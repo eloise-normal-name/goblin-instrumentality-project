@@ -1,0 +1,27 @@
+# Build directories
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# Build outputs
+*.obj
+*.exe
+*.ilk
+*.pdb
+*.lib
+*.exp
+*.iobj
+*.ipdb
+
+# Debug/Release directories
+Debug/
+Release/
+
+# IDE artifacts
+.vscode/.history/
+.vscode/.data/
