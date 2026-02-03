@@ -2,7 +2,7 @@
 
 ## Technology Stack
 - **Language**: C++23 (latest standard)
-- **Build System**: MSBuild with MSVC compiler (Visual Studio 2026 Community)
+- **Build System**: MSBuild with MSVC compiler (Visual Studio 2026 Community, aka version 18)
 - **Linking**: Static linking (`/MT` runtime)
 - **Target Platform**: Windows x64
 - **Subsystem**: Windows (no console window)

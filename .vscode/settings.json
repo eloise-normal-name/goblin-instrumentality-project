@@ -21,6 +21,21 @@
   },
   "editor.rulers": [100],
   "editor.wordWrapColumn": 100,
+  "terminal.integrated.profiles.windows": {
+    "Developer Command Prompt": {
+      "path": "cmd.exe",
+      "args": [
+        "/k",
+        "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\Tools\\VsDevCmd.bat"
+      ],
+      "icon": "terminal-cmd"
+    },
+    "PowerShell": {
+      "path": "powershell.exe",
+      "icon": "terminal-powershell"
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": false
   }
