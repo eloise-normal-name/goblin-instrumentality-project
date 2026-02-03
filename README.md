@@ -1,28 +1,67 @@
 # Goblin Stream
 
-Windows C++ application using MSVC and MSBuild targeting the latest C++ standard.
-
-## Requirements
-
-- Visual Studio 2022 Community (or later)
-- Windows 10/11 x64
-- VS Code with C/C++ extension (optional, for IDE-based development)
+Windows C++ application for GPU-accelerated frame rendering and video encoding. Uses Direct3D 12 for rendering and NVIDIA NVENC for hardware H.264/HEVC encoding to produce streamable video output.
 
 ## Project Structure
 
 ```
 goblin-stream/
-├── .github/copilot-instructions.md    # Project standards and requirements
-├── .clang-format                      # Google C++ code style configuration
-├── .vscode/                           # VS Code configuration
-├── bin/Debug/                         # Debug build output
-├── bin/Release/                       # Release build output
-├── obj/                               # Intermediate build artifacts (git-ignored)
-├── include/                           # Public header files
-├── src/main.cpp                       # Application entry point (WinMain)
-├── goblin-stream.vcxproj              # MSBuild project file
-└── goblin-stream.sln                  # Visual Studio solution
+├── .github/           # Copilot instructions and project standards
+├── .vscode/           # VS Code configuration
+├── bin/               # Build outputs (Debug/Release)
+├── include/nvenc/     # Vendored NVENC 13 SDK headers
+├── src/
+│   ├── graphics/      # D3D12 rendering (device, resources, commands)
+│   ├── encoder/       # NVENC encoding (session, config, D3D12 interop)
+│   ├── pipeline/      # Frame coordination (render-to-encode sync)
+│   └── main.cpp       # Application entry point
+├── goblin-stream.vcxproj
+└── goblin-stream.sln
 ```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Main Application                        │
+│                           (main.cpp)                            │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Frame Coordinator                          │
+│              (synchronizes render → encode flow)                │
+└───────────────┬─────────────────────────────┬───────────────────┘
+                │                             │
+                ▼                             ▼
+┌───────────────────────────┐   ┌───────────────────────────────┐
+│     D3D12 Graphics        │   │        NVENC Encoder          │
+│  ┌─────────────────────┐  │   │  ┌─────────────────────────┐  │
+│  │ d3d12_device        │  │   │  │ nvenc_session           │  │
+│  │ (device, swapchain) │  │   │  │ (DLL loading, session)  │  │
+│  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
+│  │ d3d12_resources     │  │   │  │ nvenc_d3d12             │  │
+│  │ (textures, heaps)   │──┼───┼─►│ (texture registration)  │  │
+│  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
+│  │ d3d12_commands      │  │   │  │ nvenc_config            │  │
+│  │ (command lists)     │  │   │  │ (H.264/HEVC settings)   │  │
+│  └─────────────────────┘  │   │  └─────────────────────────┘  │
+└───────────────────────────┘   └───────────────────────────────┘
+                │                             │
+                ▼                             ▼
+┌───────────────────────────┐   ┌───────────────────────────────┐
+│      GPU Render Work      │   │    GPU Encode Work            │
+│   (D3D12 command queue)   │   │  (nvEncodeAPI64.dll)          │
+└───────────────────────────┘   └───────────────────────────────┘
+```
+
+### Data Flow
+
+1. **D3D12 Device** creates render targets as shared GPU resources
+2. **D3D12 Commands** records draw calls and executes on GPU
+3. **Frame Coordinator** waits for D3D12 fence signal (render complete)
+4. **NVENC D3D12** submits the rendered texture to hardware encoder
+5. **NVENC Session** retrieves H.264/HEVC bitstream for streaming
 
 ## Build
 
@@ -62,8 +101,8 @@ All code must follow the standards defined in `.github/copilot-instructions.md`:
 - **Google C++ style** enforced by `.clang-format`
 - **Windows API** preferred over STL when straightforward
 - **Static linking** (MultiThreaded runtime `/MT`)
-- **No external libraries** (C++ standard library and Windows APIs only)
-- **No multi-threading**
+- **Vendored headers only** (NVENC headers included; no external library linking)
+- **No multi-threading** (single-threaded with GPU synchronization)
 
 ## Development
 
@@ -76,5 +115,8 @@ All code must follow the standards defined in `.github/copilot-instructions.md`:
 ## Resources
 
 - [Windows API Documentation](https://docs.microsoft.com/en-us/windows/win32/api/)
+- [Direct3D 12 Programming Guide](https://docs.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
+- [NVIDIA Video Codec SDK](https://developer.nvidia.com/video-codec-sdk)
+- [NVENC Programming Guide](https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-video-encoder-api-prog-guide/)
 - [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
 - [MSVC Documentation](https://docs.microsoft.com/en-us/cpp/)
