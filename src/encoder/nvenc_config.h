@@ -39,15 +39,10 @@ class NvencConfig {
 	bool Initialize(NvencSession* session, const EncoderConfig& cfg);
 	bool InitializeEncoder();
 
-	NV_ENC_INITIALIZE_PARAMS* GetInitParams() {
-		return &init_params;
-	}
-	NV_ENC_CONFIG* GetEncodeConfig() {
-		return &encode_config;
-	}
-	const EncoderConfig& GetConfig() const {
-		return config;
-	}
+	NvencSession* session = nullptr;
+	EncoderConfig config;
+	NV_ENC_INITIALIZE_PARAMS init_params = {};
+	NV_ENC_CONFIG encode_config = {};
 
   private:
 	GUID GetPresetGuid(EncoderPreset preset) const;
@@ -58,9 +53,4 @@ class NvencConfig {
 	void ConfigureRateControl();
 	void ConfigureH264();
 	void ConfigureHEVC();
-
-	NvencSession* session = nullptr;
-	EncoderConfig config;
-	NV_ENC_INITIALIZE_PARAMS init_params = {};
-	NV_ENC_CONFIG encode_config = {};
 };

@@ -47,16 +47,6 @@ class NvencD3D12 {
 	bool MapInputTexture(uint32_t index);
 	bool UnmapInputTexture(uint32_t index);
 
-	RegisteredTexture* GetRegisteredTexture(uint32_t index);
-	BitstreamBuffer* GetBitstreamBuffer(uint32_t index);
-	uint32_t GetTextureCount() const {
-		return static_cast<uint32_t>(textures.size());
-	}
-	uint32_t GetBitstreamBufferCount() const {
-		return static_cast<uint32_t>(bitstream_buffers.size());
-	}
-
-  private:
 	NvencSession* session = nullptr;
 	std::vector<RegisteredTexture> textures;
 	std::vector<BitstreamBuffer> bitstream_buffers;

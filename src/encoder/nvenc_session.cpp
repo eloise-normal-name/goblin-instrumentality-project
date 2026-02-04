@@ -2,24 +2,16 @@
 
 using NvEncodeAPICreateInstanceFunc = NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*);
 
-NvencSession::~NvencSession() {
-	CloseSession();
-	if (nvenc_module) {
-		FreeLibrary(nvenc_module);
-		nvenc_module = nullptr;
-	}
-}
-
-bool NvencSession::LoadLibrary() {
-	if (nvenc_module)
+bool NvencSession::OpenSession(void* d3d12_device) {
+	if (encoder)
 		return true;
 
-	nvenc_module = ::LoadLibraryW(L"nvEncodeAPI64.dll");
+	auto nvenc_module = ::LoadLibraryW(L"nvEncodeAPI64.dll");
 	if (!nvenc_module)
 		return false;
 
-	auto create_instance = reinterpret_cast<NvEncodeAPICreateInstanceFunc>(
-		GetProcAddress(nvenc_module, "NvEncodeAPICreateInstance"));
+	auto create_instance =
+		(NvEncodeAPICreateInstanceFunc)(GetProcAddress(nvenc_module, "NvEncodeAPICreateInstance"));
 
 	if (!create_instance) {
 		FreeLibrary(nvenc_module);
@@ -27,21 +19,10 @@ bool NvencSession::LoadLibrary() {
 		return false;
 	}
 
+	version = NV_ENCODE_API_FUNCTION_LIST_VER;
 	NVENCSTATUS status = create_instance(this);
-	if (status != NV_ENC_SUCCESS) {
-		FreeLibrary(nvenc_module);
-		nvenc_module = nullptr;
+	if (status != NV_ENC_SUCCESS)
 		return false;
-	}
-
-	return true;
-}
-
-bool NvencSession::OpenSession(void* d3d12_device) {
-	if (!nvenc_module || !nvEncOpenEncodeSessionEx)
-		return false;
-	if (encoder)
-		return true;
 
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS session_params = {};
 	session_params.version = NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;
@@ -49,12 +30,12 @@ bool NvencSession::OpenSession(void* d3d12_device) {
 	session_params.device = d3d12_device;
 	session_params.apiVersion = NVENCAPI_VERSION;
 
-	NVENCSTATUS status = nvEncOpenEncodeSessionEx(&session_params, &encoder);
+	status = nvEncOpenEncodeSessionEx(&session_params, &encoder);
 	return status == NV_ENC_SUCCESS && encoder != nullptr;
 }
 
 void NvencSession::CloseSession() {
-	if (encoder && nvEncDestroyEncoder) {
+	if (encoder) {
 		nvEncDestroyEncoder(encoder);
 		encoder = nullptr;
 	}

@@ -81,20 +81,6 @@ void D3D12Device::MoveToNextFrame() {
 	fence_values[current_frame_index] = current_fence_value + 1;
 }
 
-ID3D12CommandAllocator* D3D12Device::GetCurrentCommandAllocator() const {
-	return command_allocators[current_frame_index].Get();
-}
-
-ID3D12Resource* D3D12Device::GetCurrentRenderTarget() const {
-	return render_targets[current_frame_index].Get();
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12Device::GetCurrentRenderTargetView() const {
-	D3D12_CPU_DESCRIPTOR_HANDLE handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
-	handle.ptr += static_cast<SIZE_T>(current_frame_index * rtv_descriptor_size);
-	return handle;
-}
-
 bool D3D12Device::CreateDevice() {
 	UINT dxgi_factory_flags = 0;
 

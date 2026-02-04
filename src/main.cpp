@@ -96,9 +96,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 			continue;
 
 		auto* commands = coordinator.GetCommands();
-		auto rtv = device.GetCurrentRenderTargetView();
 
-		commands->TransitionResource(device.GetCurrentRenderTarget(), D3D12_RESOURCE_STATE_PRESENT,
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv = device.rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		rtv.ptr += static_cast<SIZE_T>(device.current_frame_index * device.rtv_descriptor_size);
+
+		commands->TransitionResource(device.render_targets[device.current_frame_index].Get(),
+									 D3D12_RESOURCE_STATE_PRESENT,
 									 D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		float clear_color[4] = {0.1f, 0.2f, 0.3f, 1.0f};
@@ -112,7 +115,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		FrameData frame_data = {};
 		coordinator.EncodeFrame(frame_data);
 
-		device.GetSwapChain()->Present(1, 0);
+		device.swap_chain->Present(1, 0);
 		device.MoveToNextFrame();
 	}
 

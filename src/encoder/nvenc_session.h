@@ -35,16 +35,9 @@ struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
 	bool QueryCapabilities(EncoderCapabilities& caps);
 	bool IsCodecSupported(EncoderCodec codec);
 
-	void* GetEncoder() const {
-		return encoder;
-	}
-	bool IsInitialized() const {
-		return encoder != nullptr;
-	}
+	HMODULE nvenc_module = nullptr;
+	void* encoder = nullptr;
 
   private:
 	GUID GetCodecGuid(EncoderCodec codec) const;
-
-	HMODULE nvenc_module = nullptr;
-	void* encoder = nullptr;
 };

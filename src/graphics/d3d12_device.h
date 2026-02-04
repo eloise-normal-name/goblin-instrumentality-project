@@ -32,31 +32,6 @@ class D3D12Device {
 	void WaitForGpu();
 	void MoveToNextFrame();
 
-	ID3D12Device* GetDevice() const {
-		return device.Get();
-	}
-	ID3D12CommandQueue* GetCommandQueue() const {
-		return command_queue.Get();
-	}
-	ID3D12CommandAllocator* GetCurrentCommandAllocator() const;
-	IDXGISwapChain4* GetSwapChain() const {
-		return swap_chain.Get();
-	}
-
-	ID3D12Resource* GetCurrentRenderTarget() const;
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView() const;
-
-	uint32_t GetCurrentFrameIndex() const {
-		return current_frame_index;
-	}
-	uint32_t GetBufferCount() const {
-		return buffer_count;
-	}
-	uint64_t GetCurrentFenceValue() const {
-		return fence_values[current_frame_index];
-	}
-
-  private:
 	bool CreateDevice();
 	bool CreateCommandQueue();
 	bool CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height);

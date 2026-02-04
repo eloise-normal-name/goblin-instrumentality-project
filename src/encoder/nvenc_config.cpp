@@ -3,13 +3,13 @@
 #include <cstring>
 
 bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
-	if (!sess || !sess->IsInitialized())
+	if (!sess || !sess->encoder)
 		return false;
 
 	session = sess;
 	config = cfg;
 
-	void* enc = session->GetEncoder();
+	void* enc = session->encoder;
 
 	GUID codec_guid = GetCodecGuid(config.codec);
 	GUID preset_guid = GetPresetGuid(config.preset);
@@ -58,7 +58,7 @@ bool NvencConfig::InitializeEncoder() {
 	if (!session)
 		return false;
 
-	void* enc = session->GetEncoder();
+	void* enc = session->encoder;
 
 	NVENCSTATUS status = session->nvEncInitializeEncoder(enc, &init_params);
 	return status == NV_ENC_SUCCESS;

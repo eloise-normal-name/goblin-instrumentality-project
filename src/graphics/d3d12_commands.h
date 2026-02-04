@@ -32,12 +32,8 @@ class D3D12Commands {
 	void CopyResource(ID3D12Resource* dest, ID3D12Resource* source);
 	void CopyTexture(SharedTexture& dest, ID3D12Resource* source);
 
-	ID3D12GraphicsCommandList* GetCommandList() const {
-		return command_list.Get();
-	}
 	ID3D12CommandList* const* GetCommandListForExecution() const;
 
-  private:
 	ComPtr<ID3D12CommandAllocator> command_allocator;
 	ComPtr<ID3D12GraphicsCommandList> command_list;
 	mutable ID3D12CommandList* command_list_ptr = nullptr;

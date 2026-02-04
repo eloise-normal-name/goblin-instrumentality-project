@@ -34,15 +34,15 @@ void D3D12Commands::TransitionResource(ID3D12Resource* res, D3D12_RESOURCE_STATE
 }
 
 void D3D12Commands::TransitionTexture(SharedTexture& texture, ResourceState new_state) {
-	ResourceState cur_state = texture.GetCurrentState();
+	ResourceState cur_state = texture.current_state;
 	if (cur_state == new_state)
 		return;
 
 	D3D12_RESOURCE_STATES before = ToD3D12State(cur_state);
 	D3D12_RESOURCE_STATES after = ToD3D12State(new_state);
 
-	TransitionResource(texture.GetResource(), before, after);
-	texture.SetCurrentState(new_state);
+	TransitionResource(texture.resource.Get(), before, after);
+	texture.current_state = new_state;
 }
 
 void D3D12Commands::ClearRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE rtv, const float color[4]) {
@@ -78,7 +78,7 @@ void D3D12Commands::CopyResource(ID3D12Resource* dest, ID3D12Resource* source) {
 
 void D3D12Commands::CopyTexture(SharedTexture& dest, ID3D12Resource* source) {
 	TransitionTexture(dest, ResourceState::CopyDest);
-	command_list->CopyResource(dest.GetResource(), source);
+	command_list->CopyResource(dest.resource.Get(), source);
 }
 
 ID3D12CommandList* const* D3D12Commands::GetCommandListForExecution() const {
