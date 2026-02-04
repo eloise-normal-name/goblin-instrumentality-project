@@ -27,9 +27,7 @@ bool NvencSession::LoadLibrary() {
 		return false;
 	}
 
-	function_list.version = NV_ENCODE_API_FUNCTION_LIST_VER;
-
-	NVENCSTATUS status = create_instance(&function_list);
+	NVENCSTATUS status = create_instance(this);
 	if (status != NV_ENC_SUCCESS) {
 		FreeLibrary(nvenc_module);
 		nvenc_module = nullptr;
@@ -40,7 +38,7 @@ bool NvencSession::LoadLibrary() {
 }
 
 bool NvencSession::OpenSession(void* d3d12_device) {
-	if (!nvenc_module || !function_list.nvEncOpenEncodeSessionEx)
+	if (!nvenc_module || !nvEncOpenEncodeSessionEx)
 		return false;
 	if (encoder)
 		return true;
@@ -51,13 +49,13 @@ bool NvencSession::OpenSession(void* d3d12_device) {
 	session_params.device = d3d12_device;
 	session_params.apiVersion = NVENCAPI_VERSION;
 
-	NVENCSTATUS status = function_list.nvEncOpenEncodeSessionEx(&session_params, &encoder);
+	NVENCSTATUS status = nvEncOpenEncodeSessionEx(&session_params, &encoder);
 	return status == NV_ENC_SUCCESS && encoder != nullptr;
 }
 
 void NvencSession::CloseSession() {
-	if (encoder && function_list.nvEncDestroyEncoder) {
-		function_list.nvEncDestroyEncoder(encoder);
+	if (encoder && nvEncDestroyEncoder) {
+		nvEncDestroyEncoder(encoder);
 		encoder = nullptr;
 	}
 }
@@ -69,14 +67,13 @@ bool NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 	caps = {};
 
 	uint32_t guid_count = 0;
-	if (function_list.nvEncGetEncodeGUIDCount(encoder, &guid_count) != NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeGUIDCount(encoder, &guid_count) != NV_ENC_SUCCESS) {
 		return false;
 	}
 
 	std::vector<GUID> guids(guid_count);
 	uint32_t actual_count = 0;
-	if (function_list.nvEncGetEncodeGUIDs(encoder, guids.data(), guid_count, &actual_count) !=
-		NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeGUIDs(encoder, guids.data(), guid_count, &actual_count) != NV_ENC_SUCCESS) {
 		return false;
 	}
 
@@ -101,26 +98,22 @@ bool NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 
 	caps_param.capsToQuery = NV_ENC_CAPS_WIDTH_MAX;
 	int value = 0;
-	if (function_list.nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) ==
-		NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
 		caps.max_width = static_cast<uint32_t>(value);
 	}
 
 	caps_param.capsToQuery = NV_ENC_CAPS_HEIGHT_MAX;
-	if (function_list.nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) ==
-		NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
 		caps.max_height = static_cast<uint32_t>(value);
 	}
 
 	caps_param.capsToQuery = NV_ENC_CAPS_ASYNC_ENCODE_SUPPORT;
-	if (function_list.nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) ==
-		NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
 		caps.supports_async_encode = value != 0;
 	}
 
 	caps_param.capsToQuery = NV_ENC_CAPS_SUPPORT_10BIT_ENCODE;
-	if (function_list.nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) ==
-		NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
 		caps.supports_10bit = value != 0;
 	}
 

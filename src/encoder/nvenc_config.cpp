@@ -9,7 +9,6 @@ bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	session = sess;
 	config = cfg;
 
-	auto* fn = session->GetFunctionList();
 	void* enc = session->GetEncoder();
 
 	GUID codec_guid = GetCodecGuid(config.codec);
@@ -21,7 +20,7 @@ bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	preset_cfg.presetCfg.version = NV_ENC_CONFIG_VER;
 
 	NVENCSTATUS status =
-		fn->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid, tuning, &preset_cfg);
+		session->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid, tuning, &preset_cfg);
 	if (status != NV_ENC_SUCCESS)
 		return false;
 
@@ -59,10 +58,9 @@ bool NvencConfig::InitializeEncoder() {
 	if (!session)
 		return false;
 
-	auto* fn = session->GetFunctionList();
 	void* enc = session->GetEncoder();
 
-	NVENCSTATUS status = fn->nvEncInitializeEncoder(enc, &init_params);
+	NVENCSTATUS status = session->nvEncInitializeEncoder(enc, &init_params);
 	return status == NV_ENC_SUCCESS;
 }
 

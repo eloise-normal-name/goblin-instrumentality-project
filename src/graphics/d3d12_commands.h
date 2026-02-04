@@ -18,7 +18,7 @@ class D3D12Commands {
 	D3D12Commands& operator=(D3D12Commands&&) = default;
 
 	bool Initialize(ID3D12Device* device);
-	void Reset(ID3D12CommandAllocator* allocator);
+	void Reset();
 	void Close();
 
 	void TransitionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES before,
@@ -38,6 +38,7 @@ class D3D12Commands {
 	ID3D12CommandList* const* GetCommandListForExecution() const;
 
   private:
+	ComPtr<ID3D12CommandAllocator> command_allocator;
 	ComPtr<ID3D12GraphicsCommandList> command_list;
 	mutable ID3D12CommandList* command_list_ptr = nullptr;
 };

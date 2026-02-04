@@ -23,7 +23,6 @@ bool NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32
 	if (!session || !texture)
 		return false;
 
-	auto* fn = session->GetFunctionList();
 	void* encoder = session->GetEncoder();
 
 	NV_ENC_REGISTER_RESOURCE register_params = {};
@@ -36,7 +35,7 @@ bool NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32
 	register_params.bufferFormat = format;
 	register_params.bufferUsage = NV_ENC_INPUT_IMAGE;
 
-	NVENCSTATUS status = fn->nvEncRegisterResource(encoder, &register_params);
+	NVENCSTATUS status = session->nvEncRegisterResource(encoder, &register_params);
 	if (status != NV_ENC_SUCCESS)
 		return false;
 
@@ -62,9 +61,8 @@ bool NvencD3D12::UnregisterTexture(uint32_t index) {
 	}
 
 	if (texture.registered_ptr) {
-		auto* fn = session->GetFunctionList();
 		void* encoder = session->GetEncoder();
-		fn->nvEncUnregisterResource(encoder, texture.registered_ptr);
+		session->nvEncUnregisterResource(encoder, texture.registered_ptr);
 		texture.registered_ptr = nullptr;
 	}
 
@@ -82,14 +80,13 @@ bool NvencD3D12::CreateBitstreamBuffers(uint32_t count, uint32_t size) {
 	if (!session)
 		return false;
 
-	auto* fn = session->GetFunctionList();
 	void* encoder = session->GetEncoder();
 
 	for (uint32_t i = 0; i < count; ++i) {
 		NV_ENC_CREATE_BITSTREAM_BUFFER create_params = {};
 		create_params.version = NV_ENC_CREATE_BITSTREAM_BUFFER_VER;
 
-		NVENCSTATUS status = fn->nvEncCreateBitstreamBuffer(encoder, &create_params);
+		NVENCSTATUS status = session->nvEncCreateBitstreamBuffer(encoder, &create_params);
 		if (status != NV_ENC_SUCCESS) {
 			DestroyBitstreamBuffers();
 			return false;
@@ -109,12 +106,11 @@ void NvencD3D12::DestroyBitstreamBuffers() {
 	if (!session)
 		return;
 
-	auto* fn = session->GetFunctionList();
 	void* encoder = session->GetEncoder();
 
 	for (auto& buffer : bitstream_buffers) {
 		if (buffer.output_ptr) {
-			fn->nvEncDestroyBitstreamBuffer(encoder, buffer.output_ptr);
+			session->nvEncDestroyBitstreamBuffer(encoder, buffer.output_ptr);
 		}
 	}
 
@@ -131,14 +127,13 @@ bool NvencD3D12::MapInputTexture(uint32_t index) {
 	if (!texture.registered_ptr)
 		return false;
 
-	auto* fn = session->GetFunctionList();
 	void* encoder = session->GetEncoder();
 
 	NV_ENC_MAP_INPUT_RESOURCE map_params = {};
 	map_params.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
 	map_params.registeredResource = texture.registered_ptr;
 
-	NVENCSTATUS status = fn->nvEncMapInputResource(encoder, &map_params);
+	NVENCSTATUS status = session->nvEncMapInputResource(encoder, &map_params);
 	if (status != NV_ENC_SUCCESS)
 		return false;
 
@@ -157,10 +152,9 @@ bool NvencD3D12::UnmapInputTexture(uint32_t index) {
 	if (!texture.is_mapped)
 		return true;
 
-	auto* fn = session->GetFunctionList();
 	void* encoder = session->GetEncoder();
 
-	NVENCSTATUS status = fn->nvEncUnmapInputResource(encoder, texture.mapped_ptr);
+	NVENCSTATUS status = session->nvEncUnmapInputResource(encoder, texture.mapped_ptr);
 	if (status != NV_ENC_SUCCESS)
 		return false;
 

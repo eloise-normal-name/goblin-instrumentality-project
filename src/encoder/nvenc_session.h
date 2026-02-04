@@ -18,7 +18,7 @@ struct EncoderCapabilities {
 	bool supports_10bit;
 };
 
-class NvencSession {
+struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
   public:
 	NvencSession() = default;
 	~NvencSession();
@@ -35,9 +35,6 @@ class NvencSession {
 	bool QueryCapabilities(EncoderCapabilities& caps);
 	bool IsCodecSupported(EncoderCodec codec);
 
-	NV_ENCODE_API_FUNCTION_LIST* GetFunctionList() {
-		return &function_list;
-	}
 	void* GetEncoder() const {
 		return encoder;
 	}
@@ -49,6 +46,5 @@ class NvencSession {
 	GUID GetCodecGuid(EncoderCodec codec) const;
 
 	HMODULE nvenc_module = nullptr;
-	NV_ENCODE_API_FUNCTION_LIST function_list = {};
 	void* encoder = nullptr;
 };

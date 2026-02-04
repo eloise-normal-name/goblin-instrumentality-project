@@ -39,7 +39,7 @@ bool FrameCoordinator::BeginFrame() {
 		return false;
 
 	current_frame_index = device->GetCurrentFrameIndex();
-	commands.Reset(device->GetCurrentCommandAllocator());
+	commands.Reset();
 
 	return true;
 }
@@ -145,7 +145,6 @@ bool FrameCoordinator::SubmitFrameToEncoder() {
 	if (!texture || !bitstream)
 		return false;
 
-	auto* fn = nvenc_session.GetFunctionList();
 	void* encoder = nvenc_session.GetEncoder();
 
 	NV_ENC_PIC_PARAMS pic_params = {};
@@ -160,7 +159,7 @@ bool FrameCoordinator::SubmitFrameToEncoder() {
 	pic_params.frameIdx = static_cast<uint32_t>(frame_count);
 	pic_params.inputTimeStamp = frame_count;
 
-	NVENCSTATUS status = fn->nvEncEncodePicture(encoder, &pic_params);
+	NVENCSTATUS status = nvenc_session.nvEncEncodePicture(encoder, &pic_params);
 
 	nvenc_d3d12.UnmapInputTexture(0);
 
@@ -172,7 +171,6 @@ bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 	if (!bitstream)
 		return false;
 
-	auto* fn = nvenc_session.GetFunctionList();
 	void* encoder = nvenc_session.GetEncoder();
 
 	NV_ENC_LOCK_BITSTREAM lock_params = {};
@@ -180,7 +178,7 @@ bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 	lock_params.outputBitstream = bitstream->output_ptr;
 	lock_params.doNotWait = 0;
 
-	NVENCSTATUS status = fn->nvEncLockBitstream(encoder, &lock_params);
+	NVENCSTATUS status = nvenc_session.nvEncLockBitstream(encoder, &lock_params);
 	if (status != NV_ENC_SUCCESS)
 		return false;
 
@@ -190,7 +188,7 @@ bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 	output.is_keyframe = (lock_params.pictureType == NV_ENC_PIC_TYPE_IDR ||
 						  lock_params.pictureType == NV_ENC_PIC_TYPE_I);
 
-	fn->nvEncUnlockBitstream(encoder, bitstream->output_ptr);
+	nvenc_session.nvEncUnlockBitstream(encoder, bitstream->output_ptr);
 
 	return true;
 }
