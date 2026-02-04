@@ -37,7 +37,7 @@
 - **Master Branch**: Stable, buildable code only
 
 ## Build Process
-- **Environment**: Must run in **Visual Studio 2026 Developer Command Prompt** (v18)
+- **Environment**: Must use **Visual Studio Community 2026 Preview - amd64** environment/kit
 - **Generator**: Use `-G "NMake Makefiles"` (VS 2022 generator is NOT supported)
 - **Debug Target**: Outputs to `bin/Debug/goblin-stream.exe` with full debug info (`/Zi`)
 - **Release Target**: Outputs to `bin/Release/goblin-stream.exe` with optimizations (`/O2`)

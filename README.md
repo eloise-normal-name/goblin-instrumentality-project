@@ -74,7 +74,7 @@ goblin-stream/
 
 ### Using Command Line (CMake)
 
-> **Note:** Must run in **Visual Studio 2026 Developer Command Prompt** (v18).
+> **Note:** Ensure you are using the **Visual Studio Community 2026 Preview - amd64** environment.
 
 ```powershell
 # 1. Generate Build System (Use NMake generator)
