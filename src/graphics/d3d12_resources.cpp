@@ -78,6 +78,43 @@ void SharedTexture::Reset() {
 	current_state = ResourceState::Common;
 }
 
+bool ReadbackBuffer::Create(ID3D12Device* device, uint32_t buffer_size) {
+	if (buffer_size == 0)
+		return false;
+
+	D3D12_RESOURCE_DESC desc = {};
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Alignment = 0;
+	desc.Width = buffer_size;
+	desc.Height = 1;
+	desc.DepthOrArraySize = 1;
+	desc.MipLevels = 1;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12_HEAP_PROPERTIES heap_props = {};
+	heap_props.Type = D3D12_HEAP_TYPE_READBACK;
+	heap_props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heap_props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+	if (FAILED(device->CreateCommittedResource(&heap_props, D3D12_HEAP_FLAG_NONE, &desc,
+											   D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+											   IID_PPV_ARGS(&resource)))) {
+		return false;
+	}
+
+	size = buffer_size;
+	return true;
+}
+
+void ReadbackBuffer::Reset() {
+	resource.Reset();
+	size = 0;
+}
+
 D3D12_RESOURCE_STATES ToD3D12State(ResourceState state) {
 	switch (state) {
 		case ResourceState::Common:

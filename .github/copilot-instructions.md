@@ -28,6 +28,9 @@
 - **External Libraries**: Stick to Windows APIs and C++ standard library
 - **Namespaces**: Do not use namespaces; keep all code in the global namespace
 - **Trailing Underscores**: Do not use trailing underscores for member variables (use plain snake_case)
+- **NVENC**: Follow the [NVENC Programming Guide](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html).
+  - Use D3D12 Readback Heaps for bitstream output (Client-allocated).
+  - Use D3D12 Textures for input.
 
 ## Git Workflow
 - **Branching**: Use feature branches to organize changes

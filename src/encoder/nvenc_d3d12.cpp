@@ -14,7 +14,7 @@ bool NvencD3D12::Initialize(NvencSession* init_session, uint32_t buffer_count) {
 
 void NvencD3D12::Shutdown() {
 	UnregisterAllTextures();
-	DestroyBitstreamBuffers();
+	UnregisterAllBitstreamBuffers();
 	session = nullptr;
 }
 
@@ -76,44 +76,51 @@ void NvencD3D12::UnregisterAllTextures() {
 	textures.clear();
 }
 
-bool NvencD3D12::CreateBitstreamBuffers(uint32_t count, uint32_t size) {
-	if (!session)
+bool NvencD3D12::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) {
+	if (!session || !buffer)
 		return false;
 
 	void* encoder = session->encoder;
 
-	for (uint32_t i = 0; i < count; ++i) {
-		NV_ENC_CREATE_BITSTREAM_BUFFER create_params = {};
-		create_params.version = NV_ENC_CREATE_BITSTREAM_BUFFER_VER;
+	NV_ENC_REGISTER_RESOURCE register_params = {};
+	register_params.version = NV_ENC_REGISTER_RESOURCE_VER;
+	register_params.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
+	register_params.resourceToRegister = buffer;
+	register_params.width = size;
+	register_params.height = 1;
+	register_params.pitch = 0;
+	register_params.bufferFormat = NV_ENC_BUFFER_FORMAT_U8;
+	register_params.bufferUsage = NV_ENC_OUTPUT_BITSTREAM;
 
-		NVENCSTATUS status = session->nvEncCreateBitstreamBuffer(encoder, &create_params);
-		if (status != NV_ENC_SUCCESS) {
-			DestroyBitstreamBuffers();
-			return false;
-		}
+	NVENCSTATUS status = session->nvEncRegisterResource(encoder, &register_params);
+	if (status != NV_ENC_SUCCESS)
+		return false;
 
-		BitstreamBuffer buffer = {};
-		buffer.output_ptr = create_params.bitstreamBuffer;
-		buffer.size = size;
+	BitstreamBuffer bitstream = {};
+	bitstream.resource = buffer;
+	bitstream.registered_ptr = register_params.registeredResource;
+	bitstream.size = size;
 
-		bitstream_buffers.push_back(buffer);
-	}
-
+	bitstream_buffers.push_back(bitstream);
 	return true;
 }
 
-void NvencD3D12::DestroyBitstreamBuffers() {
-	if (!session)
+void NvencD3D12::UnregisterBitstreamBuffer(uint32_t index) {
+	if (index >= bitstream_buffers.size())
 		return;
 
-	void* encoder = session->encoder;
-
-	for (auto& buffer : bitstream_buffers) {
-		if (buffer.output_ptr) {
-			session->nvEncDestroyBitstreamBuffer(encoder, buffer.output_ptr);
-		}
+	auto& buffer = bitstream_buffers[index];
+	if (buffer.registered_ptr) {
+		void* encoder = session->encoder;
+		session->nvEncUnregisterResource(encoder, buffer.registered_ptr);
+		buffer.registered_ptr = nullptr;
 	}
+}
 
+void NvencD3D12::UnregisterAllBitstreamBuffers() {
+	for (uint32_t i = 0; i < bitstream_buffers.size(); ++i) {
+		UnregisterBitstreamBuffer(i);
+	}
 	bitstream_buffers.clear();
 }
 

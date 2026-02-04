@@ -30,6 +30,7 @@ void FrameCoordinator::Shutdown() {
 	nvenc_session.CloseSession();
 
 	encoder_texture.Reset();
+	output_buffer.Reset();
 	encoder_initialized = false;
 	device = nullptr;
 }
@@ -125,7 +126,12 @@ bool FrameCoordinator::InitializeEncoder() {
 		return false;
 	}
 
-	if (!nvenc_d3d12.CreateBitstreamBuffers(1, config.width * config.height * 4)) {
+	uint32_t buffer_size = config.width * config.height * 4;
+	if (!output_buffer.Create(device->device.Get(), buffer_size)) {
+		return false;
+	}
+
+	if (!nvenc_d3d12.RegisterBitstreamBuffer(output_buffer.resource.Get(), buffer_size)) {
 		return false;
 	}
 
@@ -151,7 +157,7 @@ bool FrameCoordinator::SubmitFrameToEncoder() {
 	pic_params.inputHeight = config.height;
 	pic_params.inputPitch = config.width;
 	pic_params.inputBuffer = texture.mapped_ptr;
-	pic_params.outputBitstream = bitstream.output_ptr;
+	pic_params.outputBitstream = bitstream.registered_ptr;
 	pic_params.bufferFmt = texture.buffer_format;
 	pic_params.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
 	pic_params.frameIdx = static_cast<uint32_t>(frame_count);
@@ -174,7 +180,7 @@ bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 
 	NV_ENC_LOCK_BITSTREAM lock_params = {};
 	lock_params.version = NV_ENC_LOCK_BITSTREAM_VER;
-	lock_params.outputBitstream = bitstream.output_ptr;
+	lock_params.outputBitstream = bitstream.registered_ptr;
 	lock_params.doNotWait = 0;
 
 	NVENCSTATUS status = nvenc_session.nvEncLockBitstream(encoder, &lock_params);
@@ -187,7 +193,9 @@ bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 	output.is_keyframe = (lock_params.pictureType == NV_ENC_PIC_TYPE_IDR ||
 						  lock_params.pictureType == NV_ENC_PIC_TYPE_I);
 
-	nvenc_session.nvEncUnlockBitstream(encoder, bitstream.output_ptr);
+	// The pointer 'output.data' is only valid until UnlockBitstream is called.
+	// The caller must copy this data immediately.
+	nvenc_session.nvEncUnlockBitstream(encoder, bitstream.registered_ptr);
 
 	return true;
 }

@@ -19,7 +19,8 @@ struct RegisteredTexture {
 };
 
 struct BitstreamBuffer {
-	NV_ENC_OUTPUT_PTR output_ptr;
+	ID3D12Resource* resource;
+	NV_ENC_REGISTERED_PTR registered_ptr;
 	uint32_t size;
 };
 
@@ -41,8 +42,9 @@ class NvencD3D12 {
 	bool UnregisterTexture(uint32_t index);
 	void UnregisterAllTextures();
 
-	bool CreateBitstreamBuffers(uint32_t count, uint32_t size);
-	void DestroyBitstreamBuffers();
+	bool RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size);
+	void UnregisterBitstreamBuffer(uint32_t index);
+	void UnregisterAllBitstreamBuffers();
 
 	bool MapInputTexture(uint32_t index);
 	bool UnmapInputTexture(uint32_t index);

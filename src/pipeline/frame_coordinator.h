@@ -67,6 +67,7 @@ class FrameCoordinator {
 
 	D3D12Commands commands;
 	SharedTexture encoder_texture;
+	ReadbackBuffer output_buffer;
 
 	NvencSession nvenc_session;
 	NvencD3D12 nvenc_d3d12;

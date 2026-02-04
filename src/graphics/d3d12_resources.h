@@ -38,6 +38,23 @@ class SharedTexture {
 	ResourceState current_state = ResourceState::Common;
 };
 
+class ReadbackBuffer {
+  public:
+	ReadbackBuffer() = default;
+	~ReadbackBuffer() = default;
+
+	ReadbackBuffer(const ReadbackBuffer&) = delete;
+	ReadbackBuffer& operator=(const ReadbackBuffer&) = delete;
+	ReadbackBuffer(ReadbackBuffer&&) = default;
+	ReadbackBuffer& operator=(ReadbackBuffer&&) = default;
+
+	bool Create(ID3D12Device* device, uint32_t size);
+	void Reset();
+
+	ComPtr<ID3D12Resource> resource;
+	uint32_t size = 0;
+};
+
 D3D12_RESOURCE_STATES ToD3D12State(ResourceState state);
 D3D12_RESOURCE_BARRIER CreateTransitionBarrier(ID3D12Resource* resource,
 											   D3D12_RESOURCE_STATES before,

@@ -42,7 +42,6 @@ bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	init_params.maxEncodeHeight = config.height;
 	init_params.tuningInfo = tuning;
 	init_params.enableEncodeAsync = true;
-	init_params.enableOutputInVidmem = true;
 	init_params.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB;
 
 	ConfigureRateControl();
