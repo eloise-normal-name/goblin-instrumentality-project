@@ -78,7 +78,7 @@ goblin-stream/
 
 ```powershell
 # 1. Generate Build System
-cmake -S . -B build
+cmake -B build -G "Visual Studio 18 2026" -A x64
 
 # 2. Build Debug
 cmake --build build --config Debug

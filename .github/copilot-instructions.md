@@ -38,7 +38,7 @@
 
 ## Build Process
 - **Environment**: Must use **Visual Studio Community 2026 Preview - amd64** environment/kit
-- **Generator**: Use standard CMake generators
+- **Generator**: Use `-G "Visual Studio 18 2026" -A x64`
 - **Debug Target**: Outputs to `bin/Debug/goblin-stream.exe` with full debug info (`/Zi`)
 - **Release Target**: Outputs to `bin/Release/goblin-stream.exe` with optimizations (`/O2`)
 - **Intermediate Files**: Located in `build/` (git-ignored)
