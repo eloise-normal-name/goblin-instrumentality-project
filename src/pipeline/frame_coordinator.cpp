@@ -94,8 +94,6 @@ bool FrameCoordinator::CreateEncoderTexture() {
 }
 
 bool FrameCoordinator::InitializeEncoder() {
-	if (!nvenc_session.LoadLibrary())
-		return false;
 	if (!nvenc_session.OpenSession(device->device.Get()))
 		return false;
 
@@ -115,7 +113,6 @@ bool FrameCoordinator::InitializeEncoder() {
 	enc_config.gop_length = config.frame_rate * 2;
 	enc_config.b_frames = 0;
 	enc_config.low_latency = config.low_latency;
-	enc_config.enable_async = false;
 
 	if (!nvenc_config.Initialize(&nvenc_session, enc_config))
 		return false;

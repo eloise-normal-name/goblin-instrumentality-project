@@ -28,7 +28,6 @@ struct EncoderConfig {
 	uint32_t qp = 23;
 
 	bool low_latency = true;
-	bool enable_async = false;
 };
 
 class NvencConfig {
