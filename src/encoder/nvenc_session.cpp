@@ -1,5 +1,7 @@
 #include "nvenc_session.h"
 
+#include "try.h"
+
 using NvEncodeAPICreateInstanceFunc = NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*);
 
 NvencSession::~NvencSession() {
@@ -10,13 +12,13 @@ NvencSession::~NvencSession() {
 	}
 }
 
-bool NvencSession::OpenSession(void* d3d12_device) {
+void NvencSession::OpenSession(void* d3d12_device) {
 	if (encoder)
-		return true;
+		return;
 
 	nvenc_module = ::LoadLibraryW(L"nvEncodeAPI64.dll");
 	if (!nvenc_module)
-		return false;
+		throw;
 
 	auto create_instance =
 		(NvEncodeAPICreateInstanceFunc)(GetProcAddress(nvenc_module, "NvEncodeAPICreateInstance"));
@@ -24,16 +26,11 @@ bool NvencSession::OpenSession(void* d3d12_device) {
 	if (!create_instance) {
 		FreeLibrary(nvenc_module);
 		nvenc_module = nullptr;
-		return false;
+		throw;
 	}
 
 	version = NV_ENCODE_API_FUNCTION_LIST_VER;
-	NVENCSTATUS status = create_instance(this);
-	if (status != NV_ENC_SUCCESS) {
-		FreeLibrary(nvenc_module);
-		nvenc_module = nullptr;
-		return false;
-	}
+	Try | create_instance(this);
 
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS session_params = {};
 	session_params.version = NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;
@@ -41,8 +38,9 @@ bool NvencSession::OpenSession(void* d3d12_device) {
 	session_params.device = d3d12_device;
 	session_params.apiVersion = NVENCAPI_VERSION;
 
-	status = nvEncOpenEncodeSessionEx(&session_params, &encoder);
-	return status == NV_ENC_SUCCESS && encoder != nullptr;
+	Try | nvEncOpenEncodeSessionEx(&session_params, &encoder);
+	if (!encoder)
+		throw;
 }
 
 void NvencSession::CloseSession() {
@@ -52,22 +50,18 @@ void NvencSession::CloseSession() {
 	}
 }
 
-bool NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
+void NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 	if (!encoder)
-		return false;
+		throw;
 
 	caps = {};
 
 	uint32_t guid_count = 0;
-	if (nvEncGetEncodeGUIDCount(encoder, &guid_count) != NV_ENC_SUCCESS) {
-		return false;
-	}
+	Try | nvEncGetEncodeGUIDCount(encoder, &guid_count);
 
 	std::vector<GUID> guids(guid_count);
 	uint32_t actual_count = 0;
-	if (nvEncGetEncodeGUIDs(encoder, guids.data(), guid_count, &actual_count) != NV_ENC_SUCCESS) {
-		return false;
-	}
+	Try | nvEncGetEncodeGUIDs(encoder, guids.data(), guid_count, &actual_count);
 
 	auto guid_equals = [](const GUID& a, const GUID& b) {
 		return a.Data1 == b.Data1 && a.Data2 == b.Data2 && a.Data3 == b.Data3 &&
@@ -108,14 +102,15 @@ bool NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
 		caps.supports_10bit = value != 0;
 	}
-
-	return true;
 }
 
 bool NvencSession::IsCodecSupported(EncoderCodec codec) {
 	EncoderCapabilities caps;
-	if (!QueryCapabilities(caps))
+	try {
+		QueryCapabilities(caps);
+	} catch (...) {
 		return false;
+	}
 
 	switch (codec) {
 		case EncoderCodec::H264:

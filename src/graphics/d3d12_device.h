@@ -26,19 +26,19 @@ class D3D12Device {
 	D3D12Device(D3D12Device&&) = delete;
 	D3D12Device& operator=(D3D12Device&&) = delete;
 
-	bool Initialize(const DeviceConfig& config);
+	void Initialize(const DeviceConfig& config);
 	void Shutdown();
 
 	void WaitForGpu();
 	void MoveToNextFrame();
 
-	bool CreateDevice();
-	bool CreateCommandQueue();
-	bool CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height);
-	bool CreateDescriptorHeaps();
-	bool CreateRenderTargets();
-	bool CreateCommandAllocators();
-	bool CreateFence();
+	void CreateDevice();
+	void CreateCommandQueue();
+	void CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height);
+	void CreateDescriptorHeaps();
+	void CreateRenderTargets();
+	void CreateCommandAllocators();
+	void CreateFence();
 
 	static constexpr uint32_t MAX_BUFFER_COUNT = 3;
 
@@ -57,5 +57,5 @@ class D3D12Device {
 	uint32_t current_frame_index = 0;
 	uint32_t buffer_count = 2;
 	uint32_t rtv_descriptor_size = 0;
-	DXGI_FORMAT render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM;
 };

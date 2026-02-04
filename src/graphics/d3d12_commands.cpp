@@ -1,18 +1,15 @@
 #include "d3d12_commands.h"
 
-bool D3D12Commands::Initialize(ID3D12Device* dev) {
-	if (FAILED(dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-										   IID_PPV_ARGS(&command_allocator)))) {
-		return false;
-	}
+#include "try.h"
 
-	if (FAILED(dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(),
-									  nullptr, IID_PPV_ARGS(&command_list)))) {
-		return false;
-	}
+void D3D12Commands::Initialize(ID3D12Device* dev) {
+	Try
+		| dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+									  IID_PPV_ARGS(&command_allocator))
+		| dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(),
+								 nullptr, IID_PPV_ARGS(&command_list));
 
 	command_list->Close();
-	return true;
 }
 
 void D3D12Commands::Reset() {

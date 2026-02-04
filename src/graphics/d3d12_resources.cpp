@@ -1,6 +1,8 @@
 #include "d3d12_resources.h"
 
-bool SharedTexture::Create(ID3D12Device* dev, const TextureDesc& desc) {
+#include "try.h"
+
+void SharedTexture::Create(ID3D12Device* dev, const TextureDesc& desc) {
 	D3D12_RESOURCE_DESC resource_desc = {};
 	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	resource_desc.Alignment = 0;
@@ -41,29 +43,22 @@ bool SharedTexture::Create(ID3D12Device* dev, const TextureDesc& desc) {
 
 	D3D12_CLEAR_VALUE* clear_value_ptr = desc.allow_render_target ? &clear_value : nullptr;
 
-	if (FAILED(dev->CreateCommittedResource(&heap_props, heap_flags, &resource_desc,
-											D3D12_RESOURCE_STATE_COMMON, clear_value_ptr,
-											IID_PPV_ARGS(&resource)))) {
-		return false;
-	}
+	Try | dev->CreateCommittedResource(&heap_props, heap_flags, &resource_desc,
+									   D3D12_RESOURCE_STATE_COMMON, clear_value_ptr,
+									   IID_PPV_ARGS(&resource));
 
 	if (desc.allow_simultaneous_access) {
 		ComPtr<ID3D12Device> device_ptr;
 		resource->GetDevice(IID_PPV_ARGS(&device_ptr));
 
-		if (FAILED(device_ptr->CreateSharedHandle(resource.Get(), nullptr, GENERIC_ALL, nullptr,
-												  &shared_handle))) {
-			resource.Reset();
-			return false;
-		}
+		Try | device_ptr->CreateSharedHandle(resource.Get(), nullptr, GENERIC_ALL, nullptr,
+											 &shared_handle);
 	}
 
 	width = desc.width;
 	height = desc.height;
 	format = desc.format;
 	current_state = ResourceState::Common;
-
-	return true;
 }
 
 void SharedTexture::Reset() {

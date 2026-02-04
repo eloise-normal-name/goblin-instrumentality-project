@@ -35,8 +35,8 @@ class NvencConfig {
 	NvencConfig() = default;
 	~NvencConfig() = default;
 
-	bool Initialize(NvencSession* session, const EncoderConfig& cfg);
-	bool InitializeEncoder();
+	void Initialize(NvencSession* session, const EncoderConfig& cfg);
+	void InitializeEncoder();
 
 	NvencSession* session = nullptr;
 	EncoderConfig config;

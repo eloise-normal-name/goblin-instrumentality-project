@@ -36,12 +36,12 @@ class FrameCoordinator {
 	FrameCoordinator(FrameCoordinator&&) = delete;
 	FrameCoordinator& operator=(FrameCoordinator&&) = delete;
 
-	bool Initialize(D3D12Device* dev, const PipelineConfig& cfg);
+	void Initialize(D3D12Device* dev, const PipelineConfig& cfg);
 	void Shutdown();
 
-	bool BeginFrame();
-	bool EndFrame();
-	bool EncodeFrame(FrameData& output);
+	void BeginFrame();
+	void EndFrame();
+	void EncodeFrame(FrameData& output);
 
 	D3D12Commands* GetCommands() {
 		return &commands;
@@ -57,10 +57,10 @@ class FrameCoordinator {
 	}
 
   private:
-	bool CreateEncoderTexture();
-	bool InitializeEncoder();
-	bool SubmitFrameToEncoder();
-	bool RetrieveEncodedFrame(FrameData& output);
+	void CreateEncoderTexture();
+	void InitializeEncoder();
+	void SubmitFrameToEncoder();
+	void RetrieveEncodedFrame(FrameData& output);
 
 	D3D12Device* device = nullptr;
 	PipelineConfig config;

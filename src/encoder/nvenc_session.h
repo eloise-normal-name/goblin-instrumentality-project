@@ -28,10 +28,10 @@ struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
 	NvencSession(NvencSession&&) = delete;
 	NvencSession& operator=(NvencSession&&) = delete;
 
-	bool OpenSession(void* d3d12_device);
+	void OpenSession(void* d3d12_device);
 	void CloseSession();
 
-	bool QueryCapabilities(EncoderCapabilities& caps);
+	void QueryCapabilities(EncoderCapabilities& caps);
 	bool IsCodecSupported(EncoderCodec codec);
 
 	void* encoder = nullptr;

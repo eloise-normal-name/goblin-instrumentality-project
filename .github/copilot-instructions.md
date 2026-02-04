@@ -21,6 +21,14 @@
 - **Command Lists**: Command lists and allocators must be generated once and reused efficiently (via Reset); do not recreate them every frame
 - **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
 - **Warnings**: Compile with `/W4` (treat all warnings as errors in future)
+- **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls
+  - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
+    ```cpp
+    Try | function1()
+        | function2()
+        | function3();
+    ```
+  - Throws empty exception on first failure; all error codes must be checked
 
 ## Prohibited Patterns
 - **Threading**: No multi-threaded code or concurrency primitives
@@ -52,6 +60,17 @@
 - **Build**: F7 or Status Bar "Build" button
 - **Run/Debug**: F5 or Ctrl+F5
 - **Format**: Ctrl+Shift+I (format document on save is automatic)
+- **Terminal**: Configure to use Command Prompt (`cmd`) instead of PowerShell for better compatibility with CMake and build tools
+  - Command Palette → "Terminal: Select Default Shell" → Choose "Command Prompt"
+  - Or add to `.vscode/settings.json`: `"terminal.integrated.defaultProfile.windows": "Command Prompt"`
+
+## Command Syntax
+- **Always use Windows/PowerShell native commands**, never Unix syntax
+  - ✅ `Get-Item`, `dir`, `Get-ChildItem` (Windows/PowerShell)
+  - ❌ `ls -la`, `ls -l` (Unix/Linux syntax)
+  - ❌ `cat`, `grep`, `find` (Unix tools)
+- **Use quoted paths** when they contain spaces: `"C:\Program Files\..."`
+- **CMake commands**: Always specify generator explicitly: `-G "Visual Studio 18 2026" -A x64`
 
 ## Documentation
 - **README.md**: Must reflect current architecture, module structure, and data flow

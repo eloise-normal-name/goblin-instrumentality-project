@@ -27,7 +27,7 @@ class SharedTexture {
 	SharedTexture(SharedTexture&&) = default;
 	SharedTexture& operator=(SharedTexture&&) = default;
 
-	bool Create(ID3D12Device* device, const TextureDesc& desc);
+	void Create(ID3D12Device* device, const TextureDesc& desc);
 	void Reset();
 
 	ComPtr<ID3D12Resource> resource;

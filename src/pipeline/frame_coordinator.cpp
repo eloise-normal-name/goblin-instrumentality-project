@@ -1,24 +1,21 @@
 #include "frame_coordinator.h"
 
+#include "try.h"
+
 FrameCoordinator::~FrameCoordinator() {
 	Shutdown();
 }
 
-bool FrameCoordinator::Initialize(D3D12Device* dev, const PipelineConfig& cfg) {
+void FrameCoordinator::Initialize(D3D12Device* dev, const PipelineConfig& cfg) {
 	if (!dev)
-		return false;
+		throw;
 
 	device = dev;
 	config = cfg;
 
-	if (!commands.Initialize(device->device.Get()))
-		return false;
-	if (!CreateEncoderTexture())
-		return false;
-	if (!InitializeEncoder())
-		return false;
-
-	return true;
+	commands.Initialize(device->device.Get());
+	CreateEncoderTexture();
+	InitializeEncoder();
 }
 
 void FrameCoordinator::Shutdown() {
@@ -35,19 +32,17 @@ void FrameCoordinator::Shutdown() {
 	device = nullptr;
 }
 
-bool FrameCoordinator::BeginFrame() {
+void FrameCoordinator::BeginFrame() {
 	if (!device)
-		return false;
+		throw;
 
 	current_frame_index = device->current_frame_index;
 	commands.Reset();
-
-	return true;
 }
 
-bool FrameCoordinator::EndFrame() {
+void FrameCoordinator::EndFrame() {
 	if (!device)
-		return false;
+		throw;
 
 	commands.TransitionResource(device->render_targets[device->current_frame_index].Get(),
 								D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -64,26 +59,21 @@ bool FrameCoordinator::EndFrame() {
 								D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_PRESENT);
 
 	ExecuteCommandList(device->command_queue.Get(), commands);
-
-	return true;
 }
 
-bool FrameCoordinator::EncodeFrame(FrameData& output) {
+void FrameCoordinator::EncodeFrame(FrameData& output) {
 	if (!encoder_initialized)
-		return false;
+		throw;
 
 	device->WaitForGpu();
 
-	if (!SubmitFrameToEncoder())
-		return false;
-	if (!RetrieveEncodedFrame(output))
-		return false;
+	SubmitFrameToEncoder();
+	RetrieveEncodedFrame(output);
 
 	++frame_count;
-	return true;
 }
 
-bool FrameCoordinator::CreateEncoderTexture() {
+void FrameCoordinator::CreateEncoderTexture() {
 	TextureDesc desc = {};
 	desc.width = config.width;
 	desc.height = config.height;
@@ -91,15 +81,13 @@ bool FrameCoordinator::CreateEncoderTexture() {
 	desc.allow_render_target = false;
 	desc.allow_simultaneous_access = true;
 
-	return encoder_texture.Create(device->device.Get(), desc);
+	encoder_texture.Create(device->device.Get(), desc);
 }
 
-bool FrameCoordinator::InitializeEncoder() {
-	if (!nvenc_session.OpenSession(device->device.Get()))
-		return false;
+void FrameCoordinator::InitializeEncoder() {
+	nvenc_session.OpenSession(device->device.Get());
 
-	if (!nvenc_d3d12.Initialize(&nvenc_session, device->buffer_count))
-		return false;
+	nvenc_d3d12.Initialize(&nvenc_session, device->buffer_count);
 
 	EncoderConfig enc_config = {};
 	enc_config.codec = config.codec;
@@ -115,36 +103,26 @@ bool FrameCoordinator::InitializeEncoder() {
 	enc_config.b_frames = 0;
 	enc_config.low_latency = config.low_latency;
 
-	if (!nvenc_config.Initialize(&nvenc_session, enc_config))
-		return false;
-	if (!nvenc_config.InitializeEncoder())
-		return false;
+	nvenc_config.Initialize(&nvenc_session, enc_config);
+	nvenc_config.InitializeEncoder();
 
 	NV_ENC_BUFFER_FORMAT nvenc_format = DxgiFormatToNvencFormat(encoder_texture.format);
-	if (!nvenc_d3d12.RegisterTexture(encoder_texture.resource.Get(), config.width, config.height,
-									 nvenc_format)) {
-		return false;
-	}
+	nvenc_d3d12.RegisterTexture(encoder_texture.resource.Get(), config.width, config.height,
+								nvenc_format);
 
 	uint32_t buffer_size = config.width * config.height * 4;
-	if (!output_buffer.Create(device->device.Get(), buffer_size)) {
-		return false;
-	}
+	output_buffer.Create(device->device.Get(), buffer_size);
 
-	if (!nvenc_d3d12.RegisterBitstreamBuffer(output_buffer.resource.Get(), buffer_size)) {
-		return false;
-	}
+	nvenc_d3d12.RegisterBitstreamBuffer(output_buffer.resource.Get(), buffer_size);
 
 	encoder_initialized = true;
-	return true;
 }
 
-bool FrameCoordinator::SubmitFrameToEncoder() {
-	if (!nvenc_d3d12.MapInputTexture(0))
-		return false;
+void FrameCoordinator::SubmitFrameToEncoder() {
+	nvenc_d3d12.MapInputTexture(0);
 
 	if (nvenc_d3d12.textures.empty() || nvenc_d3d12.bitstream_buffers.empty())
-		return false;
+		throw;
 
 	auto& texture = nvenc_d3d12.textures[0];
 	auto& bitstream = nvenc_d3d12.bitstream_buffers[0];
@@ -163,16 +141,14 @@ bool FrameCoordinator::SubmitFrameToEncoder() {
 	pic_params.frameIdx = static_cast<uint32_t>(frame_count);
 	pic_params.inputTimeStamp = frame_count;
 
-	NVENCSTATUS status = nvenc_session.nvEncEncodePicture(encoder, &pic_params);
+	Try | nvenc_session.nvEncEncodePicture(encoder, &pic_params);
 
 	nvenc_d3d12.UnmapInputTexture(0);
-
-	return status == NV_ENC_SUCCESS;
 }
 
-bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
+void FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 	if (nvenc_d3d12.bitstream_buffers.empty())
-		return false;
+		throw;
 
 	auto& bitstream = nvenc_d3d12.bitstream_buffers[0];
 
@@ -183,19 +159,15 @@ bool FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 	lock_params.outputBitstream = bitstream.registered_ptr;
 	lock_params.doNotWait = 0;
 
-	NVENCSTATUS status = nvenc_session.nvEncLockBitstream(encoder, &lock_params);
-	if (status != NV_ENC_SUCCESS)
-		return false;
+	Try | nvenc_session.nvEncLockBitstream(encoder, &lock_params);
 
 	output.data = static_cast<uint8_t*>(lock_params.bitstreamBufferPtr);
 	output.size = lock_params.bitstreamSizeInBytes;
 	output.timestamp = lock_params.outputTimeStamp;
-	output.is_keyframe = (lock_params.pictureType == NV_ENC_PIC_TYPE_IDR ||
-						  lock_params.pictureType == NV_ENC_PIC_TYPE_I);
+	output.is_keyframe = (lock_params.pictureType == NV_ENC_PIC_TYPE_IDR
+						  || lock_params.pictureType == NV_ENC_PIC_TYPE_I);
 
 	// The pointer 'output.data' is only valid until UnlockBitstream is called.
 	// The caller must copy this data immediately.
 	nvenc_session.nvEncUnlockBitstream(encoder, bitstream.registered_ptr);
-
-	return true;
 }

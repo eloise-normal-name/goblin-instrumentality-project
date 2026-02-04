@@ -17,7 +17,7 @@ class D3D12Commands {
 	D3D12Commands(D3D12Commands&&) = default;
 	D3D12Commands& operator=(D3D12Commands&&) = default;
 
-	bool Initialize(ID3D12Device* device);
+	void Initialize(ID3D12Device* device);
 	void Reset();
 	void Close();
 

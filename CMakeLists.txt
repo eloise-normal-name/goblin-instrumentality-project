@@ -27,7 +27,7 @@ add_executable(goblin-stream WIN32 ${SOURCES})
 target_include_directories(goblin-stream PRIVATE "${CMAKE_SOURCE_DIR}/include")
 
 # 6. Compiler Flags (Warning Level 4)
-target_compile_options(goblin-stream PRIVATE /W4)
+target_compile_options(goblin-stream PRIVATE /W4 /EHs)
 
 # 7. Definitions
 target_compile_definitions(goblin-stream PRIVATE UNICODE _UNICODE)

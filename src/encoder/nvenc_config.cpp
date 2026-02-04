@@ -2,9 +2,11 @@
 
 #include <cstring>
 
-bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
+#include "try.h"
+
+void NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	if (!sess || !sess->encoder)
-		return false;
+		throw;
 
 	session = sess;
 	config = cfg;
@@ -19,10 +21,7 @@ bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	preset_cfg.version = NV_ENC_PRESET_CONFIG_VER;
 	preset_cfg.presetCfg.version = NV_ENC_CONFIG_VER;
 
-	NVENCSTATUS status =
-		session->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid, tuning, &preset_cfg);
-	if (status != NV_ENC_SUCCESS)
-		return false;
+	Try | session->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid, tuning, &preset_cfg);
 
 	encode_config = preset_cfg.presetCfg;
 
@@ -51,18 +50,15 @@ bool NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	} else if (config.codec == EncoderCodec::HEVC) {
 		ConfigureHEVC();
 	}
-
-	return true;
 }
 
-bool NvencConfig::InitializeEncoder() {
+void NvencConfig::InitializeEncoder() {
 	if (!session)
-		return false;
+		throw;
 
 	void* enc = session->encoder;
 
-	NVENCSTATUS status = session->nvEncInitializeEncoder(enc, &init_params);
-	return status == NV_ENC_SUCCESS;
+	Try | session->nvEncInitializeEncoder(enc, &init_params);
 }
 
 GUID NvencConfig::GetPresetGuid(EncoderPreset preset) const {

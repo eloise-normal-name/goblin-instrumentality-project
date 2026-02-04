@@ -34,20 +34,20 @@ class NvencD3D12 {
 	NvencD3D12(NvencD3D12&&) = delete;
 	NvencD3D12& operator=(NvencD3D12&&) = delete;
 
-	bool Initialize(NvencSession* init_session, uint32_t buffer_count);
+	void Initialize(NvencSession* init_session, uint32_t buffer_count);
 	void Shutdown();
 
-	bool RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
+	void RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
 						 NV_ENC_BUFFER_FORMAT format);
-	bool UnregisterTexture(uint32_t index);
+	void UnregisterTexture(uint32_t index);
 	void UnregisterAllTextures();
 
-	bool RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size);
+	void RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size);
 	void UnregisterBitstreamBuffer(uint32_t index);
 	void UnregisterAllBitstreamBuffers();
 
-	bool MapInputTexture(uint32_t index);
-	bool UnmapInputTexture(uint32_t index);
+	void MapInputTexture(uint32_t index);
+	void UnmapInputTexture(uint32_t index);
 
 	NvencSession* session = nullptr;
 	std::vector<RegisteredTexture> textures;

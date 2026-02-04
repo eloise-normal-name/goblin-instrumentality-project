@@ -47,80 +47,92 @@ HWND CreateAppWindow(HINSTANCE instance) {
 } // namespace
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
-	HWND hwnd = CreateAppWindow(instance);
-	if (!hwnd)
-		return 1;
+	try {
+		HWND hwnd = CreateAppWindow(instance);
+		if (!hwnd)
+			return 1;
 
-	D3D12Device device;
-	DeviceConfig device_config = {};
-	device_config.window_handle = hwnd;
-	device_config.frame_width = WINDOW_WIDTH;
-	device_config.frame_height = WINDOW_HEIGHT;
-	device_config.buffer_count = 2;
-	device_config.render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		D3D12Device device;
+		DeviceConfig device_config = {};
+		device_config.window_handle = hwnd;
+		device_config.frame_width = WINDOW_WIDTH;
+		device_config.frame_height = WINDOW_HEIGHT;
+		device_config.buffer_count = 2;
+		device_config.render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM;
 
-	if (!device.Initialize(device_config))
-		return 1;
+		device.Initialize(device_config);
 
-	FrameCoordinator coordinator;
-	PipelineConfig pipeline_config = {};
-	pipeline_config.width = WINDOW_WIDTH;
-	pipeline_config.height = WINDOW_HEIGHT;
-	pipeline_config.frame_rate = 60;
-	pipeline_config.bitrate = 8000000;
-	pipeline_config.codec = EncoderCodec::H264;
-	pipeline_config.low_latency = true;
+		FrameCoordinator coordinator;
+		PipelineConfig pipeline_config = {};
+		pipeline_config.width = WINDOW_WIDTH;
+		pipeline_config.height = WINDOW_HEIGHT;
+		pipeline_config.frame_rate = 60;
+		pipeline_config.bitrate = 8000000;
+		pipeline_config.codec = EncoderCodec::H264;
+		pipeline_config.low_latency = true;
 
-	if (!coordinator.Initialize(&device, pipeline_config))
-		return 1;
+		coordinator.Initialize(&device, pipeline_config);
 
-	ShowWindow(hwnd, show_command);
+		ShowWindow(hwnd, show_command);
 
-	MSG msg = {};
-	bool running = true;
+		MSG msg = {};
+		bool running = true;
 
-	while (running) {
-		while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_QUIT) {
-				running = false;
-				break;
+		while (running) {
+			while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+				if (msg.message == WM_QUIT) {
+					running = false;
+					break;
+				}
+				TranslateMessage(&msg);
+				DispatchMessageW(&msg);
 			}
-			TranslateMessage(&msg);
-			DispatchMessageW(&msg);
+
+			if (!running)
+				break;
+
+			try {
+				coordinator.BeginFrame();
+			} catch (...) {
+				continue;
+			}
+
+			auto* commands = coordinator.GetCommands();
+
+			D3D12_CPU_DESCRIPTOR_HANDLE rtv = device.rtv_heap->GetCPUDescriptorHandleForHeapStart();
+			rtv.ptr += static_cast<SIZE_T>(device.current_frame_index * device.rtv_descriptor_size);
+
+			commands->TransitionResource(device.render_targets[device.current_frame_index].Get(),
+										 D3D12_RESOURCE_STATE_PRESENT,
+										 D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+			float clear_color[4] = {0.1f, 0.2f, 0.3f, 1.0f};
+			commands->ClearRenderTarget(rtv, clear_color);
+			commands->SetRenderTarget(rtv);
+			commands->SetViewportAndScissor(WINDOW_WIDTH, WINDOW_HEIGHT);
+
+			try {
+				coordinator.EndFrame();
+			} catch (...) {
+				continue;
+			}
+
+			FrameData frame_data = {};
+			try {
+				coordinator.EncodeFrame(frame_data);
+			} catch (...) {
+				continue;
+			}
+
+			device.swap_chain->Present(1, 0);
+			device.MoveToNextFrame();
 		}
 
-		if (!running)
-			break;
+		coordinator.Shutdown();
+		device.Shutdown();
 
-		if (!coordinator.BeginFrame())
-			continue;
-
-		auto* commands = coordinator.GetCommands();
-
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv = device.rtv_heap->GetCPUDescriptorHandleForHeapStart();
-		rtv.ptr += static_cast<SIZE_T>(device.current_frame_index * device.rtv_descriptor_size);
-
-		commands->TransitionResource(device.render_targets[device.current_frame_index].Get(),
-									 D3D12_RESOURCE_STATE_PRESENT,
-									 D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		float clear_color[4] = {0.1f, 0.2f, 0.3f, 1.0f};
-		commands->ClearRenderTarget(rtv, clear_color);
-		commands->SetRenderTarget(rtv);
-		commands->SetViewportAndScissor(WINDOW_WIDTH, WINDOW_HEIGHT);
-
-		if (!coordinator.EndFrame())
-			continue;
-
-		FrameData frame_data = {};
-		coordinator.EncodeFrame(frame_data);
-
-		device.swap_chain->Present(1, 0);
-		device.MoveToNextFrame();
+		return 0;
+	} catch (...) {
+		return 1;
 	}
-
-	coordinator.Shutdown();
-	device.Shutdown();
-
-	return 0;
 }

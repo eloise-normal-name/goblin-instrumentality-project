@@ -16,6 +16,7 @@ AllowShortLoopsOnASingleLine: false
 BinPackArguments: true
 BinPackParameters: true
 BreakBeforeBraces: Attach
+BreakBeforeBinaryOperators: All
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
 BreakStringLiterals: true
