@@ -17,31 +17,33 @@ void NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	GUID preset_guid = GetPresetGuid(config.preset);
 	NV_ENC_TUNING_INFO tuning = GetTuningInfo(config.low_latency);
 
-	NV_ENC_PRESET_CONFIG preset_cfg = {};
-	preset_cfg.version = NV_ENC_PRESET_CONFIG_VER;
-	preset_cfg.presetCfg.version = NV_ENC_CONFIG_VER;
+	NV_ENC_PRESET_CONFIG preset_cfg{
+		.version = NV_ENC_PRESET_CONFIG_VER,
+		.presetCfg = {.version = NV_ENC_CONFIG_VER},
+	};
 
 	Try | session->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid, tuning, &preset_cfg);
 
 	encode_config = preset_cfg.presetCfg;
 
-	memset(&init_params, 0, sizeof(init_params));
-	init_params.version = NV_ENC_INITIALIZE_PARAMS_VER;
-	init_params.encodeGUID = codec_guid;
-	init_params.presetGUID = preset_guid;
-	init_params.encodeWidth = config.width;
-	init_params.encodeHeight = config.height;
-	init_params.darWidth = config.width;
-	init_params.darHeight = config.height;
-	init_params.frameRateNum = config.frame_rate_num;
-	init_params.frameRateDen = config.frame_rate_den;
-	init_params.enablePTD = 1;
-	init_params.encodeConfig = &encode_config;
-	init_params.maxEncodeWidth = config.width;
-	init_params.maxEncodeHeight = config.height;
-	init_params.tuningInfo = tuning;
-	init_params.enableEncodeAsync = true;
-	init_params.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB;
+	init_params = {
+		.version = NV_ENC_INITIALIZE_PARAMS_VER,
+		.encodeGUID = codec_guid,
+		.presetGUID = preset_guid,
+		.encodeWidth = config.width,
+		.encodeHeight = config.height,
+		.darWidth = config.width,
+		.darHeight = config.height,
+		.frameRateNum = config.frame_rate_num,
+		.frameRateDen = config.frame_rate_den,
+		.enableEncodeAsync = true,
+		.enablePTD = 1,
+		.encodeConfig = &encode_config,
+		.maxEncodeWidth = config.width,
+		.maxEncodeHeight = config.height,
+		.tuningInfo = tuning,
+		.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB,
+	};
 
 	ConfigureRateControl();
 

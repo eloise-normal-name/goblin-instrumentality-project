@@ -29,6 +29,10 @@
         | function3();
     ```
   - Throws empty exception on first failure; all error codes must be checked
+- **Struct Initialization**:
+  - Prefer designated initializers (`.field = value`).
+  - Prefer brace initialization without equals: `MyStruct s { .field = val };` instead of `MyStruct s = { .field = val };`.
+  - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity.
 
 ## Prohibited Patterns
 - **Threading**: No multi-threaded code or concurrency primitives

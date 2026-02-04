@@ -26,27 +26,25 @@ void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32
 
 	void* encoder = session->encoder;
 
-	NV_ENC_REGISTER_RESOURCE register_params = {};
-	register_params.version = NV_ENC_REGISTER_RESOURCE_VER;
-	register_params.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
-	register_params.resourceToRegister = texture;
-	register_params.width = width;
-	register_params.height = height;
-	register_params.pitch = 0;
-	register_params.bufferFormat = format;
-	register_params.bufferUsage = NV_ENC_INPUT_IMAGE;
+	NV_ENC_REGISTER_RESOURCE register_params{
+		.version = NV_ENC_REGISTER_RESOURCE_VER,
+		.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
+		.width = width,
+		.height = height,
+		.resourceToRegister = texture,
+		.bufferFormat = format,
+		.bufferUsage = NV_ENC_INPUT_IMAGE,
+	};
 
 	Try | session->nvEncRegisterResource(encoder, &register_params);
 
-	RegisteredTexture reg_texture = {};
-	reg_texture.resource = texture;
-	reg_texture.registered_ptr = register_params.registeredResource;
-	reg_texture.buffer_format = format;
-	reg_texture.width = width;
-	reg_texture.height = height;
-	reg_texture.is_mapped = false;
-
-	textures.push_back(reg_texture);
+	textures.push_back({
+		.resource = texture,
+		.registered_ptr = register_params.registeredResource,
+		.buffer_format = format,
+		.width = width,
+		.height = height,
+	});
 }
 
 void NvencD3D12::UnregisterTexture(uint32_t index) {
@@ -78,24 +76,23 @@ void NvencD3D12::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) 
 
 	void* encoder = session->encoder;
 
-	NV_ENC_REGISTER_RESOURCE register_params = {};
-	register_params.version = NV_ENC_REGISTER_RESOURCE_VER;
-	register_params.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX;
-	register_params.resourceToRegister = buffer;
-	register_params.width = size;
-	register_params.height = 1;
-	register_params.pitch = 0;
-	register_params.bufferFormat = NV_ENC_BUFFER_FORMAT_U8;
-	register_params.bufferUsage = NV_ENC_OUTPUT_BITSTREAM;
+	NV_ENC_REGISTER_RESOURCE register_params{
+		.version = NV_ENC_REGISTER_RESOURCE_VER,
+		.resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
+		.width = size,
+		.height = 1,
+		.resourceToRegister = buffer,
+		.bufferFormat = NV_ENC_BUFFER_FORMAT_U8,
+		.bufferUsage = NV_ENC_OUTPUT_BITSTREAM,
+	};
 
 	Try | session->nvEncRegisterResource(encoder, &register_params);
 
-	BitstreamBuffer bitstream = {};
-	bitstream.resource = buffer;
-	bitstream.registered_ptr = register_params.registeredResource;
-	bitstream.size = size;
-
-	bitstream_buffers.push_back(bitstream);
+	bitstream_buffers.push_back({
+		.resource = buffer,
+		.registered_ptr = register_params.registeredResource,
+		.size = size,
+	});
 }
 
 void NvencD3D12::UnregisterBitstreamBuffer(uint32_t index) {
@@ -129,9 +126,10 @@ void NvencD3D12::MapInputTexture(uint32_t index) {
 
 	void* encoder = session->encoder;
 
-	NV_ENC_MAP_INPUT_RESOURCE map_params = {};
-	map_params.version = NV_ENC_MAP_INPUT_RESOURCE_VER;
-	map_params.registeredResource = texture.registered_ptr;
+	NV_ENC_MAP_INPUT_RESOURCE map_params{
+		.version = NV_ENC_MAP_INPUT_RESOURCE_VER,
+		.registeredResource = texture.registered_ptr,
+	};
 
 	Try | session->nvEncMapInputResource(encoder, &map_params);
 

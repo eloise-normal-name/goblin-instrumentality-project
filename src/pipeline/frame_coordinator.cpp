@@ -74,12 +74,12 @@ void FrameCoordinator::EncodeFrame(FrameData& output) {
 }
 
 void FrameCoordinator::CreateEncoderTexture() {
-	TextureDesc desc = {};
-	desc.width = config.width;
-	desc.height = config.height;
-	desc.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	desc.allow_render_target = false;
-	desc.allow_simultaneous_access = true;
+	TextureDesc desc{
+		.width = config.width,
+		.height = config.height,
+		.format = DXGI_FORMAT_B8G8R8A8_UNORM,
+		.allow_simultaneous_access = true,
+	};
 
 	encoder_texture.Create(device->device.Get(), desc);
 }
@@ -89,19 +89,18 @@ void FrameCoordinator::InitializeEncoder() {
 
 	nvenc_d3d12.Initialize(&nvenc_session, device->buffer_count);
 
-	EncoderConfig enc_config = {};
-	enc_config.codec = config.codec;
-	enc_config.preset = EncoderPreset::Fast;
-	enc_config.rate_control = RateControlMode::ConstantBitrate;
-	enc_config.width = config.width;
-	enc_config.height = config.height;
-	enc_config.frame_rate_num = config.frame_rate;
-	enc_config.frame_rate_den = 1;
-	enc_config.bitrate = config.bitrate;
-	enc_config.max_bitrate = config.bitrate * 2;
-	enc_config.gop_length = config.frame_rate * 2;
-	enc_config.b_frames = 0;
-	enc_config.low_latency = config.low_latency;
+	EncoderConfig enc_config{
+		.codec = config.codec,
+		.preset = EncoderPreset::Fast,
+		.rate_control = RateControlMode::ConstantBitrate,
+		.width = config.width,
+		.height = config.height,
+		.frame_rate_num = config.frame_rate,
+		.bitrate = config.bitrate,
+		.max_bitrate = config.bitrate * 2,
+		.gop_length = config.frame_rate * 2,
+		.low_latency = config.low_latency,
+	};
 
 	nvenc_config.Initialize(&nvenc_session, enc_config);
 	nvenc_config.InitializeEncoder();
@@ -129,17 +128,18 @@ void FrameCoordinator::SubmitFrameToEncoder() {
 
 	void* encoder = nvenc_session.encoder;
 
-	NV_ENC_PIC_PARAMS pic_params = {};
-	pic_params.version = NV_ENC_PIC_PARAMS_VER;
-	pic_params.inputWidth = config.width;
-	pic_params.inputHeight = config.height;
-	pic_params.inputPitch = config.width;
-	pic_params.inputBuffer = texture.mapped_ptr;
-	pic_params.outputBitstream = bitstream.registered_ptr;
-	pic_params.bufferFmt = texture.buffer_format;
-	pic_params.pictureStruct = NV_ENC_PIC_STRUCT_FRAME;
-	pic_params.frameIdx = static_cast<uint32_t>(frame_count);
-	pic_params.inputTimeStamp = frame_count;
+	NV_ENC_PIC_PARAMS pic_params{
+		.version = NV_ENC_PIC_PARAMS_VER,
+		.inputWidth = config.width,
+		.inputHeight = config.height,
+		.inputPitch = config.width,
+		.frameIdx = static_cast<uint32_t>(frame_count),
+		.inputTimeStamp = frame_count,
+		.inputBuffer = texture.mapped_ptr,
+		.outputBitstream = bitstream.registered_ptr,
+		.bufferFmt = texture.buffer_format,
+		.pictureStruct = NV_ENC_PIC_STRUCT_FRAME,
+	};
 
 	Try | nvenc_session.nvEncEncodePicture(encoder, &pic_params);
 
@@ -154,10 +154,10 @@ void FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 
 	void* encoder = nvenc_session.encoder;
 
-	NV_ENC_LOCK_BITSTREAM lock_params = {};
-	lock_params.version = NV_ENC_LOCK_BITSTREAM_VER;
-	lock_params.outputBitstream = bitstream.registered_ptr;
-	lock_params.doNotWait = 0;
+	NV_ENC_LOCK_BITSTREAM lock_params{
+		.version = NV_ENC_LOCK_BITSTREAM_VER,
+		.outputBitstream = bitstream.registered_ptr,
+	};
 
 	Try | nvenc_session.nvEncLockBitstream(encoder, &lock_params);
 
