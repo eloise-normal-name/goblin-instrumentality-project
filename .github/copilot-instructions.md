@@ -2,7 +2,7 @@
 
 ## Technology Stack
 - **Language**: C++23 (latest standard)
-- **Build System**: MSBuild with MSVC compiler (Visual Studio 2026 Community, aka version 18)
+- **Build System**: CMake 3.28+ with MSVC compiler (Visual Studio 2026 Community, aka version 18)
 - **Linking**: Static linking (`/MT` runtime)
 - **Target Platform**: Windows x64
 - **Subsystem**: Windows (no console window)
@@ -39,12 +39,12 @@
 ## Build Process
 - **Debug Target**: Outputs to `bin/Debug/goblin-stream.exe` with full debug info (`/Zi`)
 - **Release Target**: Outputs to `bin/Release/goblin-stream.exe` with optimizations (`/O2`)
-- **Intermediate Files**: Located in `obj/Debug/` and `obj/Release/` (git-ignored)
+- **Intermediate Files**: Located in `build/` (git-ignored)
 
 ## VS Code Workflow
-- **Build**: Ctrl+Shift+B (builds Debug configuration)
-- **Build & Run**: Ctrl+Shift+T (builds and executes)
-- **Debug**: F5 (builds Debug and launches debugger)
+- **Extension**: Use CMake Tools extension
+- **Build**: F7 or Status Bar "Build" button
+- **Run/Debug**: F5 or Ctrl+F5
 - **Format**: Ctrl+Shift+I (format document on save is automatic)
 
 ## Documentation

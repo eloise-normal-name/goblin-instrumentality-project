@@ -1,6 +1,7 @@
 # Build directories
 bin/
 obj/
+build/
 
 # Visual Studio
 .vs/
@@ -25,3 +26,7 @@ Release/
 # IDE artifacts
 .vscode/.history/
 .vscode/.data/
+
+# CMake
+CMakeUserPresets.json
+compile_commands.json

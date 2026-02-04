@@ -15,8 +15,7 @@ goblin-stream/
 │   ├── encoder/       # NVENC encoding (session, config, D3D12 interop)
 │   ├── pipeline/      # Frame coordination (render-to-encode sync)
 │   └── main.cpp       # Application entry point
-├── goblin-stream.vcxproj
-└── goblin-stream.sln
+└── CMakeLists.txt     # CMake build configuration
 ```
 
 ## Architecture
@@ -67,30 +66,26 @@ goblin-stream/
 
 ### Using VS Code
 
-- **Build Debug**: Press `Ctrl+Shift+B`
-- **Build & Run Debug**: Press `Ctrl+Shift+T`
-- **Debug with Debugger**: Press `F5`
+1. Install **C/C++** and **CMake Tools** extensions.
+2. Open the folder in VS Code.
+3. When prompted, select a Kit (e.g., `Visual Studio Community 2026 Release - amd64`).
+4. **Build**: Click "Build" in the status bar or press `F7`.
+5. **Debug**: Press `Ctrl+F5` (Run) or `F5` (Debug).
 
-### Using Visual Studio
-
-1. Open `goblin-stream.sln` in Visual Studio
-2. Select `Debug` or `Release` configuration and `x64` platform
-3. Press `Ctrl+Shift+B` to build
-
-### Using Command Line
+### Using Command Line (CMake)
 
 ```powershell
-# Build Debug
-msbuild goblin-stream.vcxproj /p:Configuration=Debug /p:Platform=x64
+# 1. Generate Build System
+cmake -S . -B build
 
-# Build Release
-msbuild goblin-stream.vcxproj /p:Configuration=Release /p:Platform=x64
+# 2. Build Debug
+cmake --build build --config Debug
 
-# Run Debug build
+# 3. Build Release
+cmake --build build --config Release
+
+# 4. Run
 .\bin\Debug\goblin-stream.exe
-
-# Run Release build
-.\bin\Release\goblin-stream.exe
 ```
 
 ## Code Standards
@@ -109,7 +104,7 @@ All code must follow the standards defined in `.github/copilot-instructions.md`:
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make changes and keep code self-documenting
 3. Format code: Automatic on save in VS Code (or manually with clang-format)
-4. Build and test: `Ctrl+Shift+T` in VS Code
+4. Build and test: Use CMake Tools in VS Code
 5. Commit and push your branch
 
 ## Resources
