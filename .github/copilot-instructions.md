@@ -38,7 +38,7 @@
 
 ## Build Process
 - **Environment**: Must use **Visual Studio Community 2026 Preview - amd64** environment/kit
-- **Generator**: Use `-G "NMake Makefiles"` (VS 2022 generator is NOT supported)
+- **Generator**: Use standard CMake generators
 - **Debug Target**: Outputs to `bin/Debug/goblin-stream.exe` with full debug info (`/Zi`)
 - **Release Target**: Outputs to `bin/Release/goblin-stream.exe` with optimizations (`/O2`)
 - **Intermediate Files**: Located in `build/` (git-ignored)

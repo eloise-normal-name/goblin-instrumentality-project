@@ -77,8 +77,8 @@ goblin-stream/
 > **Note:** Ensure you are using the **Visual Studio Community 2026 Preview - amd64** environment.
 
 ```powershell
-# 1. Generate Build System (Use NMake generator)
-cmake -S . -B build -G "NMake Makefiles"
+# 1. Generate Build System
+cmake -S . -B build
 
 # 2. Build Debug
 cmake --build build --config Debug
