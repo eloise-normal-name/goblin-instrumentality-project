@@ -11,60 +11,68 @@
 #include "../graphics/d3d12_resources.h"
 
 struct FrameData {
-    uint8_t* data;
-    uint32_t size;
-    uint64_t timestamp;
-    bool is_keyframe;
+	uint8_t* data;
+	uint32_t size;
+	uint64_t timestamp;
+	bool is_keyframe;
 };
 
 struct PipelineConfig {
-    uint32_t width;
-    uint32_t height;
-    uint32_t frame_rate;
-    uint32_t bitrate;
-    EncoderCodec codec;
-    bool low_latency;
+	uint32_t width;
+	uint32_t height;
+	uint32_t frame_rate;
+	uint32_t bitrate;
+	EncoderCodec codec;
+	bool low_latency;
 };
 
 class FrameCoordinator {
-   public:
-    FrameCoordinator() = default;
-    ~FrameCoordinator();
+  public:
+	FrameCoordinator() = default;
+	~FrameCoordinator();
 
-    FrameCoordinator(const FrameCoordinator&) = delete;
-    FrameCoordinator& operator=(const FrameCoordinator&) = delete;
-    FrameCoordinator(FrameCoordinator&&) = delete;
-    FrameCoordinator& operator=(FrameCoordinator&&) = delete;
+	FrameCoordinator(const FrameCoordinator&) = delete;
+	FrameCoordinator& operator=(const FrameCoordinator&) = delete;
+	FrameCoordinator(FrameCoordinator&&) = delete;
+	FrameCoordinator& operator=(FrameCoordinator&&) = delete;
 
-    bool Initialize(D3D12Device* dev, const PipelineConfig& cfg);
-    void Shutdown();
+	bool Initialize(D3D12Device* dev, const PipelineConfig& cfg);
+	void Shutdown();
 
-    bool BeginFrame();
-    bool EndFrame();
-    bool EncodeFrame(FrameData& output);
+	bool BeginFrame();
+	bool EndFrame();
+	bool EncodeFrame(FrameData& output);
 
-    D3D12Commands* GetCommands() { return &commands; }
-    SharedTexture* GetEncoderTexture() { return &encoder_texture; }
-    uint32_t GetCurrentFrameIndex() const { return current_frame_index; }
-    uint64_t GetFrameCount() const { return frame_count; }
+	D3D12Commands* GetCommands() {
+		return &commands;
+	}
+	SharedTexture* GetEncoderTexture() {
+		return &encoder_texture;
+	}
+	uint32_t GetCurrentFrameIndex() const {
+		return current_frame_index;
+	}
+	uint64_t GetFrameCount() const {
+		return frame_count;
+	}
 
-   private:
-    bool CreateEncoderTexture();
-    bool InitializeEncoder();
-    bool SubmitFrameToEncoder();
-    bool RetrieveEncodedFrame(FrameData& output);
+  private:
+	bool CreateEncoderTexture();
+	bool InitializeEncoder();
+	bool SubmitFrameToEncoder();
+	bool RetrieveEncodedFrame(FrameData& output);
 
-    D3D12Device* device = nullptr;
-    PipelineConfig config;
+	D3D12Device* device = nullptr;
+	PipelineConfig config;
 
-    D3D12Commands commands;
-    SharedTexture encoder_texture;
+	D3D12Commands commands;
+	SharedTexture encoder_texture;
 
-    NvencSession nvenc_session;
-    NvencD3D12 nvenc_d3d12;
-    NvencConfig nvenc_config;
+	NvencSession nvenc_session;
+	NvencD3D12 nvenc_d3d12;
+	NvencConfig nvenc_config;
 
-    uint32_t current_frame_index = 0;
-    uint64_t frame_count = 0;
-    bool encoder_initialized = false;
+	uint32_t current_frame_index = 0;
+	uint64_t frame_count = 0;
+	bool encoder_initialized = false;
 };

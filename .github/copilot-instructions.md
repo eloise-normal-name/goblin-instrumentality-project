@@ -18,7 +18,7 @@
 - **Documentation**: Self-documenting code with meaningful names (NO comment-based documentation)
 - **Naming**: Use clear, descriptive identifiers in snake_case; no trailing underscores on member variables; constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
 - **Resource Management**: RAII patterns for all resource handling (no manual delete/close patterns)
-- **Style**: All code must conform to `.clang-format` configuration (Google style, 100-column limit)
+- **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
 - **Warnings**: Compile with `/W4` (treat all warnings as errors in future)
 
 ## Prohibited Patterns

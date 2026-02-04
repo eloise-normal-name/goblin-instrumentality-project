@@ -3,7 +3,8 @@
   "C_Cpp.default.cppStandard": "c++23",
   "C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
   "C_Cpp.formatting": "clangFormat",
-  "C_Cpp.clang_format_path": "clang-format",
+  "C_Cpp.clang_format_path": "C:\\Program Files\\LLVM\\bin\\clang-format.exe",
+  "editor.defaultFormatter": "ms-vscode.cpptools",
   "[cpp]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "ms-vscode.cpptools",
