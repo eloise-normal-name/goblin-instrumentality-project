@@ -2,7 +2,7 @@
 
 ## Technology Stack
 - **Language**: C++23 (latest standard)
-- **Build System**: MSBuild with MSVC compiler (Visual Studio 2026 Community, aka version 18)
+- **Build System**: CMake 3.28+ with MSVC compiler (Visual Studio 2026 Community, aka version 18)
 - **Linking**: Static linking (`/MT` runtime)
 - **Target Platform**: Windows x64
 - **Subsystem**: Windows (no console window)
@@ -18,7 +18,7 @@
 - **Documentation**: Self-documenting code with meaningful names (NO comment-based documentation)
 - **Naming**: Use clear, descriptive identifiers in snake_case; no trailing underscores on member variables; constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
 - **Resource Management**: RAII patterns for all resource handling (no manual delete/close patterns)
-- **Style**: All code must conform to `.clang-format` configuration (Google style, 100-column limit)
+- **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
 - **Warnings**: Compile with `/W4` (treat all warnings as errors in future)
 
 ## Prohibited Patterns
@@ -37,14 +37,16 @@
 - **Master Branch**: Stable, buildable code only
 
 ## Build Process
+- **Environment**: Must use **Visual Studio Community 2026 Preview - amd64** environment/kit
+- **Generator**: Use `-G "Visual Studio 18 2026" -A x64`
 - **Debug Target**: Outputs to `bin/Debug/goblin-stream.exe` with full debug info (`/Zi`)
 - **Release Target**: Outputs to `bin/Release/goblin-stream.exe` with optimizations (`/O2`)
-- **Intermediate Files**: Located in `obj/Debug/` and `obj/Release/` (git-ignored)
+- **Intermediate Files**: Located in `build/` (git-ignored)
 
 ## VS Code Workflow
-- **Build**: Ctrl+Shift+B (builds Debug configuration)
-- **Build & Run**: Ctrl+Shift+T (builds and executes)
-- **Debug**: F5 (builds Debug and launches debugger)
+- **Extension**: Use CMake Tools extension
+- **Build**: F7 or Status Bar "Build" button
+- **Run/Debug**: F5 or Ctrl+F5
 - **Format**: Ctrl+Shift+I (format document on save is automatic)
 
 ## Documentation
