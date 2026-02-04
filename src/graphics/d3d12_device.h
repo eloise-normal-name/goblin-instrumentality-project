@@ -53,7 +53,7 @@ class D3D12Device {
     bool CreateCommandAllocators();
     bool CreateFence();
 
-    static constexpr uint32_t kMaxBufferCount = 3;
+    static constexpr uint32_t MAX_BUFFER_COUNT = 3;
 
     ComPtr<IDXGIFactory7> factory;
     ComPtr<IDXGIAdapter4> adapter;
@@ -61,12 +61,12 @@ class D3D12Device {
     ComPtr<ID3D12CommandQueue> command_queue;
     ComPtr<IDXGISwapChain4> swap_chain;
     ComPtr<ID3D12DescriptorHeap> rtv_heap;
-    ComPtr<ID3D12Resource> render_targets[kMaxBufferCount];
-    ComPtr<ID3D12CommandAllocator> command_allocators[kMaxBufferCount];
+    ComPtr<ID3D12Resource> render_targets[MAX_BUFFER_COUNT];
+    ComPtr<ID3D12CommandAllocator> command_allocators[MAX_BUFFER_COUNT];
     ComPtr<ID3D12Fence> fence;
     HANDLE fence_event = nullptr;
 
-    uint64_t fence_values[kMaxBufferCount] = {};
+    uint64_t fence_values[MAX_BUFFER_COUNT] = {};
     uint32_t current_frame_index = 0;
     uint32_t buffer_count = 2;
     uint32_t rtv_descriptor_size = 0;

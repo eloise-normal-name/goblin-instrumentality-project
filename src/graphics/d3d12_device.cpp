@@ -4,8 +4,8 @@ D3D12Device::~D3D12Device() { Shutdown(); }
 
 bool D3D12Device::Initialize(const DeviceConfig& cfg) {
     buffer_count = cfg.buffer_count > 0 ? cfg.buffer_count : 2;
-    if (buffer_count > kMaxBufferCount) {
-        buffer_count = kMaxBufferCount;
+    if (buffer_count > MAX_BUFFER_COUNT) {
+        buffer_count = MAX_BUFFER_COUNT;
     }
 
     render_target_format = cfg.render_target_format;

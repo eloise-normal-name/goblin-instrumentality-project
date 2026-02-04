@@ -5,10 +5,10 @@
 
 namespace {
 
-constexpr uint32_t kWindowWidth = 1920;
-constexpr uint32_t kWindowHeight = 1080;
-constexpr wchar_t kWindowClassName[] = L"GoblinStreamWindow";
-constexpr wchar_t kWindowTitle[] = L"Goblin Stream";
+constexpr uint32_t WINDOW_WIDTH = 1920;
+constexpr uint32_t WINDOW_HEIGHT = 1080;
+constexpr wchar_t WINDOW_CLASS_NAME[] = L"GoblinStreamWindow";
+constexpr wchar_t WINDOW_TITLE[] = L"Goblin Stream";
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
     switch (message) {
@@ -32,14 +32,14 @@ HWND CreateAppWindow(HINSTANCE instance) {
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = instance;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.lpszClassName = kWindowClassName;
+    wc.lpszClassName = WINDOW_CLASS_NAME;
 
     RegisterClassExW(&wc);
 
-    RECT rect = {0, 0, static_cast<LONG>(kWindowWidth), static_cast<LONG>(kWindowHeight)};
+    RECT rect = {0, 0, static_cast<LONG>(WINDOW_WIDTH), static_cast<LONG>(WINDOW_HEIGHT)};
     AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
-    return CreateWindowExW(0, kWindowClassName, kWindowTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+    return CreateWindowExW(0, WINDOW_CLASS_NAME, WINDOW_TITLE, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
                            CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr,
                            nullptr, instance, nullptr);
 }
@@ -53,8 +53,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
     D3D12Device device;
     DeviceConfig device_config = {};
     device_config.window_handle = hwnd;
-    device_config.frame_width = kWindowWidth;
-    device_config.frame_height = kWindowHeight;
+    device_config.frame_width = WINDOW_WIDTH;
+    device_config.frame_height = WINDOW_HEIGHT;
     device_config.buffer_count = 2;
     device_config.render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -62,8 +62,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 
     FrameCoordinator coordinator;
     PipelineConfig pipeline_config = {};
-    pipeline_config.width = kWindowWidth;
-    pipeline_config.height = kWindowHeight;
+    pipeline_config.width = WINDOW_WIDTH;
+    pipeline_config.height = WINDOW_HEIGHT;
     pipeline_config.frame_rate = 60;
     pipeline_config.bitrate = 8000000;
     pipeline_config.codec = EncoderCodec::H264;
@@ -99,7 +99,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
         float clear_color[4] = {0.1f, 0.2f, 0.3f, 1.0f};
         commands->ClearRenderTarget(rtv, clear_color);
         commands->SetRenderTarget(rtv);
-        commands->SetViewportAndScissor(kWindowWidth, kWindowHeight);
+        commands->SetViewportAndScissor(WINDOW_WIDTH, WINDOW_HEIGHT);
 
         if (!coordinator.EndFrame()) continue;
 

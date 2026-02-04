@@ -16,7 +16,7 @@
 
 ### Code Quality Standards
 - **Documentation**: Self-documenting code with meaningful names (NO comment-based documentation)
-- **Naming**: Use clear, descriptive identifiers in snake_case; no trailing underscores on member variables
+- **Naming**: Use clear, descriptive identifiers in snake_case; no trailing underscores on member variables; constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
 - **Resource Management**: RAII patterns for all resource handling (no manual delete/close patterns)
 - **Style**: All code must conform to `.clang-format` configuration (Google style, 100-column limit)
 - **Warnings**: Compile with `/W4` (treat all warnings as errors in future)
@@ -26,7 +26,7 @@
 - **Comments**: Use self-documenting code instead of comments
 - **External Libraries**: Stick to Windows APIs and C++ standard library
 - **Namespaces**: Do not use namespaces; keep all code in the global namespace
-- **Trailing Underscores**: Do not use trailing underscores for member variables; use plain snake_case naming instead
+- **Trailing Underscores**: Do not use trailing underscores for member variables (use plain snake_case)
 
 ## Git Workflow
 - **Branching**: Use feature branches to organize changes
