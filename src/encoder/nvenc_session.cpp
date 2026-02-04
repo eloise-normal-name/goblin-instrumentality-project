@@ -2,11 +2,19 @@
 
 using NvEncodeAPICreateInstanceFunc = NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*);
 
+NvencSession::~NvencSession() {
+	CloseSession();
+	if (nvenc_module) {
+		FreeLibrary(nvenc_module);
+		nvenc_module = nullptr;
+	}
+}
+
 bool NvencSession::OpenSession(void* d3d12_device) {
 	if (encoder)
 		return true;
 
-	auto nvenc_module = ::LoadLibraryW(L"nvEncodeAPI64.dll");
+	nvenc_module = ::LoadLibraryW(L"nvEncodeAPI64.dll");
 	if (!nvenc_module)
 		return false;
 
@@ -21,8 +29,11 @@ bool NvencSession::OpenSession(void* d3d12_device) {
 
 	version = NV_ENCODE_API_FUNCTION_LIST_VER;
 	NVENCSTATUS status = create_instance(this);
-	if (status != NV_ENC_SUCCESS)
+	if (status != NV_ENC_SUCCESS) {
+		FreeLibrary(nvenc_module);
+		nvenc_module = nullptr;
 		return false;
+	}
 
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS session_params = {};
 	session_params.version = NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;

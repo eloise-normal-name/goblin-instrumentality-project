@@ -21,6 +21,7 @@ struct EncoderCapabilities {
 struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
   public:
 	NvencSession() = default;
+	~NvencSession();
 
 	NvencSession(const NvencSession&) = delete;
 	NvencSession& operator=(const NvencSession&) = delete;
@@ -36,5 +37,6 @@ struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
 	void* encoder = nullptr;
 
   private:
+	HMODULE nvenc_module = nullptr;
 	GUID GetCodecGuid(EncoderCodec codec) const;
 };
