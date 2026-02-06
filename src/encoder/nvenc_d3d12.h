@@ -26,16 +26,8 @@ struct BitstreamBuffer {
 
 class NvencD3D12 {
   public:
-	NvencD3D12() = default;
+	explicit NvencD3D12(NvencSession* session, uint32_t buffer_count);
 	~NvencD3D12();
-
-	NvencD3D12(const NvencD3D12&) = delete;
-	NvencD3D12& operator=(const NvencD3D12&) = delete;
-	NvencD3D12(NvencD3D12&&) = delete;
-	NvencD3D12& operator=(NvencD3D12&&) = delete;
-
-	void Initialize(NvencSession* init_session, uint32_t buffer_count);
-	void Shutdown();
 
 	void RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
 						 NV_ENC_BUFFER_FORMAT format);

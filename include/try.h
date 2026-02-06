@@ -1,9 +1,5 @@
 #pragma once
 
-// Simple exception-based error handling for HRESULT and NVENCSTATUS.
-// IMPORTANT: Do not add external library dependencies to this file.
-// Keep this header dependency-free (only C++ standard library features allowed).
-
 #ifdef _HRESULT_DEFINED
 constexpr bool failed(HRESULT hr) noexcept {
 	return FAILED(hr);

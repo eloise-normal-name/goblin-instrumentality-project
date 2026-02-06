@@ -2,12 +2,12 @@
 
 #include "try.h"
 
-void D3D12Commands::Initialize(ID3D12Device* dev) {
+D3D12Commands::D3D12Commands(ID3D12Device* device) {
 	Try
-		| dev->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-									  IID_PPV_ARGS(&command_allocator))
-		| dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(),
-								 nullptr, IID_PPV_ARGS(&command_list));
+		| device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+										 IID_PPV_ARGS(&command_allocator))
+		| device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(),
+									nullptr, IID_PPV_ARGS(&command_list));
 
 	command_list->Close();
 }
@@ -51,19 +51,21 @@ void D3D12Commands::SetRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE rtv) {
 }
 
 void D3D12Commands::SetViewportAndScissor(uint32_t w, uint32_t h) {
-	D3D12_VIEWPORT viewport = {};
-	viewport.TopLeftX = 0.0f;
-	viewport.TopLeftY = 0.0f;
-	viewport.Width = static_cast<float>(w);
-	viewport.Height = static_cast<float>(h);
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
+	D3D12_VIEWPORT viewport{
+		.TopLeftX = 0.0f,
+		.TopLeftY = 0.0f,
+		.Width = (float)w,
+		.Height = (float)h,
+		.MinDepth = 0.0f,
+		.MaxDepth = 1.0f,
+	};
 
-	D3D12_RECT scissor = {};
-	scissor.left = 0;
-	scissor.top = 0;
-	scissor.right = static_cast<LONG>(w);
-	scissor.bottom = static_cast<LONG>(h);
+	D3D12_RECT scissor{
+		.left = 0,
+		.top = 0,
+		.right = (LONG)w,
+		.bottom = (LONG)h,
+	};
 
 	command_list->RSSetViewports(1, &viewport);
 	command_list->RSSetScissorRects(1, &scissor);

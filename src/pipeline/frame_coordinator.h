@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "../encoder/nvenc_config.h"
@@ -28,26 +29,18 @@ struct PipelineConfig {
 
 class FrameCoordinator {
   public:
-	FrameCoordinator() = default;
+	explicit FrameCoordinator(D3D12Device* device, const PipelineConfig& config);
 	~FrameCoordinator();
-
-	FrameCoordinator(const FrameCoordinator&) = delete;
-	FrameCoordinator& operator=(const FrameCoordinator&) = delete;
-	FrameCoordinator(FrameCoordinator&&) = delete;
-	FrameCoordinator& operator=(FrameCoordinator&&) = delete;
-
-	void Initialize(D3D12Device* dev, const PipelineConfig& cfg);
-	void Shutdown();
 
 	void BeginFrame();
 	void EndFrame();
 	void EncodeFrame(FrameData& output);
 
 	D3D12Commands* GetCommands() {
-		return &commands;
+		return commands.get();
 	}
 	SharedTexture* GetEncoderTexture() {
-		return &encoder_texture;
+		return encoder_texture.get();
 	}
 	uint32_t GetCurrentFrameIndex() const {
 		return current_frame_index;
@@ -57,25 +50,21 @@ class FrameCoordinator {
 	}
 
   private:
-	void CreateEncoderTexture();
-	void InitializeEncoder();
 	void SubmitFrameToEncoder();
 	void RetrieveEncodedFrame(FrameData& output);
 
-	D3D12Device* device = nullptr;
+	D3D12Device* device;
 	PipelineConfig config;
 
-	D3D12Commands commands;
-	SharedTexture encoder_texture;
-	ReadbackBuffer output_buffer;
-
-	NvencSession nvenc_session;
-	NvencD3D12 nvenc_d3d12;
-	NvencConfig nvenc_config;
+	std::unique_ptr<D3D12Commands> commands;
+	std::unique_ptr<SharedTexture> encoder_texture;
+	std::unique_ptr<ReadbackBuffer> output_buffer;
+	std::unique_ptr<NvencSession> nvenc_session;
+	std::unique_ptr<NvencD3D12> nvenc_d3d12;
+	std::unique_ptr<NvencConfig> nvenc_config;
 	HANDLE encode_fence_event = nullptr;
 
 	uint32_t current_frame_index = 0;
 	uint64_t frame_count = 0;
 	uint64_t last_encode_fence_value = 0;
-	bool encoder_initialized = false;
 };

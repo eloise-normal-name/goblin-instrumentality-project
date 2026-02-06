@@ -3,8 +3,6 @@
 #include "graphics/d3d12_device.h"
 #include "pipeline/frame_coordinator.h"
 
-namespace {
-
 constexpr uint32_t WINDOW_WIDTH = 1920;
 constexpr uint32_t WINDOW_HEIGHT = 1080;
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"GoblinStreamWindow";
@@ -26,17 +24,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 }
 
 HWND CreateAppWindow(HINSTANCE instance) {
-	WNDCLASSEXW wc = {};
-	wc.cbSize = sizeof(wc);
-	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = WindowProc;
-	wc.hInstance = instance;
-	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-	wc.lpszClassName = WINDOW_CLASS_NAME;
+	WNDCLASSEXW wc{
+		.cbSize = sizeof(WNDCLASSEXW),
+		.style = CS_HREDRAW | CS_VREDRAW,
+		.lpfnWndProc = WindowProc,
+		.hInstance = instance,
+		.hCursor = LoadCursor(nullptr, IDC_ARROW),
+		.lpszClassName = WINDOW_CLASS_NAME,
+	};
 
 	RegisterClassExW(&wc);
 
-	RECT rect = {0, 0, static_cast<LONG>(WINDOW_WIDTH), static_cast<LONG>(WINDOW_HEIGHT)};
+	RECT rect{
+		.left = 0,
+		.top = 0,
+		.right = (LONG)WINDOW_WIDTH,
+		.bottom = (LONG)WINDOW_HEIGHT,
+	};
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	return CreateWindowExW(0, WINDOW_CLASS_NAME, WINDOW_TITLE, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
@@ -44,38 +48,34 @@ HWND CreateAppWindow(HINSTANCE instance) {
 						   nullptr, instance, nullptr);
 }
 
-} // namespace
-
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	try {
 		HWND hwnd = CreateAppWindow(instance);
 		if (!hwnd)
 			return 1;
 
-		D3D12Device device;
-		DeviceConfig device_config = {};
-		device_config.window_handle = hwnd;
-		device_config.frame_width = WINDOW_WIDTH;
-		device_config.frame_height = WINDOW_HEIGHT;
-		device_config.buffer_count = 2;
-		device_config.render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		DeviceConfig device_config{
+			.window_handle = hwnd,
+			.frame_width = WINDOW_WIDTH,
+			.frame_height = WINDOW_HEIGHT,
+			.buffer_count = 2,
+			.render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM,
+		};
+		D3D12Device device(device_config);
 
-		device.Initialize(device_config);
-
-		FrameCoordinator coordinator;
-		PipelineConfig pipeline_config = {};
-		pipeline_config.width = WINDOW_WIDTH;
-		pipeline_config.height = WINDOW_HEIGHT;
-		pipeline_config.frame_rate = 60;
-		pipeline_config.bitrate = 8000000;
-		pipeline_config.codec = EncoderCodec::H264;
-		pipeline_config.low_latency = true;
-
-		coordinator.Initialize(&device, pipeline_config);
+		PipelineConfig pipeline_config{
+			.width = WINDOW_WIDTH,
+			.height = WINDOW_HEIGHT,
+			.frame_rate = 60,
+			.bitrate = 8000000,
+			.codec = EncoderCodec::H264,
+			.low_latency = true,
+		};
+		FrameCoordinator coordinator(&device, pipeline_config);
 
 		ShowWindow(hwnd, show_command);
 
-		MSG msg = {};
+		MSG msg{};
 		bool running = true;
 
 		while (running) {
@@ -97,10 +97,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 				continue;
 			}
 
-			auto* commands = coordinator.GetCommands();
+			auto commands = coordinator.GetCommands();
 
-			D3D12_CPU_DESCRIPTOR_HANDLE rtv = device.rtv_heap->GetCPUDescriptorHandleForHeapStart();
-			rtv.ptr += static_cast<SIZE_T>(device.current_frame_index * device.rtv_descriptor_size);
+			auto rtv = device.rtv_heap->GetCPUDescriptorHandleForHeapStart();
+			rtv.ptr += (SIZE_T)(device.current_frame_index * device.rtv_descriptor_size);
 
 			commands->TransitionResource(device.render_targets[device.current_frame_index].Get(),
 										 D3D12_RESOURCE_STATE_PRESENT,
@@ -117,7 +117,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 				continue;
 			}
 
-			FrameData frame_data = {};
+			FrameData frame_data{};
 			try {
 				coordinator.EncodeFrame(frame_data);
 			} catch (...) {
@@ -127,9 +127,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 			device.swap_chain->Present(0, 0);
 			device.MoveToNextFrame();
 		}
-
-		coordinator.Shutdown();
-		device.Shutdown();
 
 		return 0;
 	} catch (...) {

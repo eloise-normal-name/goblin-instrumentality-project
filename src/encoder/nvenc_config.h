@@ -32,11 +32,8 @@ struct EncoderConfig {
 
 class NvencConfig {
   public:
-	NvencConfig() = default;
+	explicit NvencConfig(NvencSession* session, const EncoderConfig& cfg);
 	~NvencConfig() = default;
-
-	void Initialize(NvencSession* session, const EncoderConfig& cfg);
-	void InitializeEncoder();
 
 	NvencSession* session = nullptr;
 	EncoderConfig config;

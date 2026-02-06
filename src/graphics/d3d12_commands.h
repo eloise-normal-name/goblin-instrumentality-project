@@ -9,15 +9,9 @@ using Microsoft::WRL::ComPtr;
 
 class D3D12Commands {
   public:
-	D3D12Commands() = default;
+	explicit D3D12Commands(ID3D12Device* device);
 	~D3D12Commands() = default;
 
-	D3D12Commands(const D3D12Commands&) = delete;
-	D3D12Commands& operator=(const D3D12Commands&) = delete;
-	D3D12Commands(D3D12Commands&&) = default;
-	D3D12Commands& operator=(D3D12Commands&&) = default;
-
-	void Initialize(ID3D12Device* device);
 	void Reset();
 	void Close();
 

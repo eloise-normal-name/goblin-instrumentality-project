@@ -16,11 +16,24 @@
 
 ### Code Quality Standards
 - **Documentation**: Self-documenting code with meaningful names (NO comment-based documentation)
-- **Naming**: Use clear, descriptive identifiers in snake_case; no trailing underscores on member variables; constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
-- **Resource Management**: RAII patterns for all resource handling (no manual delete/close patterns)
+- **Naming**: 
+  - Methods and public APIs use PascalCase (e.g., `WaitForGpu`, `BeginFrame`)
+  - Local variables and private helper functions use snake_case (e.g., `create_device`, `fence_event`)
+  - Member variables use snake_case without trailing underscores
+  - Constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
+- **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods):
+  - All resource allocation in constructors (called once at object creation)
+  - All resource cleanup in destructors (called at object destruction)
+  - No two-phase initialization; construction must either fully succeed or throw
+  - For GPU resources receiving parameters, constructors accept all necessary config/device pointers
+  - HANDLEs, COM objects, and DLL modules wrapped with proper cleanup in destructors
 - **Command Lists**: Command lists and allocators must be generated once and reused efficiently (via Reset); do not recreate them every frame
 - **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
+  - Single-statement conditionals (`if`, `for`, `while`) should omit braces
+  - Multi-statement blocks require braces
 - **Warnings**: Compile with `/W4` (treat all warnings as errors in future)
+- **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, smart pointer declarations from `make_unique`, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
+- **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project
 - **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
     ```cpp
@@ -30,9 +43,11 @@
     ```
   - Throws empty exception on first failure; all error codes must be checked
 - **Struct Initialization**:
-  - Prefer designated initializers (`.field = value`).
-  - Prefer brace initialization without equals: `MyStruct s { .field = val };` instead of `MyStruct s = { .field = val };`.
-  - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity.
+  - Use designated initializers (`.field = value`) at initialization time, never initialize-then-assign
+  - Prefer brace initialization: `Type var{.field = val};` (no equals sign)
+  - Example (✓ correct): `WNDCLASSEXW wc{.cbSize = sizeof(WNDCLASSEXW), .style = CS_HREDRAW};`
+  - Example (✗ wrong): `WNDCLASSEXW wc{}; wc.cbSize = ...; wc.style = ...;`
+  - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity
 
 ## Prohibited Patterns
 - **Threading**: No multi-threaded code or concurrency primitives

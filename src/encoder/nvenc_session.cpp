@@ -4,24 +4,13 @@
 
 using NvEncodeAPICreateInstanceFunc = NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*);
 
-NvencSession::~NvencSession() {
-	CloseSession();
-	if (nvenc_module) {
-		FreeLibrary(nvenc_module);
-		nvenc_module = nullptr;
-	}
-}
-
-void NvencSession::OpenSession(void* d3d12_device) {
-	if (encoder)
-		return;
-
+NvencSession::NvencSession(void* d3d12_device) {
 	nvenc_module = ::LoadLibraryW(L"nvEncodeAPI64.dll");
 	if (!nvenc_module)
 		throw;
 
-	auto create_instance =
-		(NvEncodeAPICreateInstanceFunc)(GetProcAddress(nvenc_module, "NvEncodeAPICreateInstance"));
+	auto create_instance = (NvEncodeAPICreateInstanceFunc)(GetProcAddress(
+		nvenc_module, "NvEncodeAPICreateInstance"));
 
 	if (!create_instance) {
 		FreeLibrary(nvenc_module);
@@ -43,11 +32,11 @@ void NvencSession::OpenSession(void* d3d12_device) {
 		throw;
 }
 
-void NvencSession::CloseSession() {
-	if (encoder) {
+NvencSession::~NvencSession() {
+	if (encoder)
 		nvEncDestroyEncoder(encoder);
-		encoder = nullptr;
-	}
+	if (nvenc_module)
+		FreeLibrary(nvenc_module);
 }
 
 void NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
@@ -64,8 +53,8 @@ void NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 	Try | nvEncGetEncodeGUIDs(encoder, guids.data(), guid_count, &actual_count);
 
 	auto guid_equals = [](const GUID& a, const GUID& b) {
-		return a.Data1 == b.Data1 && a.Data2 == b.Data2 && a.Data3 == b.Data3 &&
-			   memcmp(a.Data4, b.Data4, 8) == 0;
+		return a.Data1 == b.Data1 && a.Data2 == b.Data2 && a.Data3 == b.Data3
+			   && memcmp(a.Data4, b.Data4, 8) == 0;
 	};
 
 	for (uint32_t i = 0; i < actual_count; ++i) {
@@ -83,25 +72,21 @@ void NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 	GUID codec_guid = caps.supports_hevc ? NV_ENC_CODEC_HEVC_GUID : NV_ENC_CODEC_H264_GUID;
 
 	caps_param.capsToQuery = NV_ENC_CAPS_WIDTH_MAX;
-	int value = 0;
-	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
-		caps.max_width = static_cast<uint32_t>(value);
-	}
+	auto value = 0;
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS)
+		caps.max_width = (uint32_t)value;
 
 	caps_param.capsToQuery = NV_ENC_CAPS_HEIGHT_MAX;
-	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
-		caps.max_height = static_cast<uint32_t>(value);
-	}
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS)
+		caps.max_height = (uint32_t)value;
 
 	caps_param.capsToQuery = NV_ENC_CAPS_ASYNC_ENCODE_SUPPORT;
-	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS)
 		caps.supports_async_encode = value != 0;
-	}
 
 	caps_param.capsToQuery = NV_ENC_CAPS_SUPPORT_10BIT_ENCODE;
-	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS) {
+	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS)
 		caps.supports_10bit = value != 0;
-	}
 }
 
 bool NvencSession::IsCodecSupported(EncoderCodec codec) {

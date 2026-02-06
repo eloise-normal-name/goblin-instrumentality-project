@@ -2,21 +2,16 @@
 
 #include "try.h"
 
-NvencD3D12::~NvencD3D12() {
-	Shutdown();
-}
-
-void NvencD3D12::Initialize(NvencSession* init_session, uint32_t buffer_count) {
+NvencD3D12::NvencD3D12(NvencSession* init_session, uint32_t buffer_count) {
 	if (!init_session || !init_session->encoder)
 		throw;
 	session = init_session;
 	textures.reserve(buffer_count);
 }
 
-void NvencD3D12::Shutdown() {
+NvencD3D12::~NvencD3D12() {
 	UnregisterAllTextures();
 	UnregisterAllBitstreamBuffers();
-	session = nullptr;
 }
 
 void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
@@ -51,10 +46,9 @@ void NvencD3D12::UnregisterTexture(uint32_t index) {
 	if (index >= textures.size())
 		throw;
 
-	auto& texture = textures[index];
-	if (texture.is_mapped) {
+	RegisteredTexture& texture = textures[index];
+	if (texture.is_mapped)
 		UnmapInputTexture(index);
-	}
 
 	if (texture.registered_ptr) {
 		void* encoder = session->encoder;
@@ -99,7 +93,7 @@ void NvencD3D12::UnregisterBitstreamBuffer(uint32_t index) {
 	if (index >= bitstream_buffers.size())
 		return;
 
-	auto& buffer = bitstream_buffers[index];
+	BitstreamBuffer& buffer = bitstream_buffers[index];
 	if (buffer.registered_ptr) {
 		void* encoder = session->encoder;
 		Try | session->nvEncUnregisterResource(encoder, buffer.registered_ptr);
@@ -118,7 +112,7 @@ void NvencD3D12::MapInputTexture(uint32_t index) {
 	if (index >= textures.size())
 		throw;
 
-	auto& texture = textures[index];
+	RegisteredTexture& texture = textures[index];
 	if (texture.is_mapped)
 		return;
 	if (!texture.registered_ptr)
@@ -142,7 +136,7 @@ void NvencD3D12::UnmapInputTexture(uint32_t index) {
 	if (index >= textures.size())
 		throw;
 
-	auto& texture = textures[index];
+	RegisteredTexture& texture = textures[index];
 	if (!texture.is_mapped)
 		return;
 

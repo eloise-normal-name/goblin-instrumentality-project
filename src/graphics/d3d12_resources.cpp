@@ -2,7 +2,11 @@
 
 #include "try.h"
 
-void SharedTexture::Create(ID3D12Device* dev, const TextureDesc& desc) {
+SharedTexture::SharedTexture(ID3D12Device* dev, const TextureDesc& desc)
+	: width(desc.width)
+	, height(desc.height)
+	, format(desc.format)
+	, current_state(ResourceState::Common) {
 	D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
 	if (desc.allow_render_target)
 		flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
@@ -47,28 +51,16 @@ void SharedTexture::Create(ID3D12Device* dev, const TextureDesc& desc) {
 			| device_ptr->CreateSharedHandle(resource.Get(), nullptr, GENERIC_ALL, nullptr,
 											 &shared_handle);
 	}
-
-	width = desc.width;
-	height = desc.height;
-	format = desc.format;
-	current_state = ResourceState::Common;
 }
 
-void SharedTexture::Reset() {
-	if (shared_handle) {
+SharedTexture::~SharedTexture() {
+	if (shared_handle)
 		CloseHandle(shared_handle);
-		shared_handle = nullptr;
-	}
-	resource.Reset();
-	width = 0;
-	height = 0;
-	format = DXGI_FORMAT_UNKNOWN;
-	current_state = ResourceState::Common;
 }
 
-bool ReadbackBuffer::Create(ID3D12Device* device, uint32_t buffer_size) {
+ReadbackBuffer::ReadbackBuffer(ID3D12Device* device, uint32_t buffer_size) : size(buffer_size) {
 	if (buffer_size == 0)
-		return false;
+		throw;
 
 	D3D12_RESOURCE_DESC desc{
 		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -84,19 +76,10 @@ bool ReadbackBuffer::Create(ID3D12Device* device, uint32_t buffer_size) {
 		.Type = D3D12_HEAP_TYPE_READBACK,
 	};
 
-	if (FAILED(device->CreateCommittedResource(&heap_props, D3D12_HEAP_FLAG_NONE, &desc,
-											   D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-											   IID_PPV_ARGS(&resource)))) {
-		return false;
-	}
-
-	size = buffer_size;
-	return true;
-}
-
-void ReadbackBuffer::Reset() {
-	resource.Reset();
-	size = 0;
+	Try
+		| device->CreateCommittedResource(&heap_props, D3D12_HEAP_FLAG_NONE, &desc,
+										  D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+										  IID_PPV_ARGS(&resource));
 }
 
 D3D12_RESOURCE_STATES ToD3D12State(ResourceState state) {

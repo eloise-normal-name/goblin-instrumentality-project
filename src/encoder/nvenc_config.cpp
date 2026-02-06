@@ -4,7 +4,7 @@
 
 #include "try.h"
 
-void NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
+NvencConfig::NvencConfig(NvencSession* sess, const EncoderConfig& cfg) {
 	if (!sess || !sess->encoder)
 		throw;
 
@@ -23,9 +23,8 @@ void NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	};
 
 	Try
-		| session->nvEncGetEncodePresetConfigEx(enc, NV_ENC_CODEC_H264_GUID, NV_ENC_PRESET_P1_GUID,
-												NV_ENC_TUNING_INFO_LOW_LATENCY,
-												&preset_cfg);
+		| session->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid,
+												NV_ENC_TUNING_INFO_LOW_LATENCY, &preset_cfg);
 
 	encode_config = preset_cfg.presetCfg;
 
@@ -55,13 +54,6 @@ void NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 	} else if (config.codec == EncoderCodec::HEVC) {
 		ConfigureHEVC();
 	}
-}
-
-void NvencConfig::InitializeEncoder() {
-	if (!session)
-		throw;
-
-	void* enc = session->encoder;
 
 	Try | session->nvEncInitializeEncoder(enc, &init_params);
 }

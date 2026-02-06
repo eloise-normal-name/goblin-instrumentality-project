@@ -20,16 +20,8 @@ struct EncoderCapabilities {
 
 struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
   public:
-	NvencSession() = default;
+	explicit NvencSession(void* d3d12_device);
 	~NvencSession();
-
-	NvencSession(const NvencSession&) = delete;
-	NvencSession& operator=(const NvencSession&) = delete;
-	NvencSession(NvencSession&&) = delete;
-	NvencSession& operator=(NvencSession&&) = delete;
-
-	void OpenSession(void* d3d12_device);
-	void CloseSession();
 
 	void QueryCapabilities(EncoderCapabilities& caps);
 	bool IsCodecSupported(EncoderCodec codec);

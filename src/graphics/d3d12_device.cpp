@@ -2,47 +2,26 @@
 
 #include "try.h"
 
+D3D12Device::D3D12Device(const DeviceConfig& config)
+	: buffer_count(config.buffer_count > 0 ? config.buffer_count : 2)
+	, render_target_format(config.render_target_format) {
+	if (buffer_count > 3)
+		buffer_count = 3;
+
+	create_device();
+	create_command_queue();
+	create_swap_chain(config.window_handle, config.frame_width, config.frame_height);
+	create_descriptor_heaps();
+	create_render_targets();
+	create_command_allocators();
+	create_fence();
+}
+
 D3D12Device::~D3D12Device() {
-	Shutdown();
-}
-
-void D3D12Device::Initialize(const DeviceConfig& cfg) {
-	buffer_count = cfg.buffer_count > 0 ? cfg.buffer_count : 2;
-	if (buffer_count > MAX_BUFFER_COUNT) {
-		buffer_count = MAX_BUFFER_COUNT;
-	}
-
-	render_target_format = cfg.render_target_format;
-
-	CreateDevice();
-	CreateCommandQueue();
-	CreateSwapChain(cfg.window_handle, cfg.frame_width, cfg.frame_height);
-	CreateDescriptorHeaps();
-	CreateRenderTargets();
-	CreateCommandAllocators();
-	CreateFence();
-}
-
-void D3D12Device::Shutdown() {
 	WaitForGpu();
 
-	if (fence_event) {
+	if (fence_event)
 		CloseHandle(fence_event);
-		fence_event = nullptr;
-	}
-
-	for (uint32_t i = 0; i < buffer_count; ++i) {
-		command_allocators[i].Reset();
-		render_targets[i].Reset();
-	}
-
-	fence.Reset();
-	rtv_heap.Reset();
-	swap_chain.Reset();
-	command_queue.Reset();
-	device.Reset();
-	adapter.Reset();
-	factory.Reset();
 }
 
 void D3D12Device::WaitForGpu() {
@@ -85,14 +64,13 @@ uint64_t D3D12Device::SignalFenceForCurrentFrame() {
 void D3D12Device::SetFenceEvent(uint64_t value, HANDLE event) {
 	if (!fence || !event)
 		return;
-	if (fence->GetCompletedValue() < value) {
+	if (fence->GetCompletedValue() < value)
 		Try | fence->SetEventOnCompletion(value, event);
-	} else {
+	else
 		SetEvent(event);
-	}
 }
 
-void D3D12Device::CreateDevice() {
+void D3D12Device::create_device() {
 	auto dxgi_factory_flags = 0u;
 
 #if defined(_DEBUG)
@@ -102,40 +80,36 @@ void D3D12Device::CreateDevice() {
 		dxgi_factory_flags |= DXGI_CREATE_FACTORY_DEBUG;
 	}
 #endif
-	ComPtr<IDXGIAdapter1> adapter;
+	ComPtr<IDXGIAdapter1> selected_adapter;
 	DXGI_ADAPTER_DESC1 desc;
 	Try | CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&factory))
 		| factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-											  IID_PPV_ARGS(&adapter))
-		| D3D12CreateDevice(*&adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device))
-		| adapter->GetDesc1(&desc);
+											  IID_PPV_ARGS(&selected_adapter))
+		| D3D12CreateDevice(*&selected_adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device))
+		| selected_adapter->GetDesc1(&desc);
 
 	if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
 		throw;
 }
 
-void D3D12Device::CreateCommandQueue() {
+void D3D12Device::create_command_queue() {
 	D3D12_COMMAND_QUEUE_DESC queue_desc{
 		.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
-		.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
 	};
 
 	Try | device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
 }
 
-void D3D12Device::CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height) {
+void D3D12Device::create_swap_chain(HWND window_handle, uint32_t width, uint32_t height) {
 	DXGI_SWAP_CHAIN_DESC1 sc_desc{
 		.Width = width,
 		.Height = height,
 		.Format = render_target_format,
-		.Stereo = FALSE,
 		.SampleDesc = {.Count = 1, .Quality = 0},
 		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = buffer_count,
 		.Scaling = DXGI_SCALING_STRETCH,
 		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
-		.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-		.Flags = 0,
 	};
 
 	ComPtr<IDXGISwapChain1> sc1;
@@ -148,18 +122,18 @@ void D3D12Device::CreateSwapChain(HWND window_handle, uint32_t width, uint32_t h
 	current_frame_index = swap_chain->GetCurrentBackBufferIndex();
 }
 
-void D3D12Device::CreateDescriptorHeaps() {
-	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
-	rtv_heap_desc.NumDescriptors = buffer_count;
-	rtv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+void D3D12Device::create_descriptor_heaps() {
+	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc{
+		.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		.NumDescriptors = buffer_count,
+	};
 
 	Try | device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&rtv_heap));
 
 	rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void D3D12Device::CreateRenderTargets() {
+void D3D12Device::create_render_targets() {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
 
 	for (uint32_t i = 0; i < buffer_count; ++i) {
@@ -170,7 +144,7 @@ void D3D12Device::CreateRenderTargets() {
 	}
 }
 
-void D3D12Device::CreateCommandAllocators() {
+void D3D12Device::create_command_allocators() {
 	for (uint32_t i = 0; i < buffer_count; ++i) {
 		Try
 			| device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -178,13 +152,12 @@ void D3D12Device::CreateCommandAllocators() {
 	}
 }
 
-void D3D12Device::CreateFence() {
+void D3D12Device::create_fence() {
 	Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
 	fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (!fence_event) {
+	if (!fence_event)
 		throw;
-	}
 
 	for (uint32_t i = 0; i < buffer_count; ++i) {
 		fence_values[i] = 1;

@@ -18,31 +18,13 @@ struct DeviceConfig {
 
 class D3D12Device {
   public:
-	D3D12Device() = default;
+	explicit D3D12Device(const DeviceConfig& config);
 	~D3D12Device();
-
-	D3D12Device(const D3D12Device&) = delete;
-	D3D12Device& operator=(const D3D12Device&) = delete;
-	D3D12Device(D3D12Device&&) = delete;
-	D3D12Device& operator=(D3D12Device&&) = delete;
-
-	void Initialize(const DeviceConfig& config);
-	void Shutdown();
 
 	void WaitForGpu();
 	void MoveToNextFrame();
 	uint64_t SignalFenceForCurrentFrame();
 	void SetFenceEvent(uint64_t value, HANDLE event);
-
-	void CreateDevice();
-	void CreateCommandQueue();
-	void CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height);
-	void CreateDescriptorHeaps();
-	void CreateRenderTargets();
-	void CreateCommandAllocators();
-	void CreateFence();
-
-	static constexpr uint32_t MAX_BUFFER_COUNT = 3;
 
 	ComPtr<IDXGIFactory7> factory;
 	ComPtr<IDXGIAdapter4> adapter;
@@ -50,14 +32,23 @@ class D3D12Device {
 	ComPtr<ID3D12CommandQueue> command_queue;
 	ComPtr<IDXGISwapChain4> swap_chain;
 	ComPtr<ID3D12DescriptorHeap> rtv_heap;
-	ComPtr<ID3D12Resource> render_targets[MAX_BUFFER_COUNT];
-	ComPtr<ID3D12CommandAllocator> command_allocators[MAX_BUFFER_COUNT];
+	ComPtr<ID3D12Resource> render_targets[3];
+	ComPtr<ID3D12CommandAllocator> command_allocators[3];
 	ComPtr<ID3D12Fence> fence;
 	HANDLE fence_event = nullptr;
 
-	uint64_t fence_values[MAX_BUFFER_COUNT] = {};
+	uint64_t fence_values[3] = {};
 	uint32_t current_frame_index = 0;
 	uint32_t buffer_count = 2;
 	uint32_t rtv_descriptor_size = 0;
 	DXGI_FORMAT render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM;
+
+  private:
+	void create_device();
+	void create_command_queue();
+	void create_swap_chain(HWND window_handle, uint32_t width, uint32_t height);
+	void create_descriptor_heaps();
+	void create_render_targets();
+	void create_command_allocators();
+	void create_fence();
 };

@@ -19,16 +19,8 @@ struct TextureDesc {
 
 class SharedTexture {
   public:
-	SharedTexture() = default;
-	~SharedTexture() = default;
-
-	SharedTexture(const SharedTexture&) = delete;
-	SharedTexture& operator=(const SharedTexture&) = delete;
-	SharedTexture(SharedTexture&&) = default;
-	SharedTexture& operator=(SharedTexture&&) = default;
-
-	void Create(ID3D12Device* device, const TextureDesc& desc);
-	void Reset();
+	explicit SharedTexture(ID3D12Device* device, const TextureDesc& desc);
+	~SharedTexture();
 
 	ComPtr<ID3D12Resource> resource;
 	HANDLE shared_handle = nullptr;
@@ -40,16 +32,8 @@ class SharedTexture {
 
 class ReadbackBuffer {
   public:
-	ReadbackBuffer() = default;
+	explicit ReadbackBuffer(ID3D12Device* device, uint32_t size);
 	~ReadbackBuffer() = default;
-
-	ReadbackBuffer(const ReadbackBuffer&) = delete;
-	ReadbackBuffer& operator=(const ReadbackBuffer&) = delete;
-	ReadbackBuffer(ReadbackBuffer&&) = default;
-	ReadbackBuffer& operator=(ReadbackBuffer&&) = default;
-
-	bool Create(ID3D12Device* device, uint32_t size);
-	void Reset();
 
 	ComPtr<ID3D12Resource> resource;
 	uint32_t size = 0;
