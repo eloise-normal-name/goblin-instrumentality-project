@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <vector>
 
 #include "../encoder/nvenc_config.h"
@@ -29,7 +28,7 @@ struct PipelineConfig {
 
 class FrameCoordinator {
   public:
-	explicit FrameCoordinator(D3D12Device* device, const PipelineConfig& config);
+	explicit FrameCoordinator(D3D12Device& device, const PipelineConfig& config);
 	~FrameCoordinator();
 
 	void BeginFrame();
@@ -37,10 +36,10 @@ class FrameCoordinator {
 	void EncodeFrame(FrameData& output);
 
 	D3D12Commands* GetCommands() {
-		return commands.get();
+		return &commands;
 	}
 	SharedTexture* GetEncoderTexture() {
-		return encoder_texture.get();
+		return &encoder_texture;
 	}
 	uint32_t GetCurrentFrameIndex() const {
 		return current_frame_index;
@@ -53,15 +52,31 @@ class FrameCoordinator {
 	void SubmitFrameToEncoder();
 	void RetrieveEncodedFrame(FrameData& output);
 
-	D3D12Device* device;
+	D3D12Device& device;
 	PipelineConfig config;
 
-	std::unique_ptr<D3D12Commands> commands;
-	std::unique_ptr<SharedTexture> encoder_texture;
-	std::unique_ptr<ReadbackBuffer> output_buffer;
-	std::unique_ptr<NvencSession> nvenc_session;
-	std::unique_ptr<NvencD3D12> nvenc_d3d12;
-	std::unique_ptr<NvencConfig> nvenc_config;
+	D3D12Commands commands{device.device.Get()};
+	SharedTexture encoder_texture{device.device.Get(), TextureDesc{
+														   .width = config.width,
+														   .height = config.height,
+														   .format = DXGI_FORMAT_B8G8R8A8_UNORM,
+														   .allow_simultaneous_access = true,
+													   }};
+	ReadbackBuffer output_buffer{device.device.Get(), config.width* config.height * 4};
+	NvencSession nvenc_session{device.device.Get()};
+	NvencD3D12 nvenc_d3d12{&nvenc_session, device.buffer_count};
+	NvencConfig nvenc_config{&nvenc_session, EncoderConfig{
+												 .codec = config.codec,
+												 .preset = EncoderPreset::Fast,
+												 .rate_control = RateControlMode::ConstantBitrate,
+												 .width = config.width,
+												 .height = config.height,
+												 .frame_rate_num = config.frame_rate,
+												 .bitrate = config.bitrate,
+												 .max_bitrate = config.bitrate * 2,
+												 .gop_length = config.frame_rate * 2,
+												 .low_latency = config.low_latency,
+											 }};
 	HANDLE encode_fence_event = nullptr;
 
 	uint32_t current_frame_index = 0;
