@@ -24,7 +24,10 @@ set(SOURCES
 add_executable(goblin-stream WIN32 ${SOURCES})
 
 # 5. Include Directories
-target_include_directories(goblin-stream PRIVATE "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(goblin-stream PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/include"
+)
 
 # 6. Compiler Flags (Warning Level 4)
 target_compile_options(goblin-stream PRIVATE /W4 /EHs)

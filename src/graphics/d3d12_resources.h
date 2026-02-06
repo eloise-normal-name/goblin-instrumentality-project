@@ -23,10 +23,10 @@ class SharedTexture {
 	~SharedTexture();
 
 	ComPtr<ID3D12Resource> resource;
-	HANDLE shared_handle = nullptr;
-	uint32_t width = 0;
-	uint32_t height = 0;
-	DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+	HANDLE shared_handle		= nullptr;
+	uint32_t width				= 0;
+	uint32_t height				= 0;
+	DXGI_FORMAT format			= DXGI_FORMAT_UNKNOWN;
 	ResourceState current_state = ResourceState::Common;
 };
 

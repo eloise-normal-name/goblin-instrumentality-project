@@ -9,16 +9,16 @@ NvencConfig::NvencConfig(NvencSession* sess, const EncoderConfig& cfg) {
 		throw;
 
 	session = sess;
-	config = cfg;
+	config	= cfg;
 
 	void* enc = session->encoder;
 
-	GUID codec_guid = GetCodecGuid(config.codec);
-	GUID preset_guid = GetPresetGuid(config.preset);
+	GUID codec_guid			  = GetCodecGuid(config.codec);
+	GUID preset_guid		  = GetPresetGuid(config.preset);
 	NV_ENC_TUNING_INFO tuning = GetTuningInfo(config.low_latency);
 
 	NV_ENC_PRESET_CONFIG preset_cfg{
-		.version = NV_ENC_PRESET_CONFIG_VER,
+		.version   = NV_ENC_PRESET_CONFIG_VER,
 		.presetCfg = {.version = NV_ENC_CONFIG_VER},
 	};
 
@@ -29,22 +29,22 @@ NvencConfig::NvencConfig(NvencSession* sess, const EncoderConfig& cfg) {
 	encode_config = preset_cfg.presetCfg;
 
 	init_params = {
-		.version = NV_ENC_INITIALIZE_PARAMS_VER,
-		.encodeGUID = NV_ENC_CODEC_H264_GUID,
-		.presetGUID = NV_ENC_PRESET_P1_GUID,
-		.encodeWidth = config.width,
-		.encodeHeight = config.height,
-		.darWidth = config.width,
-		.darHeight = config.height,
-		.frameRateNum = config.frame_rate_num,
-		.frameRateDen = config.frame_rate_den,
+		.version		   = NV_ENC_INITIALIZE_PARAMS_VER,
+		.encodeGUID		   = NV_ENC_CODEC_H264_GUID,
+		.presetGUID		   = NV_ENC_PRESET_P1_GUID,
+		.encodeWidth	   = config.width,
+		.encodeHeight	   = config.height,
+		.darWidth		   = config.width,
+		.darHeight		   = config.height,
+		.frameRateNum	   = config.frame_rate_num,
+		.frameRateDen	   = config.frame_rate_den,
 		.enableEncodeAsync = true,
-		.enablePTD = 1,
-		.encodeConfig = &encode_config,
-		.maxEncodeWidth = config.width,
-		.maxEncodeHeight = config.height,
-		.tuningInfo = tuning,
-		.bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB,
+		.enablePTD		   = 1,
+		.encodeConfig	   = &encode_config,
+		.maxEncodeWidth	   = config.width,
+		.maxEncodeHeight   = config.height,
+		.tuningInfo		   = tuning,
+		.bufferFormat	   = NV_ENC_BUFFER_FORMAT_ARGB,
 	};
 
 	ConfigureRateControl();
@@ -111,63 +111,63 @@ void NvencConfig::ConfigureRateControl() {
 
 	switch (config.rate_control) {
 		case RateControlMode::ConstantQP:
-			rc.rateControlMode = NV_ENC_PARAMS_RC_CONSTQP;
-			rc.constQP.qpIntra = config.qp;
+			rc.rateControlMode	= NV_ENC_PARAMS_RC_CONSTQP;
+			rc.constQP.qpIntra	= config.qp;
 			rc.constQP.qpInterP = config.qp;
 			rc.constQP.qpInterB = config.qp;
 			break;
 
 		case RateControlMode::VariableBitrate:
 			rc.rateControlMode = NV_ENC_PARAMS_RC_VBR;
-			rc.averageBitRate = config.bitrate;
-			rc.maxBitRate = config.max_bitrate;
+			rc.averageBitRate  = config.bitrate;
+			rc.maxBitRate	   = config.max_bitrate;
 			break;
 
 		case RateControlMode::ConstantBitrate:
 			rc.rateControlMode = NV_ENC_PARAMS_RC_CBR;
-			rc.averageBitRate = config.bitrate;
-			rc.maxBitRate = config.bitrate;
+			rc.averageBitRate  = config.bitrate;
+			rc.maxBitRate	   = config.bitrate;
 			break;
 	}
 
 	if (config.low_latency) {
 		rc.lowDelayKeyFrameScale = 1;
-		rc.zeroReorderDelay = 1;
+		rc.zeroReorderDelay		 = 1;
 	}
 }
 
 void NvencConfig::ConfigureH264() {
 	NV_ENC_CONFIG_H264& h264_cfg = encode_config.encodeCodecConfig.h264Config;
 
-	h264_cfg.idrPeriod = config.gop_length;
-	h264_cfg.sliceMode = 0;
+	h264_cfg.idrPeriod	   = config.gop_length;
+	h264_cfg.sliceMode	   = 0;
 	h264_cfg.sliceModeData = 0;
-	h264_cfg.repeatSPSPPS = 1;
+	h264_cfg.repeatSPSPPS  = 1;
 
 	if (config.low_latency) {
-		h264_cfg.outputAUD = 0;
-		h264_cfg.outputPictureTimingSEI = 0;
+		h264_cfg.outputAUD				  = 0;
+		h264_cfg.outputPictureTimingSEI	  = 0;
 		h264_cfg.outputBufferingPeriodSEI = 0;
 	}
 
-	encode_config.gopLength = config.gop_length;
+	encode_config.gopLength		 = config.gop_length;
 	encode_config.frameIntervalP = config.b_frames + 1;
 }
 
 void NvencConfig::ConfigureHEVC() {
 	NV_ENC_CONFIG_HEVC& hevc_cfg = encode_config.encodeCodecConfig.hevcConfig;
 
-	hevc_cfg.idrPeriod = config.gop_length;
-	hevc_cfg.sliceMode = 0;
+	hevc_cfg.idrPeriod	   = config.gop_length;
+	hevc_cfg.sliceMode	   = 0;
 	hevc_cfg.sliceModeData = 0;
-	hevc_cfg.repeatSPSPPS = 1;
+	hevc_cfg.repeatSPSPPS  = 1;
 
 	if (config.low_latency) {
-		hevc_cfg.outputAUD = 0;
-		hevc_cfg.outputPictureTimingSEI = 0;
+		hevc_cfg.outputAUD				  = 0;
+		hevc_cfg.outputPictureTimingSEI	  = 0;
 		hevc_cfg.outputBufferingPeriodSEI = 0;
 	}
 
-	encode_config.gopLength = config.gop_length;
+	encode_config.gopLength		 = config.gop_length;
 	encode_config.frameIntervalP = config.b_frames + 1;
 }

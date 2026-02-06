@@ -22,10 +22,10 @@ NvencSession::NvencSession(void* d3d12_device) {
 	Try | create_instance(this);
 
 	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS session_params = {};
-	session_params.version = NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;
-	session_params.deviceType = NV_ENC_DEVICE_TYPE_DIRECTX;
-	session_params.device = d3d12_device;
-	session_params.apiVersion = NVENCAPI_VERSION;
+	session_params.version								= NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;
+	session_params.deviceType							= NV_ENC_DEVICE_TYPE_DIRECTX;
+	session_params.device								= d3d12_device;
+	session_params.apiVersion							= NVENCAPI_VERSION;
 
 	Try | nvEncOpenEncodeSessionEx(&session_params, &encoder);
 	if (!encoder)
@@ -67,12 +67,12 @@ void NvencSession::QueryCapabilities(EncoderCapabilities& caps) {
 	}
 
 	NV_ENC_CAPS_PARAM caps_param = {};
-	caps_param.version = NV_ENC_CAPS_PARAM_VER;
+	caps_param.version			 = NV_ENC_CAPS_PARAM_VER;
 
 	GUID codec_guid = caps.supports_hevc ? NV_ENC_CODEC_HEVC_GUID : NV_ENC_CODEC_H264_GUID;
 
 	caps_param.capsToQuery = NV_ENC_CAPS_WIDTH_MAX;
-	auto value = 0;
+	auto value			   = 0;
 	if (nvEncGetEncodeCaps(encoder, codec_guid, &caps_param, &value) == NV_ENC_SUCCESS)
 		caps.max_width = (uint32_t)value;
 

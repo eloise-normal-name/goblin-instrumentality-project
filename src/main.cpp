@@ -3,10 +3,10 @@
 #include "graphics/d3d12_device.h"
 #include "pipeline/frame_coordinator.h"
 
-constexpr uint32_t WINDOW_WIDTH = 1920;
-constexpr uint32_t WINDOW_HEIGHT = 1080;
+constexpr uint32_t WINDOW_WIDTH		  = 1920;
+constexpr uint32_t WINDOW_HEIGHT	  = 1080;
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"GoblinStreamWindow";
-constexpr wchar_t WINDOW_TITLE[] = L"Goblin Stream";
+constexpr wchar_t WINDOW_TITLE[]	  = L"Goblin Stream";
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
 	switch (message) {
@@ -25,18 +25,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 
 HWND CreateAppWindow(HINSTANCE instance) {
 	WNDCLASSEXW wc{
-		.cbSize = sizeof(WNDCLASSEXW),
-		.lpfnWndProc = WindowProc,
-		.hInstance = instance,
+		.cbSize		   = sizeof(WNDCLASSEXW),
+		.lpfnWndProc   = WindowProc,
+		.hInstance	   = instance,
 		.lpszClassName = WINDOW_CLASS_NAME,
 	};
 
 	RegisterClassExW(&wc);
 
 	RECT rect{
-		.left = 0,
-		.top = 0,
-		.right = (LONG)WINDOW_WIDTH,
+		.left	= 0,
+		.top	= 0,
+		.right	= (LONG)WINDOW_WIDTH,
 		.bottom = (LONG)WINDOW_HEIGHT,
 	};
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
@@ -52,19 +52,19 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		return 1;
 
 	D3D12Device device({
-		.window_handle = hwnd,
-		.frame_width = WINDOW_WIDTH,
-		.frame_height = WINDOW_HEIGHT,
-		.buffer_count = 2,
+		.window_handle		  = hwnd,
+		.frame_width		  = WINDOW_WIDTH,
+		.frame_height		  = WINDOW_HEIGHT,
+		.buffer_count		  = 2,
 		.render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM,
 	});
 
 	PipelineConfig pipeline_config{
-		.width = WINDOW_WIDTH,
-		.height = WINDOW_HEIGHT,
-		.frame_rate = 60,
-		.bitrate = 8000000,
-		.codec = EncoderCodec::H264,
+		.width		 = WINDOW_WIDTH,
+		.height		 = WINDOW_HEIGHT,
+		.frame_rate	 = 60,
+		.bitrate	 = 8000000,
+		.codec		 = EncoderCodec::H264,
 		.low_latency = true,
 	};
 	FrameCoordinator coordinator(device, pipeline_config);

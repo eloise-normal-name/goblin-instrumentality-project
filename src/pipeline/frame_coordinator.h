@@ -57,7 +57,7 @@ class FrameCoordinator {
 
 	D3D12Commands commands{device.device.Get()};
 	SharedTexture encoder_texture{device.device.Get(), TextureDesc{
-														   .width = config.width,
+														   .width  = config.width,
 														   .height = config.height,
 														   .format = DXGI_FORMAT_B8G8R8A8_UNORM,
 														   .allow_simultaneous_access = true,
@@ -66,20 +66,20 @@ class FrameCoordinator {
 	NvencSession nvenc_session{device.device.Get()};
 	NvencD3D12 nvenc_d3d12{&nvenc_session, device.buffer_count};
 	NvencConfig nvenc_config{&nvenc_session, EncoderConfig{
-												 .codec = config.codec,
-												 .preset = EncoderPreset::Fast,
-												 .rate_control = RateControlMode::ConstantBitrate,
-												 .width = config.width,
-												 .height = config.height,
+												 .codec			 = config.codec,
+												 .preset		 = EncoderPreset::Fast,
+												 .rate_control	 = RateControlMode::ConstantBitrate,
+												 .width			 = config.width,
+												 .height		 = config.height,
 												 .frame_rate_num = config.frame_rate,
-												 .bitrate = config.bitrate,
-												 .max_bitrate = config.bitrate * 2,
-												 .gop_length = config.frame_rate * 2,
-												 .low_latency = config.low_latency,
+												 .bitrate		 = config.bitrate,
+												 .max_bitrate	 = config.bitrate * 2,
+												 .gop_length	 = config.frame_rate * 2,
+												 .low_latency	 = config.low_latency,
 											 }};
 	HANDLE encode_fence_event = nullptr;
 
-	uint32_t current_frame_index = 0;
-	uint64_t frame_count = 0;
+	uint32_t current_frame_index	 = 0;
+	uint64_t frame_count			 = 0;
 	uint64_t last_encode_fence_value = 0;
 };

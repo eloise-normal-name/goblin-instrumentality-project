@@ -14,14 +14,14 @@ SharedTexture::SharedTexture(ID3D12Device* dev, const TextureDesc& desc)
 		flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 
 	D3D12_RESOURCE_DESC resource_desc{
-		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		.Width = desc.width,
-		.Height = desc.height,
+		.Dimension		  = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		.Width			  = desc.width,
+		.Height			  = desc.height,
 		.DepthOrArraySize = 1,
-		.MipLevels = 1,
-		.Format = desc.format,
-		.SampleDesc = {.Count = 1},
-		.Flags = flags,
+		.MipLevels		  = 1,
+		.Format			  = desc.format,
+		.SampleDesc		  = {.Count = 1},
+		.Flags			  = flags,
 	};
 
 	D3D12_HEAP_PROPERTIES heap_props{
@@ -33,7 +33,7 @@ SharedTexture::SharedTexture(ID3D12Device* dev, const TextureDesc& desc)
 
 	D3D12_CLEAR_VALUE clear_value{
 		.Format = desc.format,
-		.Color = {0.0f, 0.0f, 0.0f, 1.0f},
+		.Color	= {0.0f, 0.0f, 0.0f, 1.0f},
 	};
 
 	D3D12_CLEAR_VALUE* clear_value_ptr = desc.allow_render_target ? &clear_value : nullptr;
@@ -63,13 +63,13 @@ ReadbackBuffer::ReadbackBuffer(ID3D12Device* device, uint32_t buffer_size) : siz
 		throw;
 
 	D3D12_RESOURCE_DESC desc{
-		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-		.Width = buffer_size,
-		.Height = 1,
+		.Dimension		  = D3D12_RESOURCE_DIMENSION_BUFFER,
+		.Width			  = buffer_size,
+		.Height			  = 1,
 		.DepthOrArraySize = 1,
-		.MipLevels = 1,
-		.SampleDesc = {.Count = 1},
-		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		.MipLevels		  = 1,
+		.SampleDesc		  = {.Count = 1},
+		.Layout			  = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 	};
 
 	D3D12_HEAP_PROPERTIES heap_props{

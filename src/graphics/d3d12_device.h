@@ -12,7 +12,7 @@ struct DeviceConfig {
 	HWND window_handle;
 	uint32_t frame_width;
 	uint32_t frame_height;
-	uint32_t buffer_count;
+	uint32_t buffer_count = 3;
 	DXGI_FORMAT render_target_format;
 };
 
@@ -37,10 +37,10 @@ class D3D12Device {
 	ComPtr<ID3D12Fence> fence;
 	HANDLE fence_event = nullptr;
 
-	uint64_t fence_values[3] = {};
-	uint32_t current_frame_index = 0;
-	uint32_t buffer_count = 2;
-	uint32_t rtv_descriptor_size = 0;
+	uint64_t fence_values[3]		 = {};
+	uint32_t current_frame_index	 = 0;
+	uint32_t buffer_count			 = 2;
+	uint32_t rtv_descriptor_size	 = 0;
 	DXGI_FORMAT render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM;
 
   private:

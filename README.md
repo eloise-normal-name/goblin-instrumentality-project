@@ -9,11 +9,13 @@ goblin-stream/
 ├── .github/           # Copilot instructions and project standards
 ├── .vscode/           # VS Code configuration
 ├── bin/               # Build outputs (Debug/Release)
-├── include/nvenc/     # Vendored NVENC 13 SDK headers
+├── include/           # Third-party headers only (do not format)
+│   └── nvenc/         # Vendored NVENC 13 SDK headers
 ├── src/
 │   ├── graphics/      # D3D12 rendering (device, resources, commands)
 │   ├── encoder/       # NVENC encoding (session, config, D3D12 interop)
 │   ├── pipeline/      # Frame coordination (render-to-encode sync)
+│   ├── try.h          # Error handling helper (Try | pattern)
 │   └── main.cpp       # Application entry point
 └── CMakeLists.txt     # CMake build configuration
 ```
@@ -101,6 +103,7 @@ Key points:
 - Windows API preferred; static linking
 - No multi-threading; GPU synchronization only
 - Format with clang-format before committing
+- Do not format the include/ directory (third-party headers only)
 
 ## References
 

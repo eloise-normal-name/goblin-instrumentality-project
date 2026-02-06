@@ -36,7 +36,7 @@ void D3D12Commands::TransitionTexture(SharedTexture& texture, ResourceState new_
 		return;
 
 	D3D12_RESOURCE_STATES before = ToD3D12State(cur_state);
-	D3D12_RESOURCE_STATES after = ToD3D12State(new_state);
+	D3D12_RESOURCE_STATES after	 = ToD3D12State(new_state);
 
 	TransitionResource(texture.resource.Get(), before, after);
 	texture.current_state = new_state;
@@ -54,16 +54,16 @@ void D3D12Commands::SetViewportAndScissor(uint32_t w, uint32_t h) {
 	D3D12_VIEWPORT viewport{
 		.TopLeftX = 0.0f,
 		.TopLeftY = 0.0f,
-		.Width = (float)w,
-		.Height = (float)h,
+		.Width	  = (float)w,
+		.Height	  = (float)h,
 		.MinDepth = 0.0f,
 		.MaxDepth = 1.0f,
 	};
 
 	D3D12_RECT scissor{
-		.left = 0,
-		.top = 0,
-		.right = (LONG)w,
+		.left	= 0,
+		.top	= 0,
+		.right	= (LONG)w,
 		.bottom = (LONG)h,
 	};
 

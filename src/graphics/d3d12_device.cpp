@@ -54,7 +54,7 @@ void D3D12Device::MoveToNextFrame() {
 }
 
 uint64_t D3D12Device::SignalFenceForCurrentFrame() {
-	uint32_t index = current_frame_index;
+	uint32_t index				   = current_frame_index;
 	uint64_t fence_value_to_signal = fence_values[index] + 1;
 	Try | command_queue->Signal(fence.Get(), fence_value_to_signal);
 	fence_values[index] = fence_value_to_signal;
@@ -102,14 +102,14 @@ void D3D12Device::create_command_queue() {
 
 void D3D12Device::create_swap_chain(HWND window_handle, uint32_t width, uint32_t height) {
 	DXGI_SWAP_CHAIN_DESC1 sc_desc{
-		.Width = width,
-		.Height = height,
-		.Format = render_target_format,
-		.SampleDesc = {.Count = 1, .Quality = 0},
+		.Width		 = width,
+		.Height		 = height,
+		.Format		 = render_target_format,
+		.SampleDesc	 = {.Count = 1, .Quality = 0},
 		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = buffer_count,
-		.Scaling = DXGI_SCALING_STRETCH,
-		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		.Scaling	 = DXGI_SCALING_STRETCH,
+		.SwapEffect	 = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 	};
 
 	ComPtr<IDXGISwapChain1> sc1;
@@ -124,7 +124,7 @@ void D3D12Device::create_swap_chain(HWND window_handle, uint32_t width, uint32_t
 
 void D3D12Device::create_descriptor_heaps() {
 	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc{
-		.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		.Type			= D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		.NumDescriptors = buffer_count,
 	};
 
