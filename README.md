@@ -58,9 +58,11 @@ goblin-stream/
 
 1. **D3D12 Device** creates render targets as shared GPU resources
 2. **D3D12 Commands** records draw calls and executes on GPU
-3. **Frame Coordinator** waits for D3D12 fence signal (render complete)
-4. **NVENC D3D12** submits the rendered texture to hardware encoder
-5. **NVENC Session** retrieves H.264/HEVC bitstream for streaming
+3. **Frame Coordinator** signals and waits for D3D12 fence (render complete)
+4. **Frame Coordinator** waits for prior NVENC fence (encode complete) before reusing encoder texture
+5. **NVENC D3D12** submits rendered texture to encoder via D3D12 fence points
+6. **NVENC Session** waits for encode completion and retrieves H.264/HEVC bitstream
+7. Graphics queue resumes texture reuse when NVENC signals fence completion
 
 ## Build
 
@@ -90,30 +92,18 @@ cmake --build build --config Release
 .\bin\Debug\goblin-stream.exe
 ```
 
-## Code Standards
-
-All code must follow the standards defined in `.github/copilot-instructions.md`:
-
-- **C++23** standard with self-documenting code
-- **Google C++ style** enforced by `.clang-format`
-- **Windows API** preferred over STL when straightforward
-- **Static linking** (MultiThreaded runtime `/MT`)
-- **Vendored headers only** (NVENC headers included; no external library linking)
-- **No multi-threading** (single-threaded with GPU synchronization)
-
 ## Development
 
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes and keep code self-documenting
-3. Format code: Automatic on save in VS Code (or manually with clang-format)
-4. Build and test: Use CMake Tools in VS Code
-5. Commit and push your branch
+See `.github/copilot-instructions.md` for detailed code standards, conventions, and development practices.
 
-## Resources
+Key points:
+- **C++23** standard with self-documenting code
+- Windows API preferred; static linking
+- No multi-threading; GPU synchronization only
+- Format with clang-format before committing
 
-- [Windows API Documentation](https://docs.microsoft.com/en-us/windows/win32/api/)
-- [Direct3D 12 Programming Guide](https://docs.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
-- [NVIDIA Video Codec SDK](https://developer.nvidia.com/video-codec-sdk)
-- [NVENC Programming Guide](https://docs.nvidia.com/video-technologies/video-codec-sdk/nvenc-video-encoder-api-prog-guide/)
+## References
+
+- [Direct3D 12 Documentation](https://docs.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
+- [NVIDIA NVENC Programming Guide](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/)
 - [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
-- [MSVC Documentation](https://docs.microsoft.com/en-us/cpp/)
