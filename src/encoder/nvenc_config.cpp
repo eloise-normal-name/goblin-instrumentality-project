@@ -22,14 +22,17 @@ void NvencConfig::Initialize(NvencSession* sess, const EncoderConfig& cfg) {
 		.presetCfg = {.version = NV_ENC_CONFIG_VER},
 	};
 
-	Try | session->nvEncGetEncodePresetConfigEx(enc, codec_guid, preset_guid, tuning, &preset_cfg);
+	Try
+		| session->nvEncGetEncodePresetConfigEx(enc, NV_ENC_CODEC_H264_GUID, NV_ENC_PRESET_P1_GUID,
+												NV_ENC_TUNING_INFO_LOW_LATENCY,
+												&preset_cfg);
 
 	encode_config = preset_cfg.presetCfg;
 
 	init_params = {
 		.version = NV_ENC_INITIALIZE_PARAMS_VER,
-		.encodeGUID = codec_guid,
-		.presetGUID = preset_guid,
+		.encodeGUID = NV_ENC_CODEC_H264_GUID,
+		.presetGUID = NV_ENC_PRESET_P1_GUID,
 		.encodeWidth = config.width,
 		.encodeHeight = config.height,
 		.darWidth = config.width,

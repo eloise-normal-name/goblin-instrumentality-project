@@ -124,7 +124,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 				continue;
 			}
 
-			device.swap_chain->Present(1, 0);
+			device.swap_chain->Present(0, 0);
 			device.MoveToNextFrame();
 		}
 

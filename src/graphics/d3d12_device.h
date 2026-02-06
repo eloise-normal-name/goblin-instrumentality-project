@@ -31,6 +31,8 @@ class D3D12Device {
 
 	void WaitForGpu();
 	void MoveToNextFrame();
+	uint64_t SignalFenceForCurrentFrame();
+	void SetFenceEvent(uint64_t value, HANDLE event);
 
 	void CreateDevice();
 	void CreateCommandQueue();

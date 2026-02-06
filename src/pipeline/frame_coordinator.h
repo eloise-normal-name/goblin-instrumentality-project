@@ -72,8 +72,10 @@ class FrameCoordinator {
 	NvencSession nvenc_session;
 	NvencD3D12 nvenc_d3d12;
 	NvencConfig nvenc_config;
+	HANDLE encode_fence_event = nullptr;
 
 	uint32_t current_frame_index = 0;
 	uint64_t frame_count = 0;
+	uint64_t last_encode_fence_value = 0;
 	bool encoder_initialized = false;
 };

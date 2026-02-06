@@ -74,6 +74,24 @@ void D3D12Device::MoveToNextFrame() {
 	fence_values[current_frame_index] = current_fence_value + 1;
 }
 
+uint64_t D3D12Device::SignalFenceForCurrentFrame() {
+	uint32_t index = current_frame_index;
+	uint64_t fence_value_to_signal = fence_values[index] + 1;
+	Try | command_queue->Signal(fence.Get(), fence_value_to_signal);
+	fence_values[index] = fence_value_to_signal;
+	return fence_value_to_signal;
+}
+
+void D3D12Device::SetFenceEvent(uint64_t value, HANDLE event) {
+	if (!fence || !event)
+		return;
+	if (fence->GetCompletedValue() < value) {
+		Try | fence->SetEventOnCompletion(value, event);
+	} else {
+		SetEvent(event);
+	}
+}
+
 void D3D12Device::CreateDevice() {
 	auto dxgi_factory_flags = 0u;
 
