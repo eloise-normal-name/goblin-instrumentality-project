@@ -8,6 +8,7 @@
 #include "../encoder/nvenc_session.h"
 #include "../graphics/d3d12_commands.h"
 #include "../graphics/d3d12_device.h"
+#include "../graphics/d3d12_frame_sync.h"
 #include "../graphics/d3d12_resources.h"
 #include "../graphics/render_targets.h"
 
@@ -29,8 +30,8 @@ struct PipelineConfig {
 
 class FrameCoordinator {
   public:
-	explicit FrameCoordinator(D3D12Device& device, RenderTargets& targets,
-							  const PipelineConfig& config);
+	explicit FrameCoordinator(D3D12Device& device, D3D12FrameSync& frame_sync,
+							  RenderTargets& targets, const PipelineConfig& config);
 	~FrameCoordinator();
 
 	void BeginFrame();
@@ -55,6 +56,7 @@ class FrameCoordinator {
 	void RetrieveEncodedFrame(FrameData& output);
 
 	D3D12Device& device;
+	D3D12FrameSync& frame_sync;
 	RenderTargets& render_targets;
 	PipelineConfig config;
 

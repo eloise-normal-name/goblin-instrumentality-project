@@ -4,9 +4,9 @@
 
 #include "try.h"
 
-FrameCoordinator::FrameCoordinator(D3D12Device& dev, RenderTargets& targets,
+FrameCoordinator::FrameCoordinator(D3D12Device& dev, D3D12FrameSync& sync, RenderTargets& targets,
 								   const PipelineConfig& cfg)
-	: device(dev), render_targets(targets), config(cfg) {
+	: device(dev), frame_sync(sync), render_targets(targets), config(cfg) {
 	uint32_t buffer_size = config.width * config.height * 4;
 
 	NV_ENC_BUFFER_FORMAT nvenc_format = DxgiFormatToNvencFormat(encoder_texture.format);
@@ -21,7 +21,7 @@ FrameCoordinator::FrameCoordinator(D3D12Device& dev, RenderTargets& targets,
 }
 
 FrameCoordinator::~FrameCoordinator() {
-	device.WaitForGpu();
+	frame_sync.WaitForGpu();
 
 	if (encode_fence_event)
 		CloseHandle(encode_fence_event);
@@ -33,7 +33,7 @@ void FrameCoordinator::BeginFrame() {
 
 void FrameCoordinator::EndFrame() {
 	if (last_encode_fence_value > 0)
-		Try | device.command_queue->Wait(device.fence.Get(), last_encode_fence_value);
+		Try | device.command_queue->Wait(frame_sync.fence.Get(), last_encode_fence_value);
 
 	commands.TransitionResource(
 		render_targets.render_targets[render_targets.current_frame_index].Get(),
@@ -54,13 +54,13 @@ void FrameCoordinator::EndFrame() {
 }
 
 void FrameCoordinator::EncodeFrame(FrameData& output) {
-	uint64_t gpu_fence_value = device.SignalFenceForFrame(render_targets.current_frame_index);
+	uint64_t gpu_fence_value = frame_sync.SignalFenceForFrame(render_targets.current_frame_index);
 
 	SubmitFrameToEncoder();
 
 	uint64_t output_fence_value = gpu_fence_value + 1;
 	last_encode_fence_value		= output_fence_value;
-	device.SetFenceEvent(output_fence_value, encode_fence_event);
+	frame_sync.SetFenceEvent(output_fence_value, encode_fence_event);
 	WaitForSingleObject(encode_fence_event, INFINITE);
 
 	RetrieveEncodedFrame(output);
@@ -87,11 +87,12 @@ void FrameCoordinator::SubmitFrameToEncoder() {
 	void* mapped_bitstream = map_params.mappedResource;
 
 	NV_ENC_INPUT_RESOURCE_D3D12 input_resource{
-		.version		 = NV_ENC_INPUT_RESOURCE_D3D12_VER,
-		.pInputBuffer	 = texture.mapped_ptr,
-		.inputFencePoint = {.version	 = NV_ENC_FENCE_POINT_D3D12_VER,
-							.pFence		 = device.fence.Get(),
-							.signalValue = device.fence_values[render_targets.current_frame_index]},
+		.version	  = NV_ENC_INPUT_RESOURCE_D3D12_VER,
+		.pInputBuffer = texture.mapped_ptr,
+		.inputFencePoint
+		= {.version		= NV_ENC_FENCE_POINT_D3D12_VER,
+		   .pFence		= frame_sync.fence.Get(),
+		   .signalValue = frame_sync.fence_values[render_targets.current_frame_index]},
 	};
 
 	NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource{
@@ -100,9 +101,9 @@ void FrameCoordinator::SubmitFrameToEncoder() {
 	};
 	output_resource.outputFencePoint.version  = NV_ENC_FENCE_POINT_D3D12_VER;
 	output_resource.outputFencePoint.reserved = 0;
-	output_resource.outputFencePoint.pFence	  = device.fence.Get();
+	output_resource.outputFencePoint.pFence	  = frame_sync.fence.Get();
 	output_resource.outputFencePoint.signalValue
-		= device.fence_values[render_targets.current_frame_index] + 1;
+		= frame_sync.fence_values[render_targets.current_frame_index] + 1;
 	output_resource.outputFencePoint.bSignal = 1;
 
 	NV_ENC_PIC_PARAMS pic_params{
@@ -144,8 +145,8 @@ void FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {
 		.pOutputBuffer = mapped_bitstream,
 		.outputFencePoint
 		= {.version		= NV_ENC_FENCE_POINT_D3D12_VER,
-		   .pFence		= device.fence.Get(),
-		   .signalValue = device.fence_values[render_targets.current_frame_index] + 1,
+		   .pFence		= frame_sync.fence.Get(),
+		   .signalValue = frame_sync.fence_values[render_targets.current_frame_index] + 1,
 		   .bSignal		= 1},
 	};
 

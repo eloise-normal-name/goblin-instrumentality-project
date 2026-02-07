@@ -17,21 +17,13 @@ class D3D12Device {
 	explicit D3D12Device(const DeviceConfig& config);
 	~D3D12Device();
 
-	void WaitForGpu();
-	void MoveToNextFrame(uint32_t previous_frame_index, uint32_t next_frame_index);
-	uint64_t SignalFenceForFrame(uint32_t frame_index);
-	void SetFenceEvent(uint64_t value, HANDLE event);
-
 	ComPtr<IDXGIFactory7> factory;
 	ComPtr<IDXGIAdapter4> adapter;
 	ComPtr<ID3D12Device> device;
 	ComPtr<ID3D12CommandQueue> command_queue;
 	ComPtr<ID3D12CommandAllocator> command_allocators[3];
-	ComPtr<ID3D12Fence> fence;
-	HANDLE fence_event = nullptr;
 
-	uint64_t fence_values[3] = {};
-	uint32_t buffer_count	 = 2;
+	uint32_t buffer_count = 2;
 
   private:
 	void create_device();

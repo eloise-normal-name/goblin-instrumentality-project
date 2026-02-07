@@ -1,6 +1,7 @@
 #include <windows.h>
 
 #include "graphics/d3d12_device.h"
+#include "graphics/d3d12_frame_sync.h"
 #include "graphics/d3d12_swap_chain.h"
 #include "pipeline/frame_coordinator.h"
 
@@ -58,6 +59,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		.buffer_count = buffer_count,
 	});
 
+	D3D12FrameSync frame_sync(device.device.Get(), device.command_queue.Get(),
+							  {
+								  .buffer_count = buffer_count,
+							  });
+
 	D3D12SwapChain swap_chain(device.device.Get(), device.factory.Get(), device.command_queue.Get(),
 							  {
 								  .window_handle		= hwnd,
@@ -76,7 +82,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		.low_latency = true,
 	};
 	RenderTargets& render_targets = swap_chain.GetRenderTargets();
-	FrameCoordinator coordinator(device, render_targets, pipeline_config);
+	FrameCoordinator coordinator(device, frame_sync, render_targets, pipeline_config);
 
 	ShowWindow(hwnd, show_command);
 
@@ -133,7 +139,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		uint32_t previous_frame_index = render_targets.current_frame_index;
 		swap_chain.Present(0, 0);
 		swap_chain.UpdateCurrentFrameIndex();
-		device.MoveToNextFrame(previous_frame_index, render_targets.current_frame_index);
+		frame_sync.MoveToNextFrame(previous_frame_index, render_targets.current_frame_index);
 	}
 
 	return 0;
