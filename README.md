@@ -12,7 +12,7 @@ goblin-stream/
 ├── include/           # Third-party headers only (do not format)
 │   └── nvenc/         # Vendored NVENC 13 SDK headers
 ├── src/
-│   ├── graphics/      # D3D12 rendering (device, resources, commands)
+│   ├── graphics/      # D3D12 rendering (device, swap chain, targets, commands)
 │   ├── encoder/       # NVENC encoding (session, config, D3D12 interop)
 │   ├── pipeline/      # Frame coordination (render-to-encode sync)
 │   ├── try.h          # Error handling helper (Try | pattern)
@@ -39,7 +39,10 @@ goblin-stream/
 │     D3D12 Graphics        │   │        NVENC Encoder          │
 │  ┌─────────────────────┐  │   │  ┌─────────────────────────┐  │
 │  │ d3d12_device        │  │   │  │ nvenc_session           │  │
-│  │ (device, swapchain) │  │   │  │ (DLL loading, session)  │  │
+│  │ (device, queue)     │  │   │  │ (DLL loading, session)  │  │
+│  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
+│  │ d3d12_swap_chain    │  │   │  │                         │  │
+│  │ (swap chain, RTVs)  │  │   │  │                         │  │
 │  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
 │  │ d3d12_resources     │  │   │  │ nvenc_d3d12             │  │
 │  │ (textures, heaps)   │──┼───┼─►│ (texture registration)  │  │
@@ -58,7 +61,7 @@ goblin-stream/
 
 ### Data Flow
 
-1. **D3D12 Device** creates render targets as shared GPU resources
+1. **D3D12 Swap Chain** creates render targets and RTV heap
 2. **D3D12 Commands** records draw calls and executes on GPU
 3. **Frame Coordinator** signals and waits for D3D12 fence (render complete)
 4. **Frame Coordinator** waits for prior NVENC fence (encode complete) before reusing encoder texture

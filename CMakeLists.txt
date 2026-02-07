@@ -17,6 +17,7 @@ set(SOURCES
     src/graphics/d3d12_commands.cpp
     src/graphics/d3d12_device.cpp
     src/graphics/d3d12_resources.cpp
+    src/graphics/d3d12_swap_chain.cpp
     src/pipeline/frame_coordinator.cpp
 )
 

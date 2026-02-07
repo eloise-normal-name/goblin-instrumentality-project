@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swap Chain Refactor - Highlights</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #58a6ff;
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+        h2 {
+            color: #79c0ff;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #30363d;
+            font-size: 1.75rem;
+        }
+        h3 {
+            color: #8b949e;
+            margin: 1.5rem 0 0.75rem;
+            font-size: 1.25rem;
+        }
+        .summary {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .stat-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+        .stat-label {
+            color: #8b949e;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .highlight-section {
+            margin: 2rem 0;
+        }
+        .file-path {
+            color: #8b949e;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        pre {
+            margin: 1rem 0;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+        }
+        .commit-msg {
+            background: #161b22;
+            border-left: 4px solid #58a6ff;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre-wrap;
+        }
+        ul {
+            margin-left: 2rem;
+            margin-top: 0.5rem;
+        }
+        li {
+            margin: 0.5rem 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+        .badge-new {
+            background: #1a7f37;
+            color: #fff;
+        }
+        .badge-modified {
+            background: #9e6a03;
+            color: #fff;
+        }
+        .badge-removed {
+            background: #da3633;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Swap Chain Refactor</h1>
+        <p style="color: #8b949e; margin-bottom: 2rem;">February 6, 2026</p>
+
+        <div class="summary">
+            <h2 style="margin-top: 0; border: none;">Summary</h2>
+            <p>Refactored swap chain ownership out of <code>D3D12Device</code> into a separate <code>D3D12SwapChain</code> class, preparing for future headless/offscreen rendering modes. The core motivation was to decouple presentation from the device and make the encoder/renderer depend on a plain <code>RenderTargets</code> struct instead of swap-chain specifics.</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">3</div>
+                <div class="stat-label">New Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">6</div>
+                <div class="stat-label">Modified Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">123 KB</div>
+                <div class="stat-label">MinSizeRel Binary</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">1,304</div>
+                <div class="stat-label">Source Lines (C++)</div>
+            </div>
+        </div>
+
+        <h2>Key Architectural Changes</h2>
+        <ul>
+            <li><strong>New abstraction layer:</strong> <code>RenderTargets</code> struct holds back buffers, RTV heap, and current frame index</li>
+            <li><strong>D3D12SwapChain</strong> owns swap chain creation, Present(), and populates <code>RenderTargets</code></li>
+            <li><strong>D3D12Device</strong> now focuses solely on device/queue/fence/allocators; accepts explicit frame indices for fence operations</li>
+            <li><strong>FrameCoordinator</strong> depends on <code>RenderTargets</code> instead of device-owned swap chain state</li>
+            <li><strong>Main loop</strong> directly manages <code>D3D12SwapChain</code> and passes <code>RenderTargets</code> to coordinator</li>
+        </ul>
+
+        <h2>Code Highlights</h2>
+
+        <div class="highlight-section">
+            <h3><span class="badge badge-new">NEW</span> RenderTargets Abstraction</h3>
+            <div class="file-path">src/graphics/render_targets.h</div>
+            <pre><code class="language-cpp">#pragma once
+
+#include &lt;d3d12.h&gt;
+#include &lt;wrl/client.h&gt;
+#include &lt;cstdint&gt;
+
+using Microsoft::WRL::ComPtr;
+
+struct RenderTargets {
+	ComPtr&lt;ID3D12DescriptorHeap&gt; rtv_heap;
+	ComPtr&lt;ID3D12Resource&gt; render_targets[3];
+	uint32_t buffer_count = 0;
+	uint32_t current_frame_index = 0;
+	uint32_t rtv_descriptor_size = 0;
+};</code></pre>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Plain struct with no methods—can be populated by swap chain or future offscreen targets.</p>
+        </div>
+
+        <div class="highlight-section">
+            <h3><span class="badge badge-new">NEW</span> D3D12SwapChain Class</h3>
+            <div class="file-path">src/graphics/d3d12_swap_chain.h</div>
+            <pre><code class="language-cpp">class D3D12SwapChain {
+  public:
+	explicit D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory,
+					 ID3D12CommandQueue* command_queue, const SwapChainConfig& config);
+	
+	void Present(uint32_t sync_interval, uint32_t flags);
+	void UpdateCurrentFrameIndex();
+	RenderTargets& GetRenderTargets();
+	const RenderTargets& GetRenderTargets() const;
+	
+	ComPtr&lt;IDXGISwapChain4&gt; swap_chain;
+  // ...</code></pre>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Swap chain isolated with clear API: Present, update index, and get render targets.</p>
+        </div>
+
+        <div class="highlight-section">
+            <h3><span class="badge badge-modified">MODIFIED</span> Simplified D3D12Device</h3>
+            <div class="file-path">src/graphics/d3d12_device.h</div>
+            <pre><code class="language-cpp">struct DeviceConfig {
+	uint32_t buffer_count = 3;  // No more window_handle, frame_width, etc.
+};
+
+class D3D12Device {
+  public:
+	void WaitForGpu();
+	void MoveToNextFrame(uint32_t previous_frame_index, uint32_t next_frame_index);
+	uint64_t SignalFenceForFrame(uint32_t frame_index);
+	void SetFenceEvent(uint64_t value, HANDLE event);
+	
+	// Swap chain, RTV heap, render targets removed
+	ComPtr&lt;ID3D12CommandQueue&gt; command_queue;
+	ComPtr&lt;ID3D12Fence&gt; fence;
+	// ...</code></pre>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Device config no longer requires window handle or dimensions. Fence methods now accept explicit indices.</p>
+        </div>
+
+        <div class="highlight-section">
+            <h3><span class="badge badge-modified">MODIFIED</span> FrameCoordinator Dependencies</h3>
+            <div class="file-path">src/pipeline/frame_coordinator.cpp</div>
+            <pre><code class="language-cpp">FrameCoordinator::FrameCoordinator(D3D12Device& dev, RenderTargets& targets,
+							const PipelineConfig& cfg)
+	: device(dev), render_targets(targets), config(cfg) {
+	// ...
+}
+
+void FrameCoordinator::EndFrame() {
+	// ...
+	commands.TransitionResource(
+		render_targets.render_targets[render_targets.current_frame_index].Get(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_COPY_SOURCE);
+	// ...</code></pre>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Coordinator now uses <code>render_targets</code> reference instead of <code>device.render_targets</code>.</p>
+        </div>
+
+        <div class="highlight-section">
+            <h3><span class="badge badge-modified">MODIFIED</span> Main Loop Refactor</h3>
+            <div class="file-path">src/main.cpp</div>
+            <pre><code class="language-cpp">D3D12Device device({
+	.buffer_count = buffer_count,
+});
+
+D3D12SwapChain swap_chain(
+	device.device.Get(), 
+	device.factory.Get(), 
+	device.command_queue.Get(), 
+	{
+		.window_handle = hwnd,
+		.frame_width = WINDOW_WIDTH,
+		.frame_height = WINDOW_HEIGHT,
+		.buffer_count = buffer_count,
+		.render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM,
+	}
+);
+
+RenderTargets& render_targets = swap_chain.GetRenderTargets();
+FrameCoordinator coordinator(device, render_targets, pipeline_config);</code></pre>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Device and swap chain constructed separately; render targets passed explicitly.</p>
+        </div>
+
+        <div class="highlight-section">
+            <h3><span class="badge badge-modified">MODIFIED</span> Present and Frame Advance</h3>
+            <div class="file-path">src/main.cpp (render loop)</div>
+            <pre><code class="language-cpp">uint32_t previous_frame_index = render_targets.current_frame_index;
+swap_chain.Present(0, 0);
+swap_chain.UpdateCurrentFrameIndex();
+device.MoveToNextFrame(previous_frame_index, render_targets.current_frame_index);</code></pre>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Present and frame advance now managed explicitly via swap chain.</p>
+        </div>
+
+        <h2>Suggested Commit Message</h2>
+        <div class="commit-msg">refactor(graphics): extract swap chain into separate class
+
+Decouple swap chain ownership from D3D12Device to prepare for headless
+rendering mode. Introduce RenderTargets struct as abstraction layer so
+render/encode pipeline can work with either swap chain or offscreen
+buffers.
+
+Changes:
+- Add D3D12SwapChain class managing IDXGISwapChain4, back buffers, RTV heap
+- Add RenderTargets struct as plain data carrier for rendering resources
+- Simplify D3D12Device to focus on device/queue/fence management
+- Update fence APIs to accept explicit frame indices instead of reading internal state
+- Update FrameCoordinator to depend on RenderTargets reference
+- Update main loop to instantiate swap chain separately from device
+
+Present() now isolated to swap chain class, enabling future headless mode
+where presentation is skipped entirely.</div>
+
+        <h2>Build Status</h2>
+        <div class="summary">
+            <p><strong>✅ Build Successful</strong></p>
+            <p style="margin-top: 0.5rem; color: #8b949e;">Debug configuration compiles cleanly with no errors or warnings.</p>
+            <p style="margin-top: 0.5rem; color: #8b949e;">MinSizeRel configuration: 123 KB optimized binary</p>
+        </div>
+
+        <h2>Future Path</h2>
+        <div class="summary">
+            <p><strong>Headless Mode Ready:</strong> <code>FrameCoordinator</code> now depends on <code>RenderTargets</code> instead of swap chain state, so a future <code>OffscreenTargets</code> class can populate the same struct without touching encoder logic.</p>
+            <p style="margin-top: 1rem;"><strong>Present Isolation:</strong> <code>Present()</code> remains swap-chain-only; headless mode will simply omit it.</p>
+        </div>
+
+    </div>
+
+    <script>
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

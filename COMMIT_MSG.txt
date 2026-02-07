@@ -1,0 +1,17 @@
+refactor(graphics): extract swap chain into separate class
+
+Decouple swap chain ownership from D3D12Device to prepare for headless
+rendering mode. Introduce RenderTargets struct as abstraction layer so
+render/encode pipeline can work with either swap chain or offscreen
+buffers.
+
+Changes:
+- Add D3D12SwapChain class managing IDXGISwapChain4, back buffers, RTV heap
+- Add RenderTargets struct as plain data carrier for rendering resources
+- Simplify D3D12Device to focus on device/queue/fence management
+- Update fence APIs to accept explicit frame indices instead of reading internal state
+- Update FrameCoordinator to depend on RenderTargets reference
+- Update main loop to instantiate swap chain separately from device
+
+Present() now isolated to swap chain class, enabling future headless mode
+where presentation is skipped entirely.

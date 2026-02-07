@@ -31,3 +31,6 @@ Release/
 # CMake
 CMakeUserPresets.json
 compile_commands.json
+
+# temp
+codemap-extension/

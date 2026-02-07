@@ -9,6 +9,7 @@
 #include "../graphics/d3d12_commands.h"
 #include "../graphics/d3d12_device.h"
 #include "../graphics/d3d12_resources.h"
+#include "../graphics/render_targets.h"
 
 struct FrameData {
 	uint8_t* data;
@@ -28,7 +29,8 @@ struct PipelineConfig {
 
 class FrameCoordinator {
   public:
-	explicit FrameCoordinator(D3D12Device& device, const PipelineConfig& config);
+	explicit FrameCoordinator(D3D12Device& device, RenderTargets& targets,
+							  const PipelineConfig& config);
 	~FrameCoordinator();
 
 	void BeginFrame();
@@ -42,7 +44,7 @@ class FrameCoordinator {
 		return &encoder_texture;
 	}
 	uint32_t GetCurrentFrameIndex() const {
-		return current_frame_index;
+		return render_targets.current_frame_index;
 	}
 	uint64_t GetFrameCount() const {
 		return frame_count;
@@ -53,6 +55,7 @@ class FrameCoordinator {
 	void RetrieveEncodedFrame(FrameData& output);
 
 	D3D12Device& device;
+	RenderTargets& render_targets;
 	PipelineConfig config;
 
 	D3D12Commands commands{device.device.Get()};
@@ -79,7 +82,6 @@ class FrameCoordinator {
 											 }};
 	HANDLE encode_fence_event = nullptr;
 
-	uint32_t current_frame_index	 = 0;
 	uint64_t frame_count			 = 0;
 	uint64_t last_encode_fence_value = 0;
 };

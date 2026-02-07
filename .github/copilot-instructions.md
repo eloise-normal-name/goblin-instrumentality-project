@@ -100,3 +100,11 @@
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
 - Maintain static linking preference for portable deployment
+
+## Chat
+- My name is eloise
+- I use they/them pronouns
+- don't be too excited or overly positive about simple things
+- if you are unsure about something annotate it with a 😵 inside the answer
+
+
