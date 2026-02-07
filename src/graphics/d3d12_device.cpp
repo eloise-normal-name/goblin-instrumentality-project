@@ -2,14 +2,9 @@
 
 #include "try.h"
 
-D3D12Device::D3D12Device(const DeviceConfig& config)
-	: buffer_count(config.buffer_count > 0 ? config.buffer_count : 2) {
-	if (buffer_count > 3)
-		buffer_count = 3;
-
+D3D12Device::D3D12Device() {
 	create_device();
 	create_command_queue();
-	create_command_allocators();
 }
 
 D3D12Device::~D3D12Device() {
@@ -45,10 +40,4 @@ void D3D12Device::create_command_queue() {
 	Try | device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
 }
 
-void D3D12Device::create_command_allocators() {
-	for (uint32_t i = 0; i < buffer_count; ++i) {
-		Try
-			| device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-											 IID_PPV_ARGS(&command_allocators[i]));
-	}
-}
+

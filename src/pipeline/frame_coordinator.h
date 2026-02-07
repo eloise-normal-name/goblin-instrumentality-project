@@ -6,6 +6,7 @@
 #include "../encoder/nvenc_config.h"
 #include "../encoder/nvenc_d3d12.h"
 #include "../encoder/nvenc_session.h"
+#include "../graphics/d3d12_command_allocators.h"
 #include "../graphics/d3d12_commands.h"
 #include "../graphics/d3d12_device.h"
 #include "../graphics/d3d12_frame_sync.h"
@@ -31,7 +32,7 @@ struct PipelineConfig {
 class FrameCoordinator {
   public:
 	explicit FrameCoordinator(D3D12Device& device, D3D12FrameSync& frame_sync,
-							  RenderTargets& targets, const PipelineConfig& config);
+						  D3D12CommandAllocators& allocators, RenderTargets& targets, const PipelineConfig& config);
 	~FrameCoordinator();
 
 	void BeginFrame();
@@ -57,6 +58,7 @@ class FrameCoordinator {
 
 	D3D12Device& device;
 	D3D12FrameSync& frame_sync;
+	D3D12CommandAllocators& allocators;
 	RenderTargets& render_targets;
 	PipelineConfig config;
 
@@ -69,7 +71,7 @@ class FrameCoordinator {
 													   }};
 	ReadbackBuffer output_buffer{device.device.Get(), config.width* config.height * 4};
 	NvencSession nvenc_session{device.device.Get()};
-	NvencD3D12 nvenc_d3d12{&nvenc_session, device.buffer_count};
+	NvencD3D12 nvenc_d3d12{&nvenc_session, allocators.buffer_count};
 	NvencConfig nvenc_config{&nvenc_session, EncoderConfig{
 												 .codec			 = config.codec,
 												 .preset		 = EncoderPreset::Fast,

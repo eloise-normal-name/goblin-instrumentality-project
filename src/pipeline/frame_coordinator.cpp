@@ -4,9 +4,10 @@
 
 #include "try.h"
 
-FrameCoordinator::FrameCoordinator(D3D12Device& dev, D3D12FrameSync& sync, RenderTargets& targets,
-								   const PipelineConfig& cfg)
-	: device(dev), frame_sync(sync), render_targets(targets), config(cfg) {
+FrameCoordinator::FrameCoordinator(D3D12Device& dev, D3D12FrameSync& sync,
+						   D3D12CommandAllocators& alloc, RenderTargets& targets,
+						   const PipelineConfig& cfg)
+	: device(dev), frame_sync(sync), allocators(alloc), render_targets(targets), config(cfg) {
 	uint32_t buffer_size = config.width * config.height * 4;
 
 	NV_ENC_BUFFER_FORMAT nvenc_format = DxgiFormatToNvencFormat(encoder_texture.format);

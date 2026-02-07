@@ -14,6 +14,7 @@ set(SOURCES
     src/encoder/nvenc_config.cpp
     src/encoder/nvenc_d3d12.cpp
     src/encoder/nvenc_session.cpp
+    src/graphics/d3d12_command_allocators.cpp
     src/graphics/d3d12_commands.cpp
     src/graphics/d3d12_device.cpp
     src/graphics/d3d12_frame_sync.cpp

@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include "graphics/d3d12_command_allocators.h"
 #include "graphics/d3d12_device.h"
 #include "graphics/d3d12_frame_sync.h"
 #include "graphics/d3d12_swap_chain.h"
@@ -55,15 +56,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 
 	uint32_t buffer_count = 2;
 
-	D3D12Device device({
-		.buffer_count = buffer_count,
-	});
+	D3D12Device device;
 
 	D3D12FrameSync frame_sync(device.device.Get(), device.command_queue.Get(),
-							  {
-								  .buffer_count = buffer_count,
-							  });
+							  {.buffer_count = buffer_count});
 
+	D3D12CommandAllocators allocators(device.device.Get(), {.buffer_count = buffer_count});
 	D3D12SwapChain swap_chain(device.device.Get(), device.factory.Get(), device.command_queue.Get(),
 							  {
 								  .window_handle		= hwnd,
@@ -82,7 +80,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		.low_latency = true,
 	};
 	RenderTargets& render_targets = swap_chain.GetRenderTargets();
-	FrameCoordinator coordinator(device, frame_sync, render_targets, pipeline_config);
+	FrameCoordinator coordinator(device, frame_sync, allocators, render_targets, pipeline_config);
 
 	ShowWindow(hwnd, show_command);
 
