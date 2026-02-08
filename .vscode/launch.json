@@ -10,7 +10,11 @@
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
-      "console": "externalTerminal"
+      "logging": {
+        "processExit": false,
+        "moduleLoad": false,
+        "threadExit": false
+      }
     }
   ]
 }

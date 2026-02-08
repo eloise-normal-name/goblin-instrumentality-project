@@ -8,14 +8,10 @@
 
 using Microsoft::WRL::ComPtr;
 
-struct FrameSyncConfig {
-	uint32_t buffer_count = 3;
-};
-
 class D3D12FrameSync {
   public:
 	explicit D3D12FrameSync(ID3D12Device* device, ID3D12CommandQueue* command_queue,
-							const FrameSyncConfig& config);
+							uint32_t buffer_count = 3);
 	~D3D12FrameSync();
 
 	void WaitForGpu();
@@ -24,13 +20,13 @@ class D3D12FrameSync {
 	void SetFenceEvent(uint64_t value, HANDLE event);
 
 	ComPtr<ID3D12Fence> fence;
-	HANDLE fence_event		 = nullptr;
-	uint64_t fence_values[3] = {};
+	HANDLE fence_event;
+	uint64_t fence_values[3];
 
   private:
 	void create_fence();
 
-	ID3D12Device* device			  = nullptr;
-	ID3D12CommandQueue* command_queue = nullptr;
-	uint32_t buffer_count			  = 2;
+	ID3D12Device* device;
+	ID3D12CommandQueue* command_queue;
+	uint32_t buffer_count = 2;
 };

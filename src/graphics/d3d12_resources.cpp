@@ -2,62 +2,6 @@
 
 #include "try.h"
 
-SharedTexture::SharedTexture(ID3D12Device* dev, const TextureDesc& desc)
-	: width(desc.width)
-	, height(desc.height)
-	, format(desc.format)
-	, current_state(ResourceState::Common) {
-	D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE;
-	if (desc.allow_render_target)
-		flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-	if (desc.allow_simultaneous_access)
-		flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
-
-	D3D12_RESOURCE_DESC resource_desc{
-		.Dimension		  = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		.Width			  = desc.width,
-		.Height			  = desc.height,
-		.DepthOrArraySize = 1,
-		.MipLevels		  = 1,
-		.Format			  = desc.format,
-		.SampleDesc		  = {.Count = 1},
-		.Flags			  = flags,
-	};
-
-	D3D12_HEAP_PROPERTIES heap_props{
-		.Type = D3D12_HEAP_TYPE_DEFAULT,
-	};
-
-	D3D12_HEAP_FLAGS heap_flags
-		= desc.allow_simultaneous_access ? D3D12_HEAP_FLAG_SHARED : D3D12_HEAP_FLAG_NONE;
-
-	D3D12_CLEAR_VALUE clear_value{
-		.Format = desc.format,
-		.Color	= {0.0f, 0.0f, 0.0f, 1.0f},
-	};
-
-	D3D12_CLEAR_VALUE* clear_value_ptr = desc.allow_render_target ? &clear_value : nullptr;
-
-	Try
-		| dev->CreateCommittedResource(&heap_props, heap_flags, &resource_desc,
-									   D3D12_RESOURCE_STATE_COMMON, clear_value_ptr,
-									   IID_PPV_ARGS(&resource));
-
-	if (desc.allow_simultaneous_access) {
-		ComPtr<ID3D12Device> device_ptr;
-		resource->GetDevice(IID_PPV_ARGS(&device_ptr));
-
-		Try
-			| device_ptr->CreateSharedHandle(resource.Get(), nullptr, GENERIC_ALL, nullptr,
-											 &shared_handle);
-	}
-}
-
-SharedTexture::~SharedTexture() {
-	if (shared_handle)
-		CloseHandle(shared_handle);
-}
-
 ReadbackBuffer::ReadbackBuffer(ID3D12Device* device, uint32_t buffer_size) : size(buffer_size) {
 	if (buffer_size == 0)
 		throw;

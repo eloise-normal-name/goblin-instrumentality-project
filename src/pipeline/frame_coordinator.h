@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 
 #include "../encoder/nvenc_config.h"
 #include "../encoder/nvenc_d3d12.h"
@@ -32,7 +31,8 @@ struct PipelineConfig {
 class FrameCoordinator {
   public:
 	explicit FrameCoordinator(D3D12Device& device, D3D12FrameSync& frame_sync,
-						  D3D12CommandAllocators& allocators, RenderTargets& targets, const PipelineConfig& config);
+							  D3D12CommandAllocators& allocators, RenderTargets& targets,
+							  const PipelineConfig& config);
 	~FrameCoordinator();
 
 	void BeginFrame();
@@ -42,8 +42,8 @@ class FrameCoordinator {
 	D3D12Commands* GetCommands() {
 		return &commands;
 	}
-	SharedTexture* GetEncoderTexture() {
-		return &encoder_texture;
+	ID3D12Resource* GetEncoderTexture() {
+		return encoder_textures[render_targets.current_frame_index].Get();
 	}
 	uint32_t GetCurrentFrameIndex() const {
 		return render_targets.current_frame_index;
@@ -62,13 +62,10 @@ class FrameCoordinator {
 	RenderTargets& render_targets;
 	PipelineConfig config;
 
-	D3D12Commands commands{device.device.Get()};
-	SharedTexture encoder_texture{device.device.Get(), TextureDesc{
-														   .width  = config.width,
-														   .height = config.height,
-														   .format = DXGI_FORMAT_B8G8R8A8_UNORM,
-														   .allow_simultaneous_access = true,
-													   }};
+	D3D12Commands commands{device.device.Get(), allocators.GetAllocator(0)};
+	ComPtr<ID3D12Resource> encoder_textures[3];
+	ResourceState encoder_states[3]{ResourceState::Common, ResourceState::Common,
+									ResourceState::Common};
 	ReadbackBuffer output_buffer{device.device.Get(), config.width* config.height * 4};
 	NvencSession nvenc_session{device.device.Get()};
 	NvencD3D12 nvenc_d3d12{&nvenc_session, allocators.buffer_count};

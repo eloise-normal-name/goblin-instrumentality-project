@@ -2,15 +2,16 @@
 
 #include "try.h"
 
-D3D12FrameSync::D3D12FrameSync(ID3D12Device* dev, ID3D12CommandQueue* queue,
-							   const FrameSyncConfig& config)
-	: device(dev)
-	, command_queue(queue)
-	, buffer_count(config.buffer_count > 0 ? config.buffer_count : 2) {
-	if (buffer_count > 3)
-		buffer_count = 3;
+D3D12FrameSync::D3D12FrameSync(ID3D12Device* dev, ID3D12CommandQueue* queue, uint32_t buffer_count)
+	: device(dev), command_queue(queue), buffer_count(buffer_count) {
+	Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
-	create_fence();
+	fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (!fence_event)
+		throw;
+
+	for (uint32_t i = 0; i < buffer_count; ++i)
+		fence_values[i] = 1;
 }
 
 D3D12FrameSync::~D3D12FrameSync() {
@@ -69,19 +70,4 @@ void D3D12FrameSync::SetFenceEvent(uint64_t value, HANDLE event) {
 		Try | fence->SetEventOnCompletion(value, event);
 	else
 		SetEvent(event);
-}
-
-void D3D12FrameSync::create_fence() {
-	if (!device)
-		throw;
-
-	Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-
-	fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (!fence_event)
-		throw;
-
-	for (uint32_t i = 0; i < buffer_count; ++i) {
-		fence_values[i] = 1;
-	}
 }

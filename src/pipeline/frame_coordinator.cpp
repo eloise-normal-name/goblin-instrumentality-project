@@ -5,14 +5,41 @@
 #include "try.h"
 
 FrameCoordinator::FrameCoordinator(D3D12Device& dev, D3D12FrameSync& sync,
-						   D3D12CommandAllocators& alloc, RenderTargets& targets,
-						   const PipelineConfig& cfg)
+								   D3D12CommandAllocators& alloc, RenderTargets& targets,
+								   const PipelineConfig& cfg)
 	: device(dev), frame_sync(sync), allocators(alloc), render_targets(targets), config(cfg) {
-	uint32_t buffer_size = config.width * config.height * 4;
+	uint32_t buffer_size	   = config.width * config.height * 4;
+	DXGI_FORMAT encoder_format = DXGI_FORMAT_B8G8R8A8_UNORM;
 
-	NV_ENC_BUFFER_FORMAT nvenc_format = DxgiFormatToNvencFormat(encoder_texture.format);
-	nvenc_d3d12.RegisterTexture(encoder_texture.resource.Get(), config.width, config.height,
-								nvenc_format);
+	D3D12_RESOURCE_DESC resource_desc{
+		.Dimension		  = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		.Width			  = config.width,
+		.Height			  = config.height,
+		.DepthOrArraySize = 1,
+		.MipLevels		  = 1,
+		.Format			  = encoder_format,
+		.SampleDesc		  = {.Count = 1},
+		.Flags			  = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS,
+	};
+
+	D3D12_HEAP_PROPERTIES heap_props{
+		.Type = D3D12_HEAP_TYPE_DEFAULT,
+	};
+
+	D3D12_HEAP_FLAGS heap_flags = D3D12_HEAP_FLAG_NONE;
+
+	for (uint32_t i = 0; i < allocators.buffer_count; ++i) {
+		Try
+			| dev.device->CreateCommittedResource(&heap_props, heap_flags, &resource_desc,
+												  D3D12_RESOURCE_STATE_COMMON, nullptr,
+												  IID_PPV_ARGS(&encoder_textures[i]));
+		encoder_states[i] = ResourceState::Common;
+	}
+
+	NV_ENC_BUFFER_FORMAT nvenc_format = DxgiFormatToNvencFormat(encoder_format);
+	for (uint32_t i = 0; i < allocators.buffer_count; ++i)
+		nvenc_d3d12.RegisterTexture(encoder_textures[i].Get(), config.width, config.height,
+									nvenc_format);
 
 	nvenc_d3d12.RegisterBitstreamBuffer(output_buffer.resource.Get(), buffer_size);
 
@@ -29,7 +56,7 @@ FrameCoordinator::~FrameCoordinator() {
 }
 
 void FrameCoordinator::BeginFrame() {
-	commands.Reset();
+	commands.Reset(allocators.GetAllocator(render_targets.current_frame_index));
 }
 
 void FrameCoordinator::EndFrame() {
@@ -40,12 +67,24 @@ void FrameCoordinator::EndFrame() {
 		render_targets.render_targets[render_targets.current_frame_index].Get(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
-	commands.TransitionTexture(encoder_texture, ResourceState::CopyDest);
+	uint32_t frame_index			 = render_targets.current_frame_index;
+	ID3D12Resource* encoder_resource = encoder_textures[frame_index].Get();
+	ResourceState& encoder_state	 = encoder_states[frame_index];
 
-	commands.CopyResource(encoder_texture.resource.Get(),
+	if (encoder_state != ResourceState::CopyDest) {
+		commands.TransitionResource(encoder_resource, ToD3D12State(encoder_state),
+									D3D12_RESOURCE_STATE_COPY_DEST);
+		encoder_state = ResourceState::CopyDest;
+	}
+
+	commands.CopyResource(encoder_resource,
 						  render_targets.render_targets[render_targets.current_frame_index].Get());
 
-	commands.TransitionTexture(encoder_texture, ResourceState::Common);
+	if (encoder_state != ResourceState::Common) {
+		commands.TransitionResource(encoder_resource, ToD3D12State(encoder_state),
+									D3D12_RESOURCE_STATE_COMMON);
+		encoder_state = ResourceState::Common;
+	}
 
 	commands.TransitionResource(
 		render_targets.render_targets[render_targets.current_frame_index].Get(),
@@ -70,12 +109,13 @@ void FrameCoordinator::EncodeFrame(FrameData& output) {
 }
 
 void FrameCoordinator::SubmitFrameToEncoder() {
-	nvenc_d3d12.MapInputTexture(0);
+	uint32_t texture_index = render_targets.current_frame_index;
+	nvenc_d3d12.MapInputTexture(texture_index);
 
 	if (nvenc_d3d12.textures.empty() || nvenc_d3d12.bitstream_buffers.empty())
 		throw;
 
-	const RegisteredTexture& texture = nvenc_d3d12.textures[0];
+	const RegisteredTexture& texture = nvenc_d3d12.textures[texture_index];
 	const BitstreamBuffer& bitstream = nvenc_d3d12.bitstream_buffers[0];
 
 	void* encoder = nvenc_session.encoder;
@@ -123,7 +163,7 @@ void FrameCoordinator::SubmitFrameToEncoder() {
 	Try | nvenc_session.nvEncEncodePicture(encoder, &pic_params)
 		| nvenc_session.nvEncUnmapInputResource(encoder, mapped_bitstream);
 
-	nvenc_d3d12.UnmapInputTexture(0);
+	nvenc_d3d12.UnmapInputTexture(texture_index);
 }
 
 void FrameCoordinator::RetrieveEncodedFrame(FrameData& output) {

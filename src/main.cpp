@@ -54,12 +54,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	if (!hwnd)
 		return 1;
 
-	uint32_t buffer_count = 2;
+	auto buffer_count = 2u;
 
 	D3D12Device device;
 
-	D3D12FrameSync frame_sync(device.device.Get(), device.command_queue.Get(),
-							  {.buffer_count = buffer_count});
+	D3D12FrameSync frame_sync(device.device.Get(), device.command_queue.Get(), buffer_count);
 
 	D3D12CommandAllocators allocators(device.device.Get(), {.buffer_count = buffer_count});
 	D3D12SwapChain swap_chain(device.device.Get(), device.factory.Get(), device.command_queue.Get(),
