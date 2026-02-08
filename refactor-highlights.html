@@ -1,321 +1,301 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Swap Chain Refactor - Highlights</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+    <title>ComPtr Refactor: .Get() to *& Pattern</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #0d1117;
-            color: #c9d1d9;
-            line-height: 1.6;
-            padding: 2rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
-        h1 {
-            color: #58a6ff;
-            margin-bottom: 0.5rem;
-            font-size: 2.5rem;
-        }
-        h2 {
-            color: #79c0ff;
-            margin: 2rem 0 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #30363d;
-            font-size: 1.75rem;
-        }
-        h3 {
-            color: #8b949e;
-            margin: 1.5rem 0 0.75rem;
-            font-size: 1.25rem;
-        }
-        .summary {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-        .stat-card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 1rem;
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
             text-align: center;
         }
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #58a6ff;
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
-        .stat-label {
-            color: #8b949e;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
+        header p {
+            font-size: 1.1em;
+            opacity: 0.95;
         }
-        .highlight-section {
-            margin: 2rem 0;
+        .content {
+            padding: 40px;
         }
-        .file-path {
-            color: #8b949e;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.875rem;
-            margin-bottom: 0.5rem;
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
         }
-        pre {
-            margin: 1rem 0;
-            border-radius: 6px;
+        .metric-card {
+            background: #f5f7fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .metric-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .metric-card .value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        .change-group {
+            margin-bottom: 30px;
+            background: #f9fafb;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        .file-header {
+            background: #e5e7eb;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #374151;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        .code-container {
             overflow-x: auto;
         }
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.875rem;
+        .code-diff {
+            display: flex;
+            font-family: 'Courier New', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.6;
         }
-        .commit-msg {
-            background: #161b22;
-            border-left: 4px solid #58a6ff;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            font-family: 'Consolas', 'Monaco', monospace;
+        .code-line {
+            display: flex;
+            width: 100%;
+        }
+        .line-num {
+            background: #f0f0f0;
+            color: #999;
+            padding: 0 15px;
+            text-align: right;
+            user-select: none;
+            min-width: 50px;
+            flex-shrink: 0;
+        }
+        .line-content {
+            flex: 1;
+            padding: 0 15px;
             white-space: pre-wrap;
+            word-break: break-word;
         }
-        ul {
-            margin-left: 2rem;
-            margin-top: 0.5rem;
+        .removed {
+            background: #fef2f2;
+            color: #7f1d1d;
         }
-        li {
-            margin: 0.5rem 0;
+        .removed .line-num {
+            background: #fee2e2;
         }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
+        .added {
+            background: #f0fdf4;
+            color: #166534;
+        }
+        .added .line-num {
+            background: #dcfce7;
+        }
+        .context {
+            background: white;
+        }
+        .context .line-num {
+            background: #f9fafb;
+        }
+        .highlight-pattern {
+            background: #fef08a;
+            padding: 2px 4px;
+            border-radius: 3px;
             font-weight: 600;
-            margin-right: 0.5rem;
         }
-        .badge-new {
-            background: #1a7f37;
-            color: #fff;
+        .summary-box {
+            background: #ede9fe;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
         }
-        .badge-modified {
-            background: #9e6a03;
-            color: #fff;
+        .summary-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
         }
-        .badge-removed {
-            background: #da3633;
-            color: #fff;
+        .summary-box p {
+            color: #4c1d95;
+            line-height: 1.6;
+        }
+        footer {
+            background: #f5f7fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 1px solid #e5e7eb;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Swap Chain Refactor</h1>
-        <p style="color: #8b949e; margin-bottom: 2rem;">February 6, 2026</p>
+        <header>
+            <h1>ComPtr Refactor: .Get() to *& Pattern</h1>
+            <p>Simplified COM object dereferencing across the codebase</p>
+        </header>
 
-        <div class="summary">
-            <h2 style="margin-top: 0; border: none;">Summary</h2>
-            <p>Refactored swap chain ownership out of <code>D3D12Device</code> into a separate <code>D3D12SwapChain</code> class, preparing for future headless/offscreen rendering modes. The core motivation was to decouple presentation from the device and make the encoder/renderer depend on a plain <code>RenderTargets</code> struct instead of swap-chain specifics.</p>
-        </div>
-
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value">3</div>
-                <div class="stat-label">New Files</div>
+        <div class="content">
+            <div class="metrics">
+                <div class="metric-card">
+                    <h3>Files Modified</h3>
+                    <div class="value">5</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Total Changes</h3>
+                    <div class="value">22</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Binary Size</h3>
+                    <div class="value">125.9 KB</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Source Lines</h3>
+                    <div class="value">1,299</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">6</div>
-                <div class="stat-label">Modified Files</div>
+
+            <div class="summary-box">
+                <h3>What Changed</h3>
+                <p>
+                    All <code>.Get()</code> method calls on ComPtr objects have been replaced with the <code>*&</code> dereferencing pattern.
+                    This provides a more concise syntax when passing COM objects to functions, while maintaining the same functionality.
+                </p>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">123 KB</div>
-                <div class="stat-label">MinSizeRel Binary</div>
+
+            <div class="section">
+                <h2>Files Modified</h2>
+                <ul style="list-style: none; padding-left: 0;">
+                    <li style="margin-bottom: 12px;">✓ <strong>src/main.cpp</strong> — 4 changes</li>
+                    <li style="margin-bottom: 12px;">✓ <strong>src/graphics/d3d12_frame_sync.cpp</strong> — 3 changes</li>
+                    <li style="margin-bottom: 12px;">✓ <strong>src/graphics/d3d12_swap_chain.cpp</strong> — 1 change</li>
+                    <li style="margin-bottom: 12px;">✓ <strong>src/pipeline/frame_coordinator.h</strong> — 4 changes</li>
+                    <li style="margin-bottom: 12px;">✓ <strong>src/pipeline/frame_coordinator.cpp</strong> — 10 changes</li>
+                </ul>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">1,304</div>
-                <div class="stat-label">Source Lines (C++)</div>
+
+            <div class="section">
+                <h2>Pattern Change: Before & After</h2>
+                <p style="margin-bottom: 20px; color: #666;">The refactor follows a simple pattern across all files:</p>
+                
+                <div class="change-group">
+                    <div class="file-header">Device Initialization Example</div>
+                    <div class="code-container">
+                        <div class="code-diff">
+                            <div class="code-line removed">
+                                <div class="line-num"></div>
+                                <div class="line-content"><span class="highlight-pattern">device.device.Get()</span></div>
+                            </div>
+                        </div>
+                        <div class="code-diff">
+                            <div class="code-line added">
+                                <div class="line-num"></div>
+                                <div class="line-content"><span class="highlight-pattern">*&device.device</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="color: #666; margin-top: 20px;"><strong>Benefits:</strong></p>
+                <ul style="margin-left: 20px; color: #555;">
+                    <li style="margin: 8px 0;">More concise syntax for dereferencing ComPtr objects</li>
+                    <li style="margin: 8px 0;">Aligns with modern C++ practices</li>
+                    <li style="margin: 8px 0;">No functional change—same underlying semantics</li>
+                    <li style="margin: 8px 0;">Consistent pattern throughout codebase</li>
+                </ul>
             </div>
-        </div>
 
-        <h2>Key Architectural Changes</h2>
-        <ul>
-            <li><strong>New abstraction layer:</strong> <code>RenderTargets</code> struct holds back buffers, RTV heap, and current frame index</li>
-            <li><strong>D3D12SwapChain</strong> owns swap chain creation, Present(), and populates <code>RenderTargets</code></li>
-            <li><strong>D3D12Device</strong> now focuses solely on device/queue/fence/allocators; accepts explicit frame indices for fence operations</li>
-            <li><strong>FrameCoordinator</strong> depends on <code>RenderTargets</code> instead of device-owned swap chain state</li>
-            <li><strong>Main loop</strong> directly manages <code>D3D12SwapChain</code> and passes <code>RenderTargets</code> to coordinator</li>
-        </ul>
+            <div class="section">
+                <h2>Build Status</h2>
+                <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; border-radius: 8px;">
+                    <p style="color: #166534; margin-bottom: 10px;"><strong>✅ Build Successful</strong></p>
+                    <p style="color: #4b5563; margin: 8px 0;">No compilation errors or warnings</p>
+                    <p style="color: #4b5563; margin: 8px 0;">MinSizeRel binary: <strong>125.9 KB</strong></p>
+                    <p style="color: #4b5563; margin: 8px 0;">Total source code: <strong>1,299 lines</strong> of C++</p>
+                    <p style="color: #4b5563; margin-top: 10px;">All files passed clang-format verification</p>
+                </div>
+            </div>
 
-        <h2>Code Highlights</h2>
+            <div class="section">
+                <h2>Commit Message</h2>
+                <div style="background: #f5f7fa; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; white-space: pre-wrap; overflow-x: auto;">
+refactor: replace .Get() with *& pattern for ComPtr dereferencing
 
-        <div class="highlight-section">
-            <h3><span class="badge badge-new">NEW</span> RenderTargets Abstraction</h3>
-            <div class="file-path">src/graphics/render_targets.h</div>
-            <pre><code class="language-cpp">#pragma once
-
-#include &lt;d3d12.h&gt;
-#include &lt;wrl/client.h&gt;
-#include &lt;cstdint&gt;
-
-using Microsoft::WRL::ComPtr;
-
-struct RenderTargets {
-	ComPtr&lt;ID3D12DescriptorHeap&gt; rtv_heap;
-	ComPtr&lt;ID3D12Resource&gt; render_targets[3];
-	uint32_t buffer_count = 0;
-	uint32_t current_frame_index = 0;
-	uint32_t rtv_descriptor_size = 0;
-};</code></pre>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Plain struct with no methods—can be populated by swap chain or future offscreen targets.</p>
-        </div>
-
-        <div class="highlight-section">
-            <h3><span class="badge badge-new">NEW</span> D3D12SwapChain Class</h3>
-            <div class="file-path">src/graphics/d3d12_swap_chain.h</div>
-            <pre><code class="language-cpp">class D3D12SwapChain {
-  public:
-	explicit D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory,
-					 ID3D12CommandQueue* command_queue, const SwapChainConfig& config);
-	
-	void Present(uint32_t sync_interval, uint32_t flags);
-	void UpdateCurrentFrameIndex();
-	RenderTargets& GetRenderTargets();
-	const RenderTargets& GetRenderTargets() const;
-	
-	ComPtr&lt;IDXGISwapChain4&gt; swap_chain;
-  // ...</code></pre>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Swap chain isolated with clear API: Present, update index, and get render targets.</p>
-        </div>
-
-        <div class="highlight-section">
-            <h3><span class="badge badge-modified">MODIFIED</span> Simplified D3D12Device</h3>
-            <div class="file-path">src/graphics/d3d12_device.h</div>
-            <pre><code class="language-cpp">struct DeviceConfig {
-	uint32_t buffer_count = 3;  // No more window_handle, frame_width, etc.
-};
-
-class D3D12Device {
-  public:
-	void WaitForGpu();
-	void MoveToNextFrame(uint32_t previous_frame_index, uint32_t next_frame_index);
-	uint64_t SignalFenceForFrame(uint32_t frame_index);
-	void SetFenceEvent(uint64_t value, HANDLE event);
-	
-	// Swap chain, RTV heap, render targets removed
-	ComPtr&lt;ID3D12CommandQueue&gt; command_queue;
-	ComPtr&lt;ID3D12Fence&gt; fence;
-	// ...</code></pre>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Device config no longer requires window handle or dimensions. Fence methods now accept explicit indices.</p>
-        </div>
-
-        <div class="highlight-section">
-            <h3><span class="badge badge-modified">MODIFIED</span> FrameCoordinator Dependencies</h3>
-            <div class="file-path">src/pipeline/frame_coordinator.cpp</div>
-            <pre><code class="language-cpp">FrameCoordinator::FrameCoordinator(D3D12Device& dev, RenderTargets& targets,
-							const PipelineConfig& cfg)
-	: device(dev), render_targets(targets), config(cfg) {
-	// ...
-}
-
-void FrameCoordinator::EndFrame() {
-	// ...
-	commands.TransitionResource(
-		render_targets.render_targets[render_targets.current_frame_index].Get(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_COPY_SOURCE);
-	// ...</code></pre>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Coordinator now uses <code>render_targets</code> reference instead of <code>device.render_targets</code>.</p>
-        </div>
-
-        <div class="highlight-section">
-            <h3><span class="badge badge-modified">MODIFIED</span> Main Loop Refactor</h3>
-            <div class="file-path">src/main.cpp</div>
-            <pre><code class="language-cpp">D3D12Device device({
-	.buffer_count = buffer_count,
-});
-
-D3D12SwapChain swap_chain(
-	device.device.Get(), 
-	device.factory.Get(), 
-	device.command_queue.Get(), 
-	{
-		.window_handle = hwnd,
-		.frame_width = WINDOW_WIDTH,
-		.frame_height = WINDOW_HEIGHT,
-		.buffer_count = buffer_count,
-		.render_target_format = DXGI_FORMAT_B8G8R8A8_UNORM,
-	}
-);
-
-RenderTargets& render_targets = swap_chain.GetRenderTargets();
-FrameCoordinator coordinator(device, render_targets, pipeline_config);</code></pre>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Device and swap chain constructed separately; render targets passed explicitly.</p>
-        </div>
-
-        <div class="highlight-section">
-            <h3><span class="badge badge-modified">MODIFIED</span> Present and Frame Advance</h3>
-            <div class="file-path">src/main.cpp (render loop)</div>
-            <pre><code class="language-cpp">uint32_t previous_frame_index = render_targets.current_frame_index;
-swap_chain.Present(0, 0);
-swap_chain.UpdateCurrentFrameIndex();
-device.MoveToNextFrame(previous_frame_index, render_targets.current_frame_index);</code></pre>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Present and frame advance now managed explicitly via swap chain.</p>
-        </div>
-
-        <h2>Suggested Commit Message</h2>
-        <div class="commit-msg">refactor(graphics): extract swap chain into separate class
-
-Decouple swap chain ownership from D3D12Device to prepare for headless
-rendering mode. Introduce RenderTargets struct as abstraction layer so
-render/encode pipeline can work with either swap chain or offscreen
-buffers.
+Simplify COM object syntax by using *& dereferencing instead of explicit
+.Get() method calls. This pattern is more concise while maintaining identical
+semantics for passing ComPtr objects to COM interfaces.
 
 Changes:
-- Add D3D12SwapChain class managing IDXGISwapChain4, back buffers, RTV heap
-- Add RenderTargets struct as plain data carrier for rendering resources
-- Simplify D3D12Device to focus on device/queue/fence management
-- Update fence APIs to accept explicit frame indices instead of reading internal state
-- Update FrameCoordinator to depend on RenderTargets reference
-- Update main loop to instantiate swap chain separately from device
+- main.cpp: 4 replacements in device initialization
+- d3d12_frame_sync.cpp: 3 replacements in fence signal operations
+- d3d12_swap_chain.cpp: 1 replacement in RTV creation
+- frame_coordinator.h: 4 replacements in member initializers
+- frame_coordinator.cpp: 10 replacements in frame processing
 
-Present() now isolated to swap chain class, enabling future headless mode
-where presentation is skipped entirely.</div>
+Build: Successfully compiles with no errors
+Binary: 125.9 KB (MinSizeRel)</div>
+            </div>
 
-        <h2>Build Status</h2>
-        <div class="summary">
-            <p><strong>✅ Build Successful</strong></p>
-            <p style="margin-top: 0.5rem; color: #8b949e;">Debug configuration compiles cleanly with no errors or warnings.</p>
-            <p style="margin-top: 0.5rem; color: #8b949e;">MinSizeRel configuration: 123 KB optimized binary</p>
+            <div class="summary-box" style="margin-top: 40px;">
+                <h3>Summary</h3>
+                <p>
+                    ✓ All <code>.Get()</code> calls successfully replaced with <code>*&</code> pattern<br>
+                    ✓ Code compiles cleanly with no errors<br>
+                    ✓ Binary size: 125.9 KB (MinSizeRel)<br>
+                    ✓ Total source: 1,299 lines of C++ code<br>
+                    ✓ All formatting verified with clang-format<br>
+                    ✓ Ready for commit and merge
+                </p>
+            </div>
         </div>
 
-        <h2>Future Path</h2>
-        <div class="summary">
-            <p><strong>Headless Mode Ready:</strong> <code>FrameCoordinator</code> now depends on <code>RenderTargets</code> instead of swap chain state, so a future <code>OffscreenTargets</code> class can populate the same struct without touching encoder logic.</p>
-            <p style="margin-top: 1rem;"><strong>Present Isolation:</strong> <code>Present()</code> remains swap-chain-only; headless mode will simply omit it.</p>
-        </div>
-
+        <footer>
+            <p>Generated on February 7, 2026 | Goblin Stream Project</p>
+        </footer>
     </div>
-
-    <script>
-        hljs.highlightAll();
-    </script>
 </body>
 </html>

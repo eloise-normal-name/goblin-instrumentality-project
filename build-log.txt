@@ -1,0 +1,16 @@
+[02/07/2026 21:16:54] MinSizeRel binary: 125952 bytes
+[02/07/2026 21:16:57] Source lines of code in /src:
+      23 text files.
+classified 23 files
+      23 unique files.                              
+       4 files ignored.
+github.com/AlDanial/cloc v 1.80  T=1.00 s (23.0 files/s, 1636.0 lines/s)
+Language                     files          blank        comment           code
+      23 text files.
+classified 23 files
+      23 unique files.                              
+       4 files ignored.
+github.com/AlDanial/cloc v 1.80  T=0.50 s (46.0 files/s, 3272.0 lines/s)
+Language                     files          blank        comment           code
+C++                             11            232              0            943
+C/C++ Header                    12            105              0            356

@@ -43,7 +43,7 @@ class FrameCoordinator {
 		return &commands;
 	}
 	ID3D12Resource* GetEncoderTexture() {
-		return encoder_textures[render_targets.current_frame_index].Get();
+		return *&encoder_textures[render_targets.current_frame_index];
 	}
 	uint32_t GetCurrentFrameIndex() const {
 		return render_targets.current_frame_index;
@@ -62,12 +62,12 @@ class FrameCoordinator {
 	RenderTargets& render_targets;
 	PipelineConfig config;
 
-	D3D12Commands commands{device.device.Get(), allocators.GetAllocator(0)};
+	D3D12Commands commands{*&device.device, allocators.GetAllocator(0)};
 	ComPtr<ID3D12Resource> encoder_textures[3];
 	ResourceState encoder_states[3]{ResourceState::Common, ResourceState::Common,
 									ResourceState::Common};
-	ReadbackBuffer output_buffer{device.device.Get(), config.width* config.height * 4};
-	NvencSession nvenc_session{device.device.Get()};
+	ReadbackBuffer output_buffer{*&device.device, config.width* config.height * 4};
+	NvencSession nvenc_session{*&device.device};
 	NvencD3D12 nvenc_d3d12{&nvenc_session, allocators.buffer_count};
 	NvencConfig nvenc_config{&nvenc_session, EncoderConfig{
 												 .codec			 = config.codec,

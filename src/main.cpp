@@ -58,10 +58,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 
 	D3D12Device device;
 
-	D3D12FrameSync frame_sync(device.device.Get(), device.command_queue.Get(), buffer_count);
+	D3D12FrameSync frame_sync(*&device.device, *&device.command_queue, buffer_count);
 
-	D3D12CommandAllocators allocators(device.device.Get(), {.buffer_count = buffer_count});
-	D3D12SwapChain swap_chain(device.device.Get(), device.factory.Get(), device.command_queue.Get(),
+	D3D12CommandAllocators allocators(*&device.device, {.buffer_count = buffer_count});
+	D3D12SwapChain swap_chain(*&device.device, *&device.factory, *&device.command_queue,
 							  {
 								  .window_handle		= hwnd,
 								  .frame_width			= WINDOW_WIDTH,
@@ -112,7 +112,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 			+= (SIZE_T)(render_targets.current_frame_index * render_targets.rtv_descriptor_size);
 
 		commands->TransitionResource(
-			render_targets.render_targets[render_targets.current_frame_index].Get(),
+			*&render_targets.render_targets[render_targets.current_frame_index],
 			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		float clear_color[4] = {1, 0, 1, 1};

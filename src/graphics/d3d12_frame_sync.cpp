@@ -27,7 +27,7 @@ void D3D12FrameSync::WaitForGpu() {
 
 	for (uint32_t i = 0; i < buffer_count; ++i) {
 		uint64_t fence_value_to_signal = fence_values[i] + 1;
-		Try | command_queue->Signal(fence.Get(), fence_value_to_signal);
+		Try | command_queue->Signal(*&fence, fence_value_to_signal);
 
 		if (fence->GetCompletedValue() < fence_value_to_signal) {
 			Try | fence->SetEventOnCompletion(fence_value_to_signal, fence_event);
@@ -43,7 +43,7 @@ void D3D12FrameSync::MoveToNextFrame(uint32_t previous_frame_index, uint32_t nex
 		throw;
 
 	uint64_t current_fence_value = fence_values[previous_frame_index];
-	Try | command_queue->Signal(fence.Get(), current_fence_value);
+	Try | command_queue->Signal(*&fence, current_fence_value);
 
 	if (fence->GetCompletedValue() < fence_values[next_frame_index]) {
 		Try | fence->SetEventOnCompletion(fence_values[next_frame_index], fence_event);
@@ -58,7 +58,7 @@ uint64_t D3D12FrameSync::SignalFenceForFrame(uint32_t frame_index) {
 		throw;
 
 	uint64_t fence_value_to_signal = fence_values[frame_index] + 1;
-	Try | command_queue->Signal(fence.Get(), fence_value_to_signal);
+	Try | command_queue->Signal(*&fence, fence_value_to_signal);
 	fence_values[frame_index] = fence_value_to_signal;
 	return fence_value_to_signal;
 }

@@ -91,7 +91,7 @@ void D3D12SwapChain::create_render_targets() {
 	for (uint32_t i = 0; i < buffer_count; ++i) {
 		Try | swap_chain->GetBuffer(i, IID_PPV_ARGS(&render_targets.render_targets[i]));
 
-		device->CreateRenderTargetView(render_targets.render_targets[i].Get(), nullptr, rtv_handle);
+		device->CreateRenderTargetView(*&render_targets.render_targets[i], nullptr, rtv_handle);
 		rtv_handle.ptr += render_targets.rtv_descriptor_size;
 	}
 }
