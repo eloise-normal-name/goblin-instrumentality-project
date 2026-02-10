@@ -4,7 +4,7 @@ project(goblin-stream CXX)
 # 1. Settings
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+    
 # 2. Static Linking (/MT and /MTd)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -17,10 +17,8 @@ set(SOURCES
     src/graphics/d3d12_command_allocators.cpp
     src/graphics/d3d12_commands.cpp
     src/graphics/d3d12_device.cpp
-    src/graphics/d3d12_frame_sync.cpp
     src/graphics/d3d12_resources.cpp
     src/graphics/d3d12_swap_chain.cpp
-    src/pipeline/frame_coordinator.cpp
 )
 
 # 4. Define Executable (WIN32 = subsystem:windows)

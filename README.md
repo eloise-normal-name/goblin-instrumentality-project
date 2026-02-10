@@ -14,7 +14,6 @@ goblin-stream/
 ├── src/
 │   ├── graphics/      # D3D12 rendering (device, swap chain, targets, commands)
 │   ├── encoder/       # NVENC encoding (session, config, D3D12 interop)
-│   ├── pipeline/      # Frame coordination (render-to-encode sync)
 │   ├── try.h          # Error handling helper (Try | pattern)
 │   └── main.cpp       # Application entry point
 └── CMakeLists.txt     # CMake build configuration
@@ -23,51 +22,32 @@ goblin-stream/
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Main Application                        │
-│                           (main.cpp)                            │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Frame Coordinator                          │
-│              (synchronizes render → encode flow)                │
-└───────────────┬─────────────────────────────┬───────────────────┘
-                │                             │
-                ▼                             ▼
-┌───────────────────────────┐   ┌───────────────────────────────┐
-│     D3D12 Graphics        │   │        NVENC Encoder          │
-│  ┌─────────────────────┐  │   │  ┌─────────────────────────┐  │
-│  │ d3d12_device        │  │   │  │ nvenc_session           │  │
-│  │ (device, queue)     │  │   │  │ (DLL loading, session)  │  │
-│  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
-│  │ d3d12_swap_chain    │  │   │  │                         │  │
-│  │ (swap chain, RTVs)  │  │   │  │                         │  │
-│  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
-│  │ d3d12_resources     │  │   │  │ nvenc_d3d12             │  │
-│  │ (textures, heaps)   │──┼───┼─►│ (texture registration)  │  │
-│  ├─────────────────────┤  │   │  ├─────────────────────────┤  │
-│  │ d3d12_commands      │  │   │  │ nvenc_config            │  │
-│  │ (command lists)     │  │   │  │ (H.264/HEVC settings)   │  │
-│  └─────────────────────┘  │   │  └─────────────────────────┘  │
-└───────────────────────────┘   └───────────────────────────────┘
-                │                             │
-                ▼                             ▼
-┌───────────────────────────┐   ┌───────────────────────────────┐
-│      GPU Render Work      │   │    GPU Encode Work            │
-│   (D3D12 command queue)   │   │  (nvEncodeAPI64.dll)          │
-└───────────────────────────┘   └───────────────────────────────┘
+┌─────────────────────────────────┐
+│         Main Application        │
+│           (main.cpp)            │
+└───────────────┬─────────────────┘
+                ▼
+┌─────────────────────────────────┐
+│          D3D12 Graphics         │
+│  ┌────────────────────────────┐ │
+│  │ d3d12_device                │ │
+│  │ d3d12_swap_chain            │ │
+│  │ d3d12_resources             │ │
+│  │ d3d12_commands              │ │
+│  └────────────────────────────┘ │
+└───────────────┬─────────────────┘
+                ▼
+┌────────────────────────┐
+│    GPU Render Work     │
+│   (command queue)      │
+└────────────────────────┘
 ```
 
 ### Data Flow
 
-1. **D3D12 Swap Chain** creates render targets and RTV heap
-2. **D3D12 Commands** records draw calls and executes on GPU
-3. **Frame Coordinator** signals and waits for D3D12 fence (render complete)
-4. **Frame Coordinator** waits for prior NVENC fence (encode complete) before reusing encoder texture
-5. **NVENC D3D12** submits rendered texture to encoder via D3D12 fence points
-6. **NVENC Session** waits for encode completion and retrieves H.264/HEVC bitstream
-7. Graphics queue resumes texture reuse when NVENC signals fence completion
+1. **D3D12 Swap Chain** provisions RTVs and command queue targets
+2. **D3D12 Commands** records transitions, clears, and present work
+3. **GPU Render Work** executes the command lists and presents to the window
 
 ## Build
 

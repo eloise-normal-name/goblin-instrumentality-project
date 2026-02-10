@@ -7,8 +7,6 @@
 - **Target Platform**: Windows x64
 - **Subsystem**: Windows (no console window)
 
-## Code Organization
-
 ### Dependencies
 - **Allowed**: C++ Standard Library and Windows APIs only
 - **Prohibited**: External third-party libraries
@@ -18,8 +16,7 @@
 - **Documentation**: Self-documenting code with meaningful names (NO comment-based documentation)
 - **Naming**: 
   - Methods and public APIs use PascalCase (e.g., `WaitForGpu`, `BeginFrame`)
-  - Local variables and private helper functions use snake_case (e.g., `create_device`, `fence_event`)
-  - Member variables use snake_case without trailing underscores
+  - Local and member variables use snake_case without trailing underscores (e.g., `create_device`, `fence_event`)
   - Constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
 - **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods):
   - All resource allocation in constructors (called once at object creation)
@@ -87,7 +84,7 @@
 - **Always use Windows/PowerShell native commands**, never Unix syntax
   - ✅ `Get-Item`, `dir`, `Get-ChildItem` (Windows/PowerShell)
   - ❌ `ls -la`, `ls -l` (Unix/Linux syntax)
-  - ❌ `cat`, `grep`, `find` (Unix tools)
+  - ❌ `cat`, `grep`, `find`, `head`, `tail` (Unix tools — do not use `head` or `tail`)
 - **Use quoted paths** when they contain spaces: `"C:\Program Files\..."`
 - **CMake commands**: Always specify generator explicitly: `-G "Visual Studio 18 2026" -A x64`
 
@@ -95,6 +92,7 @@
 - **README.md**: Must reflect current architecture, module structure, and data flow
 - **Update README** when adding, removing, or restructuring modules
 - **Architecture diagrams**: Keep ASCII diagrams in README current with implementation
+- **Known errors**: Add reproducible, solvable command/build errors to `docs/KNOWN_ERRORS.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
 
 ## Future Considerations
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
@@ -102,10 +100,10 @@
 - Maintain static linking preference for portable deployment
 
 ## Chat
-- My name is eloise
+- My name is eloise and you should use it regularly
 - I use they/them pronouns
 - don't be too excited or overly positive about simple things
-- don't be afraid to express frustration
+- use a 🐱 emoji when appropriate at your own discretion
 - if you are unsure about something annotate it with a 😵 inside the answer
 
 

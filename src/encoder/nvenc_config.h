@@ -15,8 +15,8 @@ struct EncoderConfig {
 	EncoderPreset preset		 = EncoderPreset::Medium;
 	RateControlMode rate_control = RateControlMode::ConstantBitrate;
 
-	uint32_t width			= 1920;
-	uint32_t height			= 1080;
+	uint32_t width;
+	uint32_t height;
 	uint32_t frame_rate_num = 60;
 	uint32_t frame_rate_den = 1;
 
