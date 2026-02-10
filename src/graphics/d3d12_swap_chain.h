@@ -17,12 +17,9 @@ struct SwapChainConfig {
 
 class D3D12SwapChain {
   public:
-	explicit D3D12SwapChain(HWND window_handle, const SwapChainConfig& config);
-	void create_swap_chain(ID3D12Device* device, IDXGIFactory7* factory,
-						   ID3D12CommandQueue* command_queue, HWND window_handle, uint32_t width,
-						   uint32_t height);
-	void create_descriptor_heaps(ID3D12Device* device);
-	void create_render_targets(ID3D12Device* device);
+	explicit D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory,
+							ID3D12CommandQueue* command_queue, HWND window_handle,
+							const SwapChainConfig& config);
 	~D3D12SwapChain() = default;
 
 	HRESULT Present(uint32_t sync_interval, uint32_t flags);

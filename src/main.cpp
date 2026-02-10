@@ -53,8 +53,23 @@ HWND CreateAppWindow(HINSTANCE instance) {
 						nullptr, instance, nullptr);
 }
 
+class FrameResources {
+  public:
+	FrameResources(ID3D12Device* device, ID3D12CommandAllocator* allocator) {
+		Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+		fence_event = CreateEvent(nullptr, FALSE, TRUE, nullptr);
+		if (!fence_event)
+			throw;
 
-struct FrameResource {
+		Try
+			| device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator, nullptr,
+										IID_PPV_ARGS(&command_list));
+	}
+
+	~FrameResources() {
+		CloseHandle(fence_event);
+	}
+
 	ComPtr<ID3D12GraphicsCommandList> command_list;
 	ComPtr<ID3D12Fence> fence;
 	HANDLE fence_event = nullptr;
@@ -106,25 +121,27 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	UpdateWindow(hwnd);
 
 	constexpr auto BUFFER_COUNT = 3u;
+
 	D3D12Device device;
-	D3D12SwapChain swap_chain(hwnd, SwapChainConfig{
-		.frame_width = WINDOW_WIDTH,
-		.frame_height = WINDOW_HEIGHT,
-		.buffer_count = BUFFER_COUNT,
-		.render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM
-	});
-	swap_chain.create_swap_chain(device.device.Get(), device.factory.Get(), device.command_queue.Get(), hwnd, WINDOW_WIDTH, WINDOW_HEIGHT);
-	swap_chain.create_descriptor_heaps(device.device.Get());
-	swap_chain.create_render_targets(device.device.Get());
+
+	D3D12SwapChain swap_chain{
+		*&device.device,
+		*&device.factory,
+		*&device.command_queue,
+		hwnd,
+		SwapChainConfig{.frame_width		  = WINDOW_WIDTH,
+						.frame_height		  = WINDOW_HEIGHT,
+						.buffer_count		  = BUFFER_COUNT,
+						.render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM},
+	};
 
 	ComPtr<ID3D12CommandAllocator> allocator;
-	Try | device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator));
-
-	std::array<FrameResource, BUFFER_COUNT> frames;
+	Try
+		| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+												IID_PPV_ARGS(&allocator));
+	std::vector<FrameResources> frames;
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
-		Try | device.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[i].fence));
-		frames[i].fence_event = CreateEvent(nullptr, FALSE, TRUE, nullptr);
-		Try | device.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.Get(), nullptr, IID_PPV_ARGS(&frames[i].command_list));
+		frames.emplace_back(device.device.Get(), allocator.Get());
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv = swap_chain.rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		rtv.ptr += i * swap_chain.rtv_descriptor_size;
@@ -137,8 +154,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		fence_handles[i] = frames[i].fence_event;
 
 	MSG msg{};
-	bool running = true;
-	auto frames_submitted = 0u;
+	bool running		   = true;
+	auto frames_submitted  = 0u;
 	auto back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
 	HRESULT present_result = S_OK;
 	std::ofstream debug_output("debug_output.txt");
@@ -147,7 +164,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		auto wait_handle = fence_handles[back_buffer_index];
 		auto wait_result = MsgWaitForMultipleObjects(1, &wait_handle, FALSE, INFINITE, QS_ALLINPUT);
 
-		debug_output << "Wait result of fence_handles[" << back_buffer_index << "]: " << wait_result << "\n";
+		debug_output << "Wait result of fence_handles[" << back_buffer_index << "]: " << wait_result
+					 << "\n";
 
 		if (wait_result == WAIT_OBJECT_0 + 1) {
 			running = ProcessWindowMessages(msg);
@@ -160,29 +178,30 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 		auto completed_value = frames[back_buffer_index].fence->GetCompletedValue();
 		if (completed_value + frames.size() < frames_submitted + 1)
 			continue;
-		debug_output << "\tCompleted Value: " << completed_value << "\n\tpresent_result: " << present_result << "\n";
+		debug_output << "\tCompleted Value: " << completed_value
+					 << "\n\tpresent_result: " << present_result << "\n";
 
 		if (present_result == S_OK) {
-			ID3D12CommandList* command_list_to_execute = frames[back_buffer_index].command_list.Get();
+			ID3D12CommandList* command_list_to_execute
+				= frames[back_buffer_index].command_list.Get();
 			ID3D12CommandList* lists[] = {command_list_to_execute};
 			device.command_queue->ExecuteCommandLists(1, lists);
 		}
 		present_result = swap_chain.Present(1, DXGI_PRESENT_DO_NOT_WAIT);
 		device.command_queue->Signal(frames[back_buffer_index].fence.Get(), frames_submitted + 1);
-		frames[back_buffer_index].fence->SetEventOnCompletion(frames_submitted + 1, frames[back_buffer_index].fence_event);
+		frames[back_buffer_index].fence->SetEventOnCompletion(
+			frames_submitted + 1, frames[back_buffer_index].fence_event);
 		if (present_result == DXGI_ERROR_WAS_STILL_DRAWING) {
 			debug_output << "\t‼Present returned DXGI_ERROR_WAS_STILL_DRAWING, skipping...\n";
 			continue;
 		}
 
-		debug_output << "\tFrame submitted, fence[" << back_buffer_index << "] signaled with value: " << frames_submitted + 1;
+		debug_output << "\tFrame submitted, fence[" << back_buffer_index
+					 << "] signaled with value: " << frames_submitted + 1;
 		back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
 		++frames_submitted;
 		debug_output << "\n\t\tnew back_buffer_index: " << back_buffer_index << "\n";
 	}
 	debug_output.close();
-	for (auto& frame : frames) {
-		if (frame.fence_event) CloseHandle(frame.fence_event);
-	}
 	return 0;
 }
