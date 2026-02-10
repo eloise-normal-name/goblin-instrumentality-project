@@ -2,19 +2,25 @@
 
 #include "try.h"
 
-D3D12SwapChain::D3D12SwapChain(HWND window_handle, const SwapChainConfig& config)
-	: buffer_count(config.buffer_count), render_target_format(config.render_target_format) {
+D3D12SwapChain::D3D12SwapChain(ID3D12Device* dev, IDXGIFactory7* fac, ID3D12CommandQueue* queue,
+							   HWND window_handle, const SwapChainConfig& config)
+	: device(dev)
+	, factory(fac)
+	, command_queue(queue)
+	, buffer_count(config.buffer_count)
+	, render_target_format(config.render_target_format) {
 	render_targets.resize(buffer_count);
-	// Initialization must be called separately after construction.
+
+	create_swap_chain(window_handle, config.frame_width, config.frame_height);
+	create_descriptor_heaps();
+	create_render_targets();
 }
 
 HRESULT D3D12SwapChain::Present(uint32_t sync_interval, uint32_t flags) {
 	return swap_chain->Present(sync_interval, flags);
 }
 
-void D3D12SwapChain::create_swap_chain(ID3D12Device* device, IDXGIFactory7* factory,
-									   ID3D12CommandQueue* command_queue, HWND window_handle,
-									   uint32_t width, uint32_t height) {
+void D3D12SwapChain::create_swap_chain(HWND window_handle, uint32_t width, uint32_t height) {
 	DXGI_SWAP_CHAIN_DESC1 sc_desc{
 		.Width		 = width,
 		.Height		 = height,
@@ -33,7 +39,7 @@ void D3D12SwapChain::create_swap_chain(ID3D12Device* device, IDXGIFactory7* fact
 		| sc1.As(&swap_chain);
 }
 
-void D3D12SwapChain::create_descriptor_heaps(ID3D12Device* device) {
+void D3D12SwapChain::create_descriptor_heaps() {
 	if (!device)
 		throw;
 
@@ -47,7 +53,7 @@ void D3D12SwapChain::create_descriptor_heaps(ID3D12Device* device) {
 	rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void D3D12SwapChain::create_render_targets(ID3D12Device* device) {
+void D3D12SwapChain::create_render_targets() {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
 
 	for (uint32_t i = 0; i < buffer_count; ++i) {

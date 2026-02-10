@@ -30,6 +30,13 @@ class D3D12SwapChain {
 	uint32_t rtv_descriptor_size = 0;
 
   private:
+	void create_swap_chain(HWND window_handle, uint32_t width, uint32_t height);
+	void create_descriptor_heaps();
+	void create_render_targets();
+
+	ID3D12Device* device;
+	IDXGIFactory7* factory;
+	ID3D12CommandQueue* command_queue;
 	uint32_t buffer_count;
 	DXGI_FORMAT render_target_format;
 };

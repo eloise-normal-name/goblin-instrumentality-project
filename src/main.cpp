@@ -66,6 +66,13 @@ class FrameResources {
 										IID_PPV_ARGS(&command_list));
 	}
 
+	FrameResources(FrameResources&& rhs) {
+		command_list	= std::move(rhs.command_list);
+		fence			= std::move(rhs.fence);
+		fence_event		= rhs.fence_event;
+		rhs.fence_event = nullptr;
+	}
+
 	~FrameResources() {
 		CloseHandle(fence_event);
 	}
