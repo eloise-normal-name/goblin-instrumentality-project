@@ -24,6 +24,7 @@
   - No two-phase initialization; construction must either fully succeed or throw
   - For GPU resources receiving parameters, constructors accept all necessary config/device pointers
   - HANDLEs, COM objects, and DLL modules wrapped with proper cleanup in destructors
+  - **Prefer passing raw COM pointers (e.g., `ID3D12Device*`, `ID3D12Resource*`) to functions rather than `ComPtr` by value.** Use `ComPtr` for RAII ownership inside types, but avoid copying or passing `ComPtr` unless a function needs ownership or lifetime management; passing the contained raw pointer avoids unintended reference count changes and clarifies intent.
 - **Command Lists**: Command lists and allocators must be generated once and reused efficiently (via Reset); do not recreate them every frame
 - **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
   - Single-statement conditionals (`if`, `for`, `while`) should omit braces
