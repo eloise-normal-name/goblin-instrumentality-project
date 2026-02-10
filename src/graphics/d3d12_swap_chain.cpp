@@ -3,7 +3,7 @@
 #include "try.h"
 
 D3D12SwapChain::D3D12SwapChain(ID3D12Device* dev, IDXGIFactory7* fac, ID3D12CommandQueue* queue,
-							   const SwapChainConfig& config)
+							   HWND window_handle, const SwapChainConfig& config)
 	: device(dev)
 	, factory(fac)
 	, command_queue(queue)
@@ -11,13 +11,13 @@ D3D12SwapChain::D3D12SwapChain(ID3D12Device* dev, IDXGIFactory7* fac, ID3D12Comm
 	, render_target_format(config.render_target_format) {
 	render_targets.resize(buffer_count);
 
-	create_swap_chain(config.window_handle, config.frame_width, config.frame_height);
+	create_swap_chain(window_handle, config.frame_width, config.frame_height);
 	create_descriptor_heaps();
 	create_render_targets();
 }
 
-void D3D12SwapChain::Present(uint32_t sync_interval, uint32_t flags) {
-	Try | swap_chain->Present(sync_interval, flags);
+HRESULT D3D12SwapChain::Present(uint32_t sync_interval, uint32_t flags) {
+	return swap_chain->Present(sync_interval, flags);
 }
 
 void D3D12SwapChain::create_swap_chain(HWND window_handle, uint32_t width, uint32_t height) {
@@ -28,7 +28,7 @@ void D3D12SwapChain::create_swap_chain(HWND window_handle, uint32_t width, uint3
 		.SampleDesc	 = {.Count = 1, .Quality = 0},
 		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = buffer_count,
-		.SwapEffect	 = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+		.SwapEffect	 = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 	};
 
 	ComPtr<IDXGISwapChain1> sc1;
