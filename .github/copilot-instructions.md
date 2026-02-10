@@ -1,6 +1,8 @@
-# Goblin Stream - Project Instructions
+# Goblin Instrumentality Project - Instructions
 
 ## Technology Stack
+
+> Formal project name: Goblin Instrumentality Project (formerly Goblin Stream)
 - **Language**: C++23 (latest standard)
 - **Build System**: CMake 3.28+ with MSVC compiler (Visual Studio 2026 Community, aka version 18)
 - **Linking**: Static linking (`/MT` runtime)

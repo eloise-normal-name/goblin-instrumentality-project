@@ -174,128 +174,34 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>ComPtr Refactor: .Get() to *& Pattern</h1>
-            <p>Simplified COM object dereferencing across the codebase</p>
-        </header>
-
-        <div class="content">
-            <div class="metrics">
-                <div class="metric-card">
-                    <h3>Files Modified</h3>
-                    <div class="value">5</div>
-                </div>
-                <div class="metric-card">
-                    <h3>Total Changes</h3>
-                    <div class="value">22</div>
-                </div>
-                <div class="metric-card">
-                    <h3>Binary Size</h3>
-                    <div class="value">125.9 KB</div>
-                </div>
-                <div class="metric-card">
-                    <h3>Source Lines</h3>
-                    <div class="value">1,299</div>
-                </div>
-            </div>
-
-            <div class="summary-box">
-                <h3>What Changed</h3>
-                <p>
-                    All <code>.Get()</code> method calls on ComPtr objects have been replaced with the <code>*&</code> dereferencing pattern.
-                    This provides a more concise syntax when passing COM objects to functions, while maintaining the same functionality.
-                </p>
-            </div>
-
-            <div class="section">
-                <h2>Files Modified</h2>
-                <ul style="list-style: none; padding-left: 0;">
-                    <li style="margin-bottom: 12px;">✓ <strong>src/main.cpp</strong> — 4 changes</li>
-                    <li style="margin-bottom: 12px;">✓ <strong>src/graphics/d3d12_frame_sync.cpp</strong> — 3 changes</li>
-                    <li style="margin-bottom: 12px;">✓ <strong>src/graphics/d3d12_swap_chain.cpp</strong> — 1 change</li>
-                    <li style="margin-bottom: 12px;">✓ <strong>src/pipeline/frame_coordinator.h</strong> — 4 changes</li>
-                    <li style="margin-bottom: 12px;">✓ <strong>src/pipeline/frame_coordinator.cpp</strong> — 10 changes</li>
-                </ul>
-            </div>
-
-            <div class="section">
-                <h2>Pattern Change: Before & After</h2>
-                <p style="margin-bottom: 20px; color: #666;">The refactor follows a simple pattern across all files:</p>
-                
-                <div class="change-group">
-                    <div class="file-header">Device Initialization Example</div>
-                    <div class="code-container">
-                        <div class="code-diff">
-                            <div class="code-line removed">
-                                <div class="line-num"></div>
-                                <div class="line-content"><span class="highlight-pattern">device.device.Get()</span></div>
-                            </div>
-                        </div>
-                        <div class="code-diff">
-                            <div class="code-line added">
-                                <div class="line-num"></div>
-                                <div class="line-content"><span class="highlight-pattern">*&device.device</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <p style="color: #666; margin-top: 20px;"><strong>Benefits:</strong></p>
-                <ul style="margin-left: 20px; color: #555;">
-                    <li style="margin: 8px 0;">More concise syntax for dereferencing ComPtr objects</li>
-                    <li style="margin: 8px 0;">Aligns with modern C++ practices</li>
-                    <li style="margin: 8px 0;">No functional change—same underlying semantics</li>
-                    <li style="margin: 8px 0;">Consistent pattern throughout codebase</li>
-                </ul>
-            </div>
-
-            <div class="section">
-                <h2>Build Status</h2>
-                <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; border-radius: 8px;">
-                    <p style="color: #166534; margin-bottom: 10px;"><strong>✅ Build Successful</strong></p>
-                    <p style="color: #4b5563; margin: 8px 0;">No compilation errors or warnings</p>
-                    <p style="color: #4b5563; margin: 8px 0;">MinSizeRel binary: <strong>125.9 KB</strong></p>
-                    <p style="color: #4b5563; margin: 8px 0;">Total source code: <strong>1,299 lines</strong> of C++</p>
-                    <p style="color: #4b5563; margin-top: 10px;">All files passed clang-format verification</p>
-                </div>
-            </div>
-
-            <div class="section">
-                <h2>Commit Message</h2>
-                <div style="background: #f5f7fa; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; white-space: pre-wrap; overflow-x: auto;">
-refactor: replace .Get() with *& pattern for ComPtr dereferencing
-
-Simplify COM object syntax by using *& dereferencing instead of explicit
-.Get() method calls. This pattern is more concise while maintaining identical
-semantics for passing ComPtr objects to COM interfaces.
-
-Changes:
-- main.cpp: 4 replacements in device initialization
-- d3d12_frame_sync.cpp: 3 replacements in fence signal operations
-- d3d12_swap_chain.cpp: 1 replacement in RTV creation
-- frame_coordinator.h: 4 replacements in member initializers
-- frame_coordinator.cpp: 10 replacements in frame processing
-
-Build: Successfully compiles with no errors
-Binary: 125.9 KB (MinSizeRel)</div>
-            </div>
-
-            <div class="summary-box" style="margin-top: 40px;">
-                <h3>Summary</h3>
-                <p>
-                    ✓ All <code>.Get()</code> calls successfully replaced with <code>*&</code> pattern<br>
-                    ✓ Code compiles cleanly with no errors<br>
-                    ✓ Binary size: 125.9 KB (MinSizeRel)<br>
-                    ✓ Total source: 1,299 lines of C++ code<br>
-                    ✓ All formatting verified with clang-format<br>
-                    ✓ Ready for commit and merge
-                </p>
-            </div>
-        </div>
-
-        <footer>
-            <p>Generated on February 7, 2026 | Goblin Stream Project</p>
-        </footer>
-    </div>
+	<h1>Goblin Instrumentality Project - Refactor Highlights 🐱</h1>
+	<div class="section">
+		<h2>Summary</h2>
+		<ul>
+			<li>Fixed D3D12SwapChain member initialization and COM interface conversion errors</li>
+			<li>Updated formal project name to <b>Goblin Instrumentality Project</b></li>
+			<li>Revised review instructions to compare against last highlights commit</li>
+			<li>Ensured formatting and resolved compile errors</li>
+		</ul>
+	</div>
+	<div class="section">
+		<h2>Build Status</h2>
+		<p><b>MinSizeRel binary:</b> <code>bin/MinSizeRel/goblin-stream.exe</code> &mdash; <b>258,048 bytes</b></p>
+		<p><b>Build:</b> Successful, no errors or warnings</p>
+	</div>
+	<div class="section">
+		<h2>Total Source Lines</h2>
+		<p><b>Source lines in src:</b> 1,299</p>
+	</div>
+	<div class="section">
+		<h2>Files Modified</h2>
+		<ul>
+			<li>.copilot-review-prompt.md</li>
+			<li>.github/copilot-instructions.md</li>
+			<li>src/graphics/d3d12_swap_chain.cpp</li>
+			<li>build-log.txt</li>
+			<li>refactor-highlights.html</li>
+		</ul>
+	</div>
 </body>
 </html>
