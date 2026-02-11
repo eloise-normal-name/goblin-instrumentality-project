@@ -11,16 +11,12 @@ D3D12SwapChain::D3D12SwapChain(ID3D12Device* dev, IDXGIFactory7* fac, ID3D12Comm
 	, render_target_format(config.render_target_format)
 	, rtv_descriptor_size(0) {
 	render_targets.resize(buffer_count);
-	this->create_swap_chain(window_handle, config.frame_width, config.frame_height);
-	this->create_descriptor_heaps();
-	this->create_render_targets();
+	CreateSwapChain(window_handle, config.frame_width, config.frame_height);
+	CreateDescriptorHeaps();
+	CreateRenderTargets();
 }
 
-HRESULT D3D12SwapChain::Present(uint32_t sync_interval, uint32_t flags) {
-	return swap_chain->Present(sync_interval, flags);
-}
-
-void D3D12SwapChain::create_swap_chain(HWND window_handle, uint32_t width, uint32_t height) {
+void D3D12SwapChain::CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height) {
 	DXGI_SWAP_CHAIN_DESC1 sc_desc{
 		.Width		 = width,
 		.Height		 = height,
@@ -39,7 +35,7 @@ void D3D12SwapChain::create_swap_chain(HWND window_handle, uint32_t width, uint3
 	Try | sc1->QueryInterface(IID_PPV_ARGS(swap_chain.GetAddressOf()));
 }
 
-void D3D12SwapChain::create_descriptor_heaps() {
+void D3D12SwapChain::CreateDescriptorHeaps() {
 	if (!device)
 		throw;
 
@@ -53,7 +49,7 @@ void D3D12SwapChain::create_descriptor_heaps() {
 	rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void D3D12SwapChain::create_render_targets() {
+void D3D12SwapChain::CreateRenderTargets() {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
 	for (uint32_t i = 0; i < buffer_count; ++i) {
 		Try | swap_chain->GetBuffer(i, IID_PPV_ARGS(render_targets[i].GetAddressOf()));

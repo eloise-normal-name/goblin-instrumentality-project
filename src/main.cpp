@@ -194,7 +194,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 			ID3D12CommandList* lists[] = {command_list_to_execute};
 			device.command_queue->ExecuteCommandLists(1, lists);
 		}
-		present_result = swap_chain.Present(1, DXGI_PRESENT_DO_NOT_WAIT);
+		present_result = swap_chain.swap_chain->Present(1, DXGI_PRESENT_DO_NOT_WAIT);
 		device.command_queue->Signal(frames[back_buffer_index].fence.Get(), frames_submitted + 1);
 		frames[back_buffer_index].fence->SetEventOnCompletion(
 			frames_submitted + 1, frames[back_buffer_index].fence_event);

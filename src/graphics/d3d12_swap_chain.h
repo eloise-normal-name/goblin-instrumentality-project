@@ -22,17 +22,15 @@ class D3D12SwapChain {
 							const SwapChainConfig& config);
 	~D3D12SwapChain() = default;
 
-	HRESULT Present(uint32_t sync_interval, uint32_t flags);
-
 	ComPtr<IDXGISwapChain4> swap_chain;
 	ComPtr<ID3D12DescriptorHeap> rtv_heap;
 	std::vector<ComPtr<ID3D12Resource>> render_targets;
 	uint32_t rtv_descriptor_size = 0;
 
   private:
-	void create_swap_chain(HWND window_handle, uint32_t width, uint32_t height);
-	void create_descriptor_heaps();
-	void create_render_targets();
+	void CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height);
+	void CreateDescriptorHeaps();
+	void CreateRenderTargets();
 
 	ID3D12Device* device;
 	IDXGIFactory7* factory;
