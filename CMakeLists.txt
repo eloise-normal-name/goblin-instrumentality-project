@@ -10,7 +10,9 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # 3. Explicit Source Listing
 set(SOURCES
+    src/app.cpp
     src/main.cpp
+    src/frame_debug_log.cpp
     src/encoder/nvenc_config.cpp
     src/encoder/nvenc_d3d12.cpp
     src/encoder/nvenc_session.cpp
