@@ -39,5 +39,3 @@ void D3D12Device::create_command_queue() {
 
 	Try | device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
 }
-
-

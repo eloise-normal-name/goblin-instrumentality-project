@@ -2,7 +2,8 @@
 
 #include "try.h"
 
-D3D12CommandAllocators::D3D12CommandAllocators(ID3D12Device* device, const CommandAllocatorsConfig& config)
+D3D12CommandAllocators::D3D12CommandAllocators(ID3D12Device* device,
+											   const CommandAllocatorsConfig& config)
 	: buffer_count(config.buffer_count > 0 ? config.buffer_count : 2) {
 	if (buffer_count > 3)
 		buffer_count = 3;
