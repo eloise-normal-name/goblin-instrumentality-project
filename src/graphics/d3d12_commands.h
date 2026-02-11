@@ -9,7 +9,7 @@ using Microsoft::WRL::ComPtr;
 
 class D3D12Commands {
   public:
-	explicit D3D12Commands(ID3D12Device* device, ID3D12CommandAllocator* allocator);
+	D3D12Commands(ID3D12Device* device, ID3D12CommandAllocator* allocator);
 	~D3D12Commands() = default;
 
 	void Reset(ID3D12CommandAllocator* allocator);

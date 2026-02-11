@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#include "app.h"
+import app;
 
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"GoblinStreamWindow";
 constexpr wchar_t WINDOW_TITLE[]	  = L"Goblin Stream";

@@ -17,9 +17,8 @@ struct SwapChainConfig {
 
 class D3D12SwapChain {
   public:
-	explicit D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory,
-							ID3D12CommandQueue* command_queue, HWND window_handle,
-							const SwapChainConfig& config);
+	D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory, ID3D12CommandQueue* command_queue,
+				   HWND window_handle, const SwapChainConfig& config);
 	~D3D12SwapChain() = default;
 
 	ComPtr<IDXGISwapChain4> swap_chain;

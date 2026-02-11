@@ -11,7 +11,7 @@ enum class ResourceState { Common, RenderTarget, CopySource, CopyDest, VideoEnco
 
 class ReadbackBuffer {
   public:
-	explicit ReadbackBuffer(ID3D12Device* device, uint32_t size);
+	ReadbackBuffer(ID3D12Device* device, uint32_t size);
 	~ReadbackBuffer() = default;
 
 	ComPtr<ID3D12Resource> resource;

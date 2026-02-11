@@ -13,7 +13,7 @@ struct CommandAllocatorsConfig {
 
 class D3D12CommandAllocators {
   public:
-	explicit D3D12CommandAllocators(ID3D12Device* device, const CommandAllocatorsConfig& config);
+	D3D12CommandAllocators(ID3D12Device* device, const CommandAllocatorsConfig& config);
 	~D3D12CommandAllocators() = default;
 
 	ID3D12CommandAllocator* GetAllocator(uint32_t frame_index) const {

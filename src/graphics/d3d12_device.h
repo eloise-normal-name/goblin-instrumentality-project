@@ -10,7 +10,7 @@ using Microsoft::WRL::ComPtr;
 
 class D3D12Device {
   public:
-	explicit D3D12Device();
+	D3D12Device();
 	~D3D12Device();
 
 	ComPtr<IDXGIFactory7> factory;

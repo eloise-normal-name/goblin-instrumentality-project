@@ -26,7 +26,7 @@ struct BitstreamBuffer {
 
 class NvencD3D12 {
   public:
-	explicit NvencD3D12(NvencSession* session, uint32_t buffer_count);
+	NvencD3D12(NvencSession* session, uint32_t buffer_count);
 	~NvencD3D12();
 
 	void RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,

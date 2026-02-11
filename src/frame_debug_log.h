@@ -8,7 +8,7 @@
 
 class FrameDebugLog {
   public:
-	explicit FrameDebugLog(const char* path);
+	FrameDebugLog(const char* path);
 
 	void BeginFrame(uint64_t frame_index);
 	std::ostream& Line();

@@ -20,7 +20,7 @@ struct EncoderCapabilities {
 
 struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
   public:
-	explicit NvencSession(void* d3d12_device);
+	NvencSession(void* d3d12_device);
 	~NvencSession();
 
 	void QueryCapabilities(EncoderCapabilities& caps);
