@@ -2,10 +2,7 @@
 
 #include "try.h"
 
-NvencD3D12::NvencD3D12(NvencSession* init_session, uint32_t buffer_count) {
-	if (!init_session || !init_session->encoder)
-		throw;
-	session = init_session;
+NvencD3D12::NvencD3D12(NvencSession& session, uint32_t buffer_count) : session(session) {
 	textures.reserve(buffer_count);
 }
 
@@ -16,10 +13,7 @@ NvencD3D12::~NvencD3D12() {
 
 void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
 								 NV_ENC_BUFFER_FORMAT format) {
-	if (!session || !texture)
-		throw;
-
-	void* encoder = session->encoder;
+	void* encoder = session.encoder;
 
 	NV_ENC_REGISTER_RESOURCE register_params{
 		.version			= NV_ENC_REGISTER_RESOURCE_VER,
@@ -31,7 +25,7 @@ void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32
 		.bufferUsage		= NV_ENC_INPUT_IMAGE,
 	};
 
-	Try | session->nvEncRegisterResource(encoder, &register_params);
+	Try | session.nvEncRegisterResource(encoder, &register_params);
 
 	textures.push_back({
 		.resource		= texture,
@@ -51,8 +45,8 @@ void NvencD3D12::UnregisterTexture(uint32_t index) {
 		UnmapInputTexture(index);
 
 	if (texture.registered_ptr) {
-		void* encoder = session->encoder;
-		Try | session->nvEncUnregisterResource(encoder, texture.registered_ptr);
+		void* encoder = session.encoder;
+		Try | session.nvEncUnregisterResource(encoder, texture.registered_ptr);
 		texture.registered_ptr = nullptr;
 	}
 }
@@ -65,10 +59,10 @@ void NvencD3D12::UnregisterAllTextures() {
 }
 
 void NvencD3D12::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) {
-	if (!session || !buffer)
+	if (!buffer)
 		throw;
 
-	void* encoder = session->encoder;
+	void* encoder = session.encoder;
 
 	NV_ENC_REGISTER_RESOURCE register_params{
 		.version			= NV_ENC_REGISTER_RESOURCE_VER,
@@ -80,7 +74,7 @@ void NvencD3D12::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) 
 		.bufferUsage		= NV_ENC_OUTPUT_BITSTREAM,
 	};
 
-	Try | session->nvEncRegisterResource(encoder, &register_params);
+	Try | session.nvEncRegisterResource(encoder, &register_params);
 
 	bitstream_buffers.push_back({
 		.resource		= buffer,
@@ -95,8 +89,8 @@ void NvencD3D12::UnregisterBitstreamBuffer(uint32_t index) {
 
 	BitstreamBuffer& buffer = bitstream_buffers[index];
 	if (buffer.registered_ptr) {
-		void* encoder = session->encoder;
-		Try | session->nvEncUnregisterResource(encoder, buffer.registered_ptr);
+		void* encoder = session.encoder;
+		Try | session.nvEncUnregisterResource(encoder, buffer.registered_ptr);
 		buffer.registered_ptr = nullptr;
 	}
 }
@@ -118,14 +112,14 @@ void NvencD3D12::MapInputTexture(uint32_t index) {
 	if (!texture.registered_ptr)
 		throw;
 
-	void* encoder = session->encoder;
+	void* encoder = session.encoder;
 
 	NV_ENC_MAP_INPUT_RESOURCE map_params{
 		.version			= NV_ENC_MAP_INPUT_RESOURCE_VER,
 		.registeredResource = texture.registered_ptr,
 	};
 
-	Try | session->nvEncMapInputResource(encoder, &map_params);
+	Try | session.nvEncMapInputResource(encoder, &map_params);
 
 	texture.mapped_ptr	  = map_params.mappedResource;
 	texture.buffer_format = map_params.mappedBufferFmt;
@@ -140,9 +134,9 @@ void NvencD3D12::UnmapInputTexture(uint32_t index) {
 	if (!texture.is_mapped)
 		return;
 
-	void* encoder = session->encoder;
+	void* encoder = session.encoder;
 
-	Try | session->nvEncUnmapInputResource(encoder, texture.mapped_ptr);
+	Try | session.nvEncUnmapInputResource(encoder, texture.mapped_ptr);
 
 	texture.mapped_ptr = nullptr;
 	texture.is_mapped  = false;

@@ -9,8 +9,6 @@
 using Microsoft::WRL::ComPtr;
 
 struct SwapChainConfig {
-	uint32_t frame_width;
-	uint32_t frame_height;
 	uint32_t buffer_count;
 	DXGI_FORMAT render_target_format;
 };
@@ -27,7 +25,7 @@ class D3D12SwapChain {
 	uint32_t rtv_descriptor_size = 0;
 
   private:
-	void CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height);
+	void CreateSwapChain(HWND window_handle);
 	void CreateDescriptorHeaps();
 	void CreateRenderTargets();
 

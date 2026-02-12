@@ -1,5 +1,7 @@
 #include "d3d12_swap_chain.h"
 
+#include <windows.h>
+
 #include "try.h"
 
 D3D12SwapChain::D3D12SwapChain(ID3D12Device* dev, IDXGIFactory7* fac, ID3D12CommandQueue* queue,
@@ -11,12 +13,19 @@ D3D12SwapChain::D3D12SwapChain(ID3D12Device* dev, IDXGIFactory7* fac, ID3D12Comm
 	, render_target_format(config.render_target_format)
 	, rtv_descriptor_size(0) {
 	render_targets.resize(buffer_count);
-	CreateSwapChain(window_handle, config.frame_width, config.frame_height);
+	CreateSwapChain(window_handle);
 	CreateDescriptorHeaps();
 	CreateRenderTargets();
 }
 
-void D3D12SwapChain::CreateSwapChain(HWND window_handle, uint32_t width, uint32_t height) {
+void D3D12SwapChain::CreateSwapChain(HWND window_handle) {
+	RECT client_rect;
+	if (!GetClientRect(window_handle, &client_rect))
+		throw;
+
+	auto width	= (uint32_t)(client_rect.right - client_rect.left);
+	auto height = (uint32_t)(client_rect.bottom - client_rect.top);
+
 	DXGI_SWAP_CHAIN_DESC1 sc_desc{
 		.Width		 = width,
 		.Height		 = height,
@@ -30,15 +39,12 @@ void D3D12SwapChain::CreateSwapChain(HWND window_handle, uint32_t width, uint32_
 	ComPtr<IDXGISwapChain1> sc1;
 	Try
 		| factory->CreateSwapChainForHwnd(command_queue, window_handle, &sc_desc, nullptr, nullptr,
-										  sc1.GetAddressOf())
+										  &sc1)
 		| factory->MakeWindowAssociation(window_handle, DXGI_MWA_NO_ALT_ENTER);
-	Try | sc1->QueryInterface(IID_PPV_ARGS(swap_chain.GetAddressOf()));
+	Try | sc1->QueryInterface(IID_PPV_ARGS(&swap_chain));
 }
 
 void D3D12SwapChain::CreateDescriptorHeaps() {
-	if (!device)
-		throw;
-
 	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc{
 		.Type			= D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		.NumDescriptors = buffer_count,
@@ -52,7 +58,7 @@ void D3D12SwapChain::CreateDescriptorHeaps() {
 void D3D12SwapChain::CreateRenderTargets() {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = rtv_heap->GetCPUDescriptorHandleForHeapStart();
 	for (uint32_t i = 0; i < buffer_count; ++i) {
-		Try | swap_chain->GetBuffer(i, IID_PPV_ARGS(render_targets[i].GetAddressOf()));
+		Try | swap_chain->GetBuffer(i, IID_PPV_ARGS(&render_targets[i]));
 		device->CreateRenderTargetView(render_targets[i].Get(), nullptr, rtv_handle);
 		rtv_handle.ptr += rtv_descriptor_size;
 	}

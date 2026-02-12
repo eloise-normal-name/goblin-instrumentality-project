@@ -26,7 +26,7 @@ struct BitstreamBuffer {
 
 class NvencD3D12 {
   public:
-	NvencD3D12(NvencSession* session, uint32_t buffer_count);
+	NvencD3D12(NvencSession& session, uint32_t buffer_count);
 	~NvencD3D12();
 
 	void RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
@@ -41,7 +41,7 @@ class NvencD3D12 {
 	void MapInputTexture(uint32_t index);
 	void UnmapInputTexture(uint32_t index);
 
-	NvencSession* session = nullptr;
+	NvencSession& session;
 	std::vector<RegisteredTexture> textures;
 	std::vector<BitstreamBuffer> bitstream_buffers;
 };

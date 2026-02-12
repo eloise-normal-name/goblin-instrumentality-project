@@ -1,6 +1,9 @@
 #include <windows.h>
 
-import app;
+import App;
+
+constexpr auto WINDOW_WIDTH	 = 512u;
+constexpr auto WINDOW_HEIGHT = 512u;
 
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"GoblinStreamWindow";
 constexpr wchar_t WINDOW_TITLE[]	  = L"Goblin Stream";

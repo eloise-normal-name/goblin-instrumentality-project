@@ -6,28 +6,18 @@ module;
 #include <utility>
 #include <vector>
 
+#include "encoder/nvenc_d3d12.h"
+#include "encoder/nvenc_session.h"
 #include "frame_debug_log.h"
 #include "graphics/d3d12_device.h"
 #include "graphics/d3d12_swap_chain.h"
 #include "try.h"
 
-export module app;
+export module App;
 
-export constexpr uint32_t WINDOW_WIDTH	= 512;
-export constexpr uint32_t WINDOW_HEIGHT = 512;
+constexpr auto BUFFER_COUNT = 3u;
 
 export class App {
-  public:
-	App(HWND hwnd);
-	int Run() &&;
-
-  private:
-	enum class FrameWaitResult {
-		Quit,
-		Continue,
-		Proceed,
-	};
-
 	class FrameResources {
 	  public:
 		FrameResources(ID3D12Device* device, ID3D12CommandAllocator* allocator);
@@ -37,6 +27,34 @@ export class App {
 		ComPtr<ID3D12GraphicsCommandList> command_list;
 		ComPtr<ID3D12Fence> fence;
 		HANDLE fence_event = nullptr;
+	};
+
+	HWND hwnd;
+	D3D12Device device;
+	NvencSession nvenc_session{*&device.device};
+	NvencD3D12 nvenc_d3d12{nvenc_session, BUFFER_COUNT};
+	D3D12SwapChain swap_chain{*&device.device, *&device.factory, *&device.command_queue, hwnd,
+							  SwapChainConfig{.buffer_count			= BUFFER_COUNT,
+											  .render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM}};
+	ComPtr<ID3D12CommandAllocator> allocator;
+	std::vector<FrameResources> frames;
+	FrameDebugLog frame_debug_log{"debug_output.txt"};
+
+  public:
+	App(HWND hwnd) : hwnd(hwnd) {
+		InitializeGraphics();
+
+		uint32_t width, height;
+		Try | swap_chain.swap_chain->GetSourceSize(&width, &height);
+	}
+
+	int Run() &&;
+
+  private:
+	enum class FrameWaitResult {
+		Quit,
+		Continue,
+		Proceed,
 	};
 
 	static void RecordCommandList(ID3D12GraphicsCommandList* command_list,
@@ -139,24 +157,14 @@ export class App {
 	}
 
 	void InitializeGraphics();
-
-	HWND hwnd = nullptr;
-	D3D12Device device;
-	D3D12SwapChain swap_chain;
-	ComPtr<ID3D12CommandAllocator> allocator;
-	std::vector<FrameResources> frames;
-	FrameDebugLog frame_debug_log;
 };
 
-constexpr uint32_t BUFFER_COUNT = 3;
-
 App::FrameResources::FrameResources(ID3D12Device* device, ID3D12CommandAllocator* allocator) {
-	Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 	fence_event = CreateEvent(nullptr, FALSE, TRUE, nullptr);
 	if (!fence_event)
 		throw;
 
-	Try
+	Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
 		| device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator, nullptr,
 									IID_PPV_ARGS(&command_list));
 }
@@ -170,17 +178,6 @@ App::FrameResources::FrameResources(FrameResources&& rhs) {
 
 App::FrameResources::~FrameResources() {
 	CloseHandle(fence_event);
-}
-
-App::App(HWND hwnd)
-	: hwnd(hwnd)
-	, swap_chain(*&device.device, *&device.factory, *&device.command_queue, hwnd,
-				 SwapChainConfig{.frame_width		   = WINDOW_WIDTH,
-								 .frame_height		   = WINDOW_HEIGHT,
-								 .buffer_count		   = BUFFER_COUNT,
-								 .render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM})
-	, frame_debug_log("debug_output.txt") {
-	InitializeGraphics();
 }
 
 int App::Run() && {
@@ -235,7 +232,6 @@ void App::InitializeGraphics() {
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv = swap_chain.rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		rtv.ptr += i * swap_chain.rtv_descriptor_size;
-		auto* render_target = swap_chain.render_targets[i].Get();
-		RecordCommandList(frames[i].command_list.Get(), rtv, render_target, i);
+		RecordCommandList(frames[i].command_list.Get(), rtv, *&swap_chain.render_targets[i], i);
 	}
 }
