@@ -45,9 +45,15 @@ goblin-stream/
 
 ### Data Flow
 
-1. **D3D12 Swap Chain** provisions RTVs and command queue targets
-2. **D3D12 Commands** records transitions, clears, and present work
-3. **GPU Render Work** executes the command lists and presents to the window
+1. **D3D12 Swap Chain** provisions back buffers for present
+2. **App Offscreen Targets** provisions per-buffer render textures used as render + encode inputs
+3. **D3D12 Commands** are pre-recorded once at startup (design requirement) and reused each frame
+4. **GPU Render Work** clears offscreen render targets, copies them to swap chain buffers, and presents
+
+### Command Recording Model
+
+The application uses pre-recorded command lists by design. Command lists are generated once during
+startup and executed repeatedly each frame without per-frame reset/re-record.
 
 ## Build
 

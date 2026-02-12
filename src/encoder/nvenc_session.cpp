@@ -21,12 +21,12 @@ NvencSession::NvencSession(void* d3d12_device) {
 	version = NV_ENCODE_API_FUNCTION_LIST_VER;
 	Try | create_instance(this);
 
-	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS session_params = {};
-	session_params.version								= NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER;
-	session_params.deviceType							= NV_ENC_DEVICE_TYPE_DIRECTX;
-	session_params.device								= d3d12_device;
-	session_params.apiVersion							= NVENCAPI_VERSION;
-
+	NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS session_params{
+		.version	= NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS_VER,
+		.deviceType = NV_ENC_DEVICE_TYPE_DIRECTX,
+		.device		= d3d12_device,
+		.apiVersion = NVENCAPI_VERSION,
+	};
 	Try | nvEncOpenEncodeSessionEx(&session_params, &encoder);
 	if (!encoder)
 		throw;

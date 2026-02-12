@@ -62,6 +62,48 @@
             font-weight: 700;
         }
 
+        .code-cards {
+            display: grid;
+            gap: 12px;
+        }
+
+        details {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .code-card {
+            margin-top: 10px;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            background: #0b1120;
+            padding: 12px;
+        }
+
+        .code-card code {
+            color: #e2e8f0;
+        }
+
+        .code-card .kw {
+            color: #93c5fd;
+        }
+
+        .code-card .type {
+            color: #c4b5fd;
+        }
+
+        .code-card .num {
+            color: #facc15;
+        }
+
         section {
             margin: 24px 0;
         }
@@ -111,25 +153,25 @@
 </head>
 <body>
     <main>
-        <h1>Refactor Highlights since <code>6bc4db5</code> 🐱</h1>
-        <p class="subtitle">Compared range: <code>6bc4db5..HEAD</code> · generated on 2026-02-12</p>
+        <h1>Refactor Highlights since <code>09cd258</code> 🐱</h1>
+        <p class="subtitle">Compared range: <code>09cd258..HEAD</code> · generated on 2026-02-12</p>
 
         <div class="cards">
             <div class="card">
                 <div class="k">Files changed</div>
-                <div class="v">29</div>
+                <div class="v">8</div>
             </div>
             <div class="card">
                 <div class="k">Insertions / Deletions</div>
-                <div class="v">+474 / -811</div>
+                <div class="v">+134 / -57</div>
             </div>
             <div class="card">
                 <div class="k">MinSizeRel binary</div>
-                <div class="v">263,168 bytes</div>
+                <div class="v">266,752 bytes</div>
             </div>
             <div class="card">
                 <div class="k">cloc total in /src</div>
-                <div class="v">928 lines</div>
+                <div class="v">913 lines</div>
             </div>
         </div>
 
@@ -137,54 +179,71 @@
             <h2>What changed and why</h2>
             <div class="panel">
                 <ul>
-                    <li>Replaced the old pipeline/frame coordinator path with a new <code>app</code> module that owns frame loop orchestration, fence waiting, and present/submit sequencing.</li>
-                    <li>Simplified swap-chain surface management by inlining render-target ownership into <code>D3D12SwapChain</code> and dropping the older <code>RenderTargets</code> wrapper pattern.</li>
-                    <li>Introduced <code>FrameDebugLog</code> for per-frame timing and event traces, making render loop behavior easier to inspect.</li>
-                    <li>Pruned obsolete files (<code>d3d12_frame_sync</code>, <code>pipeline/frame_coordinator</code>, <code>render_targets.h</code>) and updated docs/build lists accordingly.</li>
+                    <li>Added app-owned offscreen render targets that feed both swap-chain presentation and NVENC registration, aligning the render path with the encode path.</li>
+                    <li>Trimmed <code>D3D12SwapChain</code> to only manage back buffers, moving RTV heap ownership into the app where offscreen textures now live.</li>
+                    <li>Updated the frame command list recording to render into offscreen textures, copy into back buffers, and return both resources to steady states.</li>
+                    <li>Refined NVENC session setup with designated initializers and clarified the data flow notes in the README.</li>
                 </ul>
             </div>
         </section>
 
         <section>
-            <h2>Snippet: new app module entry flow</h2>
-            <pre><code>import app;
+            <h2>Snippets in context</h2>
+            <div class="code-cards">
+                <details>
+                    <summary>Offscreen render targets + NVENC registration</summary>
+                    <div class="code-card">
+                        <pre><code><span class="type">D3D12_RESOURCE_DESC</span> texture_desc{
+    .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+    .Width = frame_width,
+    .Height = frame_height,
+    .Format = RENDER_TARGET_FORMAT,
+    .SampleDesc = {.Count = 1, .Quality = 0},
+    .Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+};
 
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
-    try {
-        auto hwnd = CreateAppWindow(instance, show_command);
-        if (!hwnd)
-            return 1;
+<span class="kw">for</span> (auto i = <span class="num">0</span>u; i &lt; BUFFER_COUNT; ++i) {
+    Try
+        | device.device-&gt;CreateCommittedResource(&amp;default_heap_props,
+            D3D12_HEAP_FLAG_NONE, &amp;texture_desc, D3D12_RESOURCE_STATE_COMMON,
+            &amp;clear_value, IID_PPV_ARGS(&amp;offscreen_render_targets[i]));
 
-        return App{hwnd}.Run();
-    } catch (...) {
-        return 1;
-    }
+    device.device-&gt;CreateRenderTargetView(offscreen_render_targets[i].Get(),
+        nullptr, offscreen_rtv);
+
+    nvenc_d3d12.RegisterTexture(offscreen_render_targets[i].Get(), frame_width,
+        frame_height, DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT));
 }</code></pre>
-        </section>
-
-        <section>
-            <h2>Snippet: swap-chain now owns RTV resources directly</h2>
-            <pre><code>class D3D12SwapChain {
-  public:
-    D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory,
-                   ID3D12CommandQueue* command_queue,
-                   HWND window_handle, const SwapChainConfig&amp; config);
-
-    ComPtr&lt;IDXGISwapChain4&gt; swap_chain;
-    ComPtr&lt;ID3D12DescriptorHeap&gt; rtv_heap;
-    std::vector&lt;ComPtr&lt;ID3D12Resource&gt;&gt; render_targets;
-    uint32_t rtv_descriptor_size = 0;
-};</code></pre>
-        </section>
-
-        <section>
-            <h2>Snippet: frame debug logging utility</h2>
-            <pre><code>class FrameDebugLog {
-  public:
-    FrameDebugLog(const char* path);
-    void BeginFrame(uint64_t frame_index);
-    std::ostream&amp; Line();
-};</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>Copy offscreen render into swap-chain buffers</summary>
+                    <div class="code-card">
+                        <pre><code>command_list-&gt;ClearRenderTargetView(rtv, clear_color, <span class="num">0</span>, nullptr);
+command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;offscreen_to_copy);
+command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;back_buffer_to_copy);
+command_list-&gt;CopyResource(swap_chain_render_target, offscreen_render_target);
+command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;back_buffer_to_present);
+command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;offscreen_to_common);
+command_list-&gt;Close();</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>Swap chain now only manages back buffers</summary>
+                    <div class="code-card">
+                        <pre><code><span class="type">D3D12SwapChain</span>::D3D12SwapChain(...)
+    : device(dev)
+    , factory(fac)
+    , command_queue(queue)
+    , buffer_count(config.buffer_count)
+    , render_target_format(config.render_target_format) {
+    render_targets.resize(buffer_count);
+    CreateSwapChain(window_handle);
+    AcquireBackBuffers();
+}</code></pre>
+                    </div>
+                </details>
+            </div>
         </section>
 
         <section>
@@ -192,10 +251,30 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
             <div class="panel">
                 <ul>
                     <li>MinSizeRel build: successful (<code>goblin-stream.vcxproj -&gt; bin/MinSizeRel/goblin-stream.exe</code>).</li>
-                    <li>Formatting audit: <code>clang-format --dry-run --Werror</code> passed for changed C++ files in the reviewed range.</li>
-                    <li>Metrics appended to <code>build-log.txt</code> (binary size + cloc total source lines only).</li>
+                    <li>Binary size (MinSizeRel): <code>266,752</code> bytes.</li>
+                    <li>cloc /src total: <code>913</code> lines.</li>
                 </ul>
-                <p class="small">Note: one earlier cloc parse attempt produced an empty value line, followed by a corrected appended line with <code>928</code>.</p>
+                <p class="small">Build command: <code>cmake --build build --config MinSizeRel</code></p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Build log</h2>
+            <div class="panel">
+                <ul>
+                    <li>2026-02-12 · MinSizeRel size: <code>266,752</code> bytes · cloc /src: <code>913</code> lines.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Proposed next steps</h2>
+            <div class="panel">
+                <ul>
+                    <li>Decide whether the offscreen render targets should become an explicit <code>App</code> sub-structure for clarity.</li>
+                    <li>Replace the NVENC map/unmap stubs with the next real encode pass integration.</li>
+                    <li>Consider a small helper to centralize resource barrier setup in the frame recording path.</li>
+                </ul>
             </div>
         </section>
     </main>

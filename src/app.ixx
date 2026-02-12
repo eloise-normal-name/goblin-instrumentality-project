@@ -6,6 +6,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "encoder/nvenc_config.h"
 #include "encoder/nvenc_d3d12.h"
 #include "encoder/nvenc_session.h"
 #include "frame_debug_log.h"
@@ -15,7 +16,8 @@ module;
 
 export module App;
 
-constexpr auto BUFFER_COUNT = 3u;
+constexpr auto BUFFER_COUNT			= 3u;
+constexpr auto RENDER_TARGET_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 
 export class App {
 	class FrameResources {
@@ -32,20 +34,29 @@ export class App {
 	HWND hwnd;
 	D3D12Device device;
 	NvencSession nvenc_session{*&device.device};
+	NvencConfig nvenc_config{&nvenc_session, EncoderConfig{
+												 .codec		   = EncoderCodec::H264,
+												 .preset	   = EncoderPreset::Fastest,
+												 .rate_control = RateControlMode::VariableBitrate,
+												 .width		   = 512,
+												 .height	   = 512,
+											 }};
 	NvencD3D12 nvenc_d3d12{nvenc_session, BUFFER_COUNT};
 	D3D12SwapChain swap_chain{*&device.device, *&device.factory, *&device.command_queue, hwnd,
 							  SwapChainConfig{.buffer_count			= BUFFER_COUNT,
-											  .render_target_format = DXGI_FORMAT_R8G8B8A8_UNORM}};
+											  .render_target_format = RENDER_TARGET_FORMAT}};
 	ComPtr<ID3D12CommandAllocator> allocator;
+	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
+	uint32_t offscreen_rtv_descriptor_size = 0;
+	uint32_t frame_width				   = 0;
+	uint32_t frame_height				   = 0;
+	std::vector<ComPtr<ID3D12Resource>> offscreen_render_targets;
 	std::vector<FrameResources> frames;
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
 	App(HWND hwnd) : hwnd(hwnd) {
 		InitializeGraphics();
-
-		uint32_t width, height;
-		Try | swap_chain.swap_chain->GetSourceSize(&width, &height);
 	}
 
 	int Run() &&;
@@ -58,12 +69,13 @@ export class App {
 	};
 
 	static void RecordCommandList(ID3D12GraphicsCommandList* command_list,
-								  D3D12_CPU_DESCRIPTOR_HANDLE rtv, ID3D12Resource* render_target,
-								  uint32_t index) {
+								  D3D12_CPU_DESCRIPTOR_HANDLE rtv,
+								  ID3D12Resource* offscreen_render_target,
+								  ID3D12Resource* swap_chain_render_target, uint32_t index) {
 		{
 			D3D12_RESOURCE_BARRIER barrier{
 				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= render_target,
+				.Transition = {.pResource	= offscreen_render_target,
 							   .StateBefore = D3D12_RESOURCE_STATE_COMMON,
 							   .StateAfter	= D3D12_RESOURCE_STATE_RENDER_TARGET}};
 			command_list->ResourceBarrier(1, &barrier);
@@ -75,13 +87,50 @@ export class App {
 		{
 			D3D12_RESOURCE_BARRIER barrier{
 				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= render_target,
+				.Transition = {.pResource	= offscreen_render_target,
 							   .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
+							   .StateAfter	= D3D12_RESOURCE_STATE_COPY_SOURCE}};
+			command_list->ResourceBarrier(1, &barrier);
+		}
+
+		{
+			D3D12_RESOURCE_BARRIER barrier{
+				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Transition = {.pResource	= swap_chain_render_target,
+							   .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
+							   .StateAfter	= D3D12_RESOURCE_STATE_COPY_DEST}};
+			command_list->ResourceBarrier(1, &barrier);
+		}
+
+		command_list->CopyResource(swap_chain_render_target, offscreen_render_target);
+
+		{
+			D3D12_RESOURCE_BARRIER barrier{
+				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Transition = {.pResource	= swap_chain_render_target,
+							   .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
 							   .StateAfter	= D3D12_RESOURCE_STATE_PRESENT}};
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
+		{
+			D3D12_RESOURCE_BARRIER barrier{
+				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Transition = {.pResource	= offscreen_render_target,
+							   .StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
+							   .StateAfter	= D3D12_RESOURCE_STATE_COMMON}};
+			command_list->ResourceBarrier(1, &barrier);
+		}
+
 		command_list->Close();
+	}
+
+	void MapEncodeTextureStub(uint32_t index) {
+		nvenc_d3d12.MapInputTexture(index);
+	}
+
+	void UnmapEncodeTextureStub(uint32_t index) {
+		nvenc_d3d12.UnmapInputTexture(index);
 	}
 
 	static bool ProcessWindowMessages(MSG& msg) {
@@ -222,16 +271,69 @@ int App::Run() && {
 }
 
 void App::InitializeGraphics() {
+	Try | swap_chain.swap_chain->GetSourceSize(&frame_width, &frame_height);
+
 	Try
 		| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
 												IID_PPV_ARGS(&allocator));
+
+	D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc{
+		.Type			= D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		.NumDescriptors = BUFFER_COUNT,
+	};
+
+	Try | device.device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&offscreen_rtv_heap));
+	offscreen_rtv_descriptor_size
+		= device.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	offscreen_render_targets.resize(BUFFER_COUNT);
+	D3D12_HEAP_PROPERTIES default_heap_props{
+		.Type = D3D12_HEAP_TYPE_DEFAULT,
+	};
+
+	D3D12_RESOURCE_DESC texture_desc{
+		.Dimension		  = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		.Width			  = frame_width,
+		.Height			  = frame_height,
+		.DepthOrArraySize = 1,
+		.MipLevels		  = 1,
+		.Format			  = RENDER_TARGET_FORMAT,
+		.SampleDesc		  = {.Count = 1, .Quality = 0},
+		.Layout			  = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		.Flags			  = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+	};
+
+	D3D12_CLEAR_VALUE clear_value{
+		.Format = RENDER_TARGET_FORMAT,
+		.Color	= {0, 0, 0, 1},
+	};
+
+	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+		Try
+			| device.device->CreateCommittedResource(&default_heap_props, D3D12_HEAP_FLAG_NONE,
+													 &texture_desc, D3D12_RESOURCE_STATE_COMMON,
+													 &clear_value,
+													 IID_PPV_ARGS(&offscreen_render_targets[i]));
+
+		D3D12_CPU_DESCRIPTOR_HANDLE offscreen_rtv
+			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		offscreen_rtv.ptr += i * offscreen_rtv_descriptor_size;
+		device.device->CreateRenderTargetView(offscreen_render_targets[i].Get(), nullptr,
+											  offscreen_rtv);
+
+		nvenc_d3d12.RegisterTexture(offscreen_render_targets[i].Get(), frame_width, frame_height,
+									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT));
+	}
 
 	frames.reserve(BUFFER_COUNT);
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		frames.emplace_back(device.device.Get(), allocator.Get());
 
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv = swap_chain.rtv_heap->GetCPUDescriptorHandleForHeapStart();
-		rtv.ptr += i * swap_chain.rtv_descriptor_size;
-		RecordCommandList(frames[i].command_list.Get(), rtv, *&swap_chain.render_targets[i], i);
+		D3D12_CPU_DESCRIPTOR_HANDLE offscreen_rtv
+			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		offscreen_rtv.ptr += i * offscreen_rtv_descriptor_size;
+
+		RecordCommandList(frames[i].command_list.Get(), offscreen_rtv,
+						  offscreen_render_targets[i].Get(), *&swap_chain.render_targets[i], i);
 	}
 }
