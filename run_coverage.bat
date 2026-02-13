@@ -1,12 +1,38 @@
 @echo off
 REM Script to run code coverage using OpenCppCoverage
 REM Requires OpenCppCoverage to be installed and in PATH
+REM NOTE: This script is ready but requires tests to be implemented first.
+REM      The main executable (goblin-stream.exe) is a DirectX 12 GUI app
+REM      and cannot be used for automated coverage without a test harness.
+REM      See docs/TEST_COVERAGE_INTEGRATION.md for guidance.
 
 setlocal enabledelayedexpansion
 
+echo.
+echo ========================================
+echo   Code Coverage - Configuration Check
+echo ========================================
+echo.
+echo WARNING: No tests are implemented yet.
+echo.
+echo The coverage infrastructure is ready, but this project currently
+echo has no test executable. The main application (goblin-stream.exe)
+echo is a DirectX 12 GUI application that requires a GPU.
+echo.
+echo To use code coverage:
+echo   1. Implement unit tests or a test harness
+echo   2. Update the EXECUTABLE variable below to point to your test executable
+echo   3. Run this script again
+echo.
+echo See docs/TEST_COVERAGE_INTEGRATION.md for detailed guidance.
+echo.
+pause
+exit /b 1
+
 REM Configuration
+REM TODO: Update this to point to your test executable when tests are added
 set "SOURCE_DIR=src"
-set "EXECUTABLE=bin\Debug\goblin-stream.exe"
+set "EXECUTABLE=bin\Debug\goblin-stream-tests.exe"
 set "REPORT_DIR=coverage_report"
 set "REPORT_FORMAT=html"
 

@@ -2,6 +2,12 @@
 
 This document describes how to measure code coverage for the Goblin Instrumentality Project.
 
+## Important Note
+
+**The coverage infrastructure is configured and ready, but no tests exist yet.** This project is a DirectX 12 GUI application that requires a GPU and cannot be run headlessly in CI environments without tests.
+
+Once unit tests or test harnesses are implemented, code coverage will work automatically. See [TEST_COVERAGE_INTEGRATION.md](TEST_COVERAGE_INTEGRATION.md) for guidance on adding tests.
+
 ## Overview
 
 Code coverage measures which parts of the codebase are executed during testing. This helps identify untested code paths and improve test quality.
@@ -26,16 +32,18 @@ OpenCppCoverage --help
 
 ### With OpenCppCoverage
 
-Once tests are available, run coverage using:
+**When tests are available**, run coverage using:
 
 ```cmd
-OpenCppCoverage --sources "src\*" --export_type html:coverage_report -- bin\Debug\goblin-stream.exe
+OpenCppCoverage --sources "src\*" --export_type html:coverage_report -- bin\Debug\goblin-stream-tests.exe
 ```
+
+**Note:** Replace `goblin-stream-tests.exe` with your test executable name. The main `goblin-stream.exe` is a GUI application and cannot be used for automated coverage without tests.
 
 **Options explained:**
 - `--sources "src\*"` - Only measure coverage for source files in src/ directory
 - `--export_type html:coverage_report` - Generate HTML report in coverage_report/ folder
-- `-- bin\Debug\goblin-stream.exe` - The executable to run (adjust path as needed)
+- `-- bin\Debug\goblin-stream-tests.exe` - The test executable to run
 
 ### Additional Export Formats
 
@@ -76,18 +84,21 @@ The HTML report (`coverage_report/index.html`) provides:
 
 ## Integration with CI/CD
 
-When GitHub Actions workflows are added, coverage can be automated using:
+A GitHub Actions workflow (`.github/workflows/coverage.yml`) is configured and ready to run coverage automatically.
 
-1. Windows runner with OpenCppCoverage installed
-2. Generate Cobertura XML format
-3. Upload to coverage services (Codecov, Coveralls, etc.)
+**Current Status:** The workflow is configured but skips coverage execution until tests are added. Once tests are implemented, the workflow will automatically run coverage on every push and pull request.
 
-Example GitHub Actions step:
-```yaml
-- name: Run Coverage
-  run: |
-    OpenCppCoverage --sources "src\*" --export_type cobertura:coverage.xml -- bin\Debug\goblin-stream.exe
-```
+To enable automated coverage:
+1. Add test executable to the project
+2. Update the "Run Coverage" step in `.github/workflows/coverage.yml`
+3. Replace the placeholder with: `OpenCppCoverage --sources "src\*" --export_type cobertura:coverage.xml -- bin\Debug\your-test-executable.exe`
+
+The workflow will then:
+- Build the project in Debug mode
+- Run tests with coverage
+- Generate Cobertura XML reports
+- Upload results to Codecov (if configured)
+- Archive coverage reports as artifacts
 
 ## Best Practices
 

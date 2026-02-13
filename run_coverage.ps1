@@ -1,37 +1,68 @@
 # PowerShell script to run code coverage using OpenCppCoverage
 # Requires OpenCppCoverage to be installed and in PATH
+# NOTE: This script is ready but requires tests to be implemented first.
+#       See docs/TEST_COVERAGE_INTEGRATION.md for guidance.
 
 param(
 	[string]$SourceDir = "src",
-	[string]$Executable = "bin\Debug\goblin-stream.exe",
+	[string]$Executable = "bin\Debug\goblin-stream-tests.exe",
 	[string]$ReportDir = "coverage_report",
 	[string]$ReportFormat = "html",
 	[switch]$Cobertura,
-	[switch]$Help
+	[switch]$Help,
+	[switch]$Force
 )
 
 function Show-Help {
 	Write-Host @"
 Usage: .\run_coverage.ps1 [options]
 
+NOTE: No tests are implemented yet. The coverage infrastructure is configured
+      but requires a test executable. See docs/TEST_COVERAGE_INTEGRATION.md.
+
 Options:
   -SourceDir <path>     Source directory to measure coverage (default: src)
-  -Executable <path>    Path to executable to run (default: bin\Debug\goblin-stream.exe)
+  -Executable <path>    Path to test executable (default: bin\Debug\goblin-stream-tests.exe)
   -ReportDir <path>     Output directory for reports (default: coverage_report)
   -ReportFormat <type>  Report format: html, cobertura, or binary (default: html)
   -Cobertura           Shortcut to generate Cobertura XML format
+  -Force               Skip the warning about missing tests
   -Help                Show this help message
 
-Examples:
-  .\run_coverage.ps1
-  .\run_coverage.ps1 -Cobertura
-  .\run_coverage.ps1 -Executable "bin\Release\goblin-stream.exe"
+Examples (when tests are added):
+  .\run_coverage.ps1 -Executable "bin\Debug\my-tests.exe"
+  .\run_coverage.ps1 -Cobertura -Executable "bin\Debug\my-tests.exe"
 "@
 	exit 0
 }
 
 if ($Help) {
 	Show-Help
+}
+
+# Warn about missing tests unless -Force is used
+if (-not $Force -and $Executable -eq "bin\Debug\goblin-stream-tests.exe") {
+	Write-Host ""
+	Write-Host "========================================" -ForegroundColor Yellow
+	Write-Host "  Code Coverage - Configuration Check" -ForegroundColor Yellow
+	Write-Host "========================================" -ForegroundColor Yellow
+	Write-Host ""
+	Write-Host "WARNING: No tests are implemented yet." -ForegroundColor Yellow
+	Write-Host ""
+	Write-Host "The coverage infrastructure is ready, but this project currently"
+	Write-Host "has no test executable. The default test executable path is:"
+	Write-Host "  $Executable" -ForegroundColor Cyan
+	Write-Host ""
+	Write-Host "To use code coverage:"
+	Write-Host "  1. Implement unit tests or a test harness"
+	Write-Host "  2. Build your test executable"
+	Write-Host "  3. Run: .\run_coverage.ps1 -Executable 'path\to\tests.exe'"
+	Write-Host ""
+	Write-Host "See docs/TEST_COVERAGE_INTEGRATION.md for detailed guidance." -ForegroundColor Cyan
+	Write-Host ""
+	Write-Host "To skip this warning and run anyway, use: -Force" -ForegroundColor DarkGray
+	Write-Host ""
+	exit 1
 }
 
 if ($Cobertura) {

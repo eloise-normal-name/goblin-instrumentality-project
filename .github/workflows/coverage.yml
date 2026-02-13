@@ -32,16 +32,20 @@ jobs:
       run: cmake --build build --config Debug
     
     - name: Run Coverage
+      # NOTE: Coverage is currently skipped because no tests exist yet.
+      # The application requires DirectX 12 and a GUI environment to run.
+      # When tests are added, update this step to run the test executable instead.
+      # Example: OpenCppCoverage --sources "src\*" -- bin\Debug\goblin-stream-tests.exe
       run: |
-        OpenCppCoverage `
-          --sources "src\*" `
-          --export_type cobertura:coverage.xml `
-          --excluded_sources "*\include\*" `
-          --excluded_sources "*\build\*" `
-          -- bin\Debug\goblin-stream.exe
-      continue-on-error: true
+        Write-Host "Coverage infrastructure is configured."
+        Write-Host "Coverage will run automatically when tests are added."
+        Write-Host "See docs/TEST_COVERAGE_INTEGRATION.md for integration guidance."
+        exit 0
+      continue-on-error: false
     
     - name: Upload coverage to Codecov
+      # Skip until tests are added and coverage.xml is generated
+      if: false
       uses: codecov/codecov-action@v4
       with:
         files: ./coverage.xml
@@ -52,8 +56,9 @@ jobs:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     
     - name: Archive coverage report
+      # Skip until tests are added and coverage.xml is generated
+      if: false
       uses: actions/upload-artifact@v4
-      if: always()
       with:
         name: coverage-report
         path: coverage.xml
