@@ -1,0 +1,309 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goblin Instrumentality Project - Highlights</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            line-height: 1.5;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 2rem;
+            color: #f8fafc;
+        }
+
+        .subtitle {
+            margin: 0 0 24px;
+            color: #94a3b8;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .card .k {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+        }
+
+        .card .v {
+            margin-top: 6px;
+            font-size: 1.3rem;
+            color: #f8fafc;
+            font-weight: 700;
+        }
+
+        .code-cards {
+            display: grid;
+            gap: 12px;
+        }
+
+        details {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .code-card {
+            margin-top: 10px;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            background: #0b1120;
+            padding: 12px;
+        }
+
+        .code-card code {
+            color: #e2e8f0;
+        }
+
+        .code-card .kw {
+            color: #93c5fd;
+        }
+
+        .code-card .type {
+            color: #c4b5fd;
+        }
+
+        .code-card .num {
+            color: #facc15;
+        }
+
+        section {
+            margin: 24px 0;
+        }
+
+        h2 {
+            color: #f8fafc;
+            margin: 0 0 10px;
+            font-size: 1.2rem;
+        }
+
+        .panel {
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        ul {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+
+        li {
+            margin: 7px 0;
+        }
+
+        pre {
+            margin: 0;
+            overflow-x: auto;
+            background: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+            color: #cbd5e1;
+        }
+
+        code {
+            font-family: Consolas, "Cascadia Mono", monospace;
+            font-size: 0.88rem;
+        }
+
+        .small {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Refactor Highlights since <code>dfc75e5</code></h1>
+        <p class="subtitle">Compared range: <code>dfc75e5..WORKTREE</code> · generated on 2026-02-13</p>
+
+        <div class="cards">
+            <div class="card">
+                <div class="k">Files changed</div>
+                <div class="v">9</div>
+            </div>
+            <div class="card">
+                <div class="k">Insertions / Deletions</div>
+                <div class="v">Frame-loop + NVENC fence sync</div>
+            </div>
+            <div class="card">
+                <div class="k">MinSizeRel binary</div>
+                <div class="v">267,264 bytes</div>
+            </div>
+            <div class="card">
+                <div class="k">cloc total in /src</div>
+                <div class="v">923 lines</div>
+            </div>
+        </div>
+
+        <section>
+            <h2>High-level goal alignment</h2>
+            <div class="panel">
+                <p>
+                    The current refactor track is consolidating frame ownership inside <code>App</code>, tightening
+                    render-to-encode synchronization, and keeping module/build wiring deterministic.
+                    This delta advances that by inlining the frame loop into <code>App</code>, adding fence-aware NVENC
+                    texture registration/mapping hooks, and fixing source casing in CMake to keep module discovery stable.
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>What changed and why</h2>
+            <div class="panel">
+                <ul>
+                    <li>Inlined <code>Run()</code> into the exported <code>App</code> class body for tighter locality between frame wait, fence readiness checks, present handling, and debug logging.</li>
+                    <li>Promoted encoder settings to <code>static constexpr ENCODER_CONFIG</code> to remove duplicated literal config and keep defaults explicit at type scope.</li>
+                    <li>Switched command list creation to <code>ID3D12Device4::CreateCommandList1</code> and aligned COM pointer usage with the <code>*&</code> style used elsewhere.</li>
+                    <li>Extended NVENC D3D12 texture registration to carry fence context (<code>pInputFencePoint</code>) and map-time fence wait values.</li>
+                    <li>Fixed CMake source path casing from <code>src/app.ixx</code> to <code>src/App.ixx</code> to avoid module lookup drift.</li>
+                    <li>Cleaned instruction docs to reference the condensed NVENC guide and removed stale/non-project-specific workflow/chat sections.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Snippets in context</h2>
+            <div class="code-cards">
+                <details>
+                    <summary>Frame loop moved into App class body</summary>
+                    <div class="code-card">
+                        <pre><code><span class="kw">int</span> Run() &amp;&amp; {
+    std::array&lt;HANDLE, BUFFER_COUNT&gt; fence_handles{};
+    <span class="kw">for</span> (auto i = <span class="num">0</span>u; i &lt; BUFFER_COUNT; ++i)
+        fence_handles[i] = frames[i].fence_event;
+
+    <span class="kw">while</span> (running) {
+        auto wait_result = WaitForFrame(...);
+        <span class="kw">if</span> (wait_result == FrameWaitResult::Quit) <span class="kw">break</span>;
+
+        <span class="kw">if</span> (!IsFrameReady(...)) <span class="kw">continue</span>;
+        ExecuteFrame(*&amp;device.command_queue, frames[back_buffer_index], present_result);
+        present_result = PresentAndSignal(*&amp;device.command_queue, *&amp;swap_chain.swap_chain,
+            frames[back_buffer_index], frames_submitted + <span class="num">1</span>);
+    }
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>Fence-aware NVENC registration and map entrypoint</summary>
+                    <div class="code-card">
+                        <pre><code><span class="type">NV_ENC_FENCE_POINT_D3D12</span> fence_point{
+    .version = NV_ENC_FENCE_POINT_D3D12_VER,
+    .pFence = fence,
+    .waitValue = <span class="num">0</span>,
+    .bWait = <span class="num">1</span>,
+};
+
+<span class="type">NV_ENC_REGISTER_RESOURCE</span> register_params{
+    .resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
+    .resourceToRegister = texture,
+    .pInputFencePoint = &amp;fence_point,
+};
+
+<span class="kw">void</span> MapInputTexture(uint32_t index, uint64_t fence_wait_value);</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>Command-list creation + CMake case fix</summary>
+                    <div class="code-card">
+                        <pre><code><span class="type">ComPtr&lt;ID3D12Device4&gt;</span> device4;
+<span class="type">ComPtr&lt;ID3D12GraphicsCommandList1&gt;</span> command_list1;
+Try | device-&gt;QueryInterface(IID_PPV_ARGS(&amp;device4))
+    | device4-&gt;CreateCommandList1(..., IID_PPV_ARGS(&amp;command_list1));
+command_list.Attach(command_list1.Detach());
+
+# CMakeLists.txt
+set(SOURCES
+    src/App.ixx
+    src/main.cpp
+)</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>References and guides</summary>
+                    <div class="code-card">
+                        <pre><code>- .github/prompts/snippets/nvenc-guide.md
+- https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/
+  nvenc-video-encoder-api-prog-guide/index.html</code></pre>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section>
+            <h2>Build and validation status</h2>
+            <div class="panel">
+                <ul>
+                    <li>MinSizeRel build: successful (<code>goblin-stream.vcxproj -&gt; bin/MinSizeRel/goblin-stream.exe</code>).</li>
+                    <li>Binary size (MinSizeRel): <code>267,264</code> bytes.</li>
+                    <li>cloc /src total: <code>923</code> lines.</li>
+                    <li>Diagnostics check: no blocking errors; two non-fatal C4100 warnings remain in staged code.</li>
+                </ul>
+                <p class="small">Build command: <code>cmake --build build --config MinSizeRel</code></p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Build log</h2>
+            <div class="panel">
+                <ul>
+                    <li>2026-02-12 · MinSizeRel size: <code>266,752</code> bytes · cloc /src: <code>913</code> lines · build succeeded.</li>
+                    <li>2026-02-13 · MinSizeRel size: <code>267,264</code> bytes · cloc /src: <code>923</code> lines · build succeeded.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Proposed next steps</h2>
+            <div class="panel">
+                <ul>
+                    <li>Consume <code>fence_wait_value</code> in <code>NvencD3D12::MapInputTexture</code> and wire it to map params to clear the current warning and complete synchronization intent.</li>
+                    <li>Either use or remove the unused allocator parameter in <code>App::FrameResources</code> constructor to keep warning budget at zero.</li>
+                    <li>Add a short encode submission/status card in this highlights page once texture map/unmap is fully wired into the frame loop.</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
