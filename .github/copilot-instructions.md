@@ -57,23 +57,10 @@
 - **External Libraries**: Stick to Windows APIs and C++ standard library
 - **Namespaces**: Do not use namespaces; keep all code in the global namespace
 - **Trailing Underscores**: Do not use trailing underscores for member variables (use plain snake_case)
-- **NVENC**: Follow the [NVENC Programming Guide](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html).
-  - Use D3D12 Readback Heaps for bitstream output (Client-allocated).
-  - Use D3D12 Textures for input.
-
-## Git Workflow
-- **Branching**: Use feature branches to organize changes
-- **Branch Naming**: 
-  - `feature/description` for new features
-  - `bugfix/description` for bug fixes
-  - `refactor/description` for refactoring
-- **Master Branch**: Stable, buildable code only
+- **NVENC**: Follow the condensed D3D12-only guide at `.github/prompts/snippets/nvenc-guide.md` and the official programming guide at https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html.
 
 ## Build Process
-- **Environment**: Must use **Visual Studio Community 2026 Preview - amd64** environment/kit
 - **Generator**: Use `-G "Visual Studio 18 2026" -A x64`
-- **Debug Target**: Outputs to `bin/Debug/goblin-stream.exe` with full debug info (`/Zi`)
-- **Release Target**: Outputs to `bin/Release/goblin-stream.exe` with optimizations (`/O2`)
 - **Intermediate Files**: Located in `build/` (git-ignored)
 
 ## VS Code Workflow
@@ -103,12 +90,4 @@
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
 - Maintain static linking preference for portable deployment
-
-## Chat
-- My name is eloise and you should use it regularly
-- I use they/them pronouns
-- don't be too excited or overly positive about simple things
-- use a 🐱 emoji when appropriate at your own discretion
-- if you are unsure about something annotate it with a 😵 inside the answer
-
 

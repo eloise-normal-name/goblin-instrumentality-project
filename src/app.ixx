@@ -30,26 +30,24 @@ export class App {
 		ComPtr<ID3D12Fence> fence;
 		HANDLE fence_event = nullptr;
 	};
-
+	static constexpr EncoderConfig ENCODER_CONFIG{.codec		= EncoderCodec::H264,
+												  .preset		= EncoderPreset::Fastest,
+												  .rate_control = RateControlMode::VariableBitrate,
+												  .width		= 512,
+												  .height		= 512};
 	HWND hwnd;
 	D3D12Device device;
 	NvencSession nvenc_session{*&device.device};
-	NvencConfig nvenc_config{&nvenc_session, EncoderConfig{
-												 .codec		   = EncoderCodec::H264,
-												 .preset	   = EncoderPreset::Fastest,
-												 .rate_control = RateControlMode::VariableBitrate,
-												 .width		   = 512,
-												 .height	   = 512,
-											 }};
+	NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};
 	NvencD3D12 nvenc_d3d12{nvenc_session, BUFFER_COUNT};
 	D3D12SwapChain swap_chain{*&device.device, *&device.factory, *&device.command_queue, hwnd,
 							  SwapChainConfig{.buffer_count			= BUFFER_COUNT,
 											  .render_target_format = RENDER_TARGET_FORMAT}};
 	ComPtr<ID3D12CommandAllocator> allocator;
 	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
-	uint32_t offscreen_rtv_descriptor_size = 0;
-	uint32_t frame_width				   = 0;
-	uint32_t frame_height				   = 0;
+	uint32_t offscreen_rtv_descriptor_size;
+	uint32_t frame_width;
+	uint32_t frame_height;
 	std::vector<ComPtr<ID3D12Resource>> offscreen_render_targets;
 	std::vector<FrameResources> frames;
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
@@ -59,7 +57,46 @@ export class App {
 		InitializeGraphics();
 	}
 
-	int Run() &&;
+	int Run() && {
+		std::array<HANDLE, BUFFER_COUNT> fence_handles{};
+		for (auto i = 0u; i < BUFFER_COUNT; ++i)
+			fence_handles[i] = frames[i].fence_event;
+
+		MSG msg{};
+		bool running			   = true;
+		uint32_t frames_submitted  = 0;
+		uint32_t back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
+		HRESULT present_result	   = S_OK;
+
+		while (running) {
+			frame_debug_log.BeginFrame(frames_submitted);
+			auto wait_result
+				= WaitForFrame(frame_debug_log, fence_handles.data(), back_buffer_index, msg);
+			if (wait_result == FrameWaitResult::Quit)
+				break;
+			if (wait_result == FrameWaitResult::Continue)
+				continue;
+
+			uint64_t completed_value = 0;
+			if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
+				continue;
+			LogFenceStatus(frame_debug_log, completed_value, present_result);
+
+			ExecuteFrame(*&device.command_queue, frames[back_buffer_index], present_result);
+			auto signaled_value = frames_submitted + 1;
+			present_result		= PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
+												   frames[back_buffer_index], signaled_value);
+			if (!HandlePresentResult(frame_debug_log, present_result))
+				continue;
+
+			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
+			LogFrameSubmitted(frame_debug_log, back_buffer_index, signaled_value,
+							  new_back_buffer_index);
+			back_buffer_index = new_back_buffer_index;
+			++frames_submitted;
+		}
+		return 0;
+	}
 
   private:
 	enum class FrameWaitResult {
@@ -125,8 +162,8 @@ export class App {
 		command_list->Close();
 	}
 
-	void MapEncodeTextureStub(uint32_t index) {
-		nvenc_d3d12.MapInputTexture(index);
+	void MapEncodeTextureStub(uint32_t index, uint64_t fence_wait_value) {
+		nvenc_d3d12.MapInputTexture(index, fence_wait_value);
 	}
 
 	void UnmapEncodeTextureStub(uint32_t index) {
@@ -176,7 +213,7 @@ export class App {
 		if (present_result != S_OK)
 			return;
 
-		ID3D12CommandList* command_list_to_execute = frame_resources.command_list.Get();
+		ID3D12CommandList* command_list_to_execute = *&frame_resources.command_list;
 		ID3D12CommandList* lists[]				   = {command_list_to_execute};
 		command_queue->ExecuteCommandLists(1, lists);
 	}
@@ -184,7 +221,7 @@ export class App {
 	static HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain,
 									FrameResources& frame_resources, uint64_t signaled_value) {
 		auto present_result = swap_chain->Present(1, DXGI_PRESENT_DO_NOT_WAIT);
-		command_queue->Signal(frame_resources.fence.Get(), signaled_value);
+		command_queue->Signal(*&frame_resources.fence, signaled_value);
 		frame_resources.fence->SetEventOnCompletion(signaled_value, frame_resources.fence_event);
 		return present_result;
 	}
@@ -213,9 +250,13 @@ App::FrameResources::FrameResources(ID3D12Device* device, ID3D12CommandAllocator
 	if (!fence_event)
 		throw;
 
-	Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
-		| device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator, nullptr,
-									IID_PPV_ARGS(&command_list));
+	ComPtr<ID3D12Device4> device4;
+	ComPtr<ID3D12GraphicsCommandList1> command_list1;
+	Try | device->QueryInterface(IID_PPV_ARGS(&device4))
+		| device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+		| device4->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+									  D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&command_list1));
+	command_list.Attach(command_list1.Detach());
 }
 
 App::FrameResources::FrameResources(FrameResources&& rhs) {
@@ -227,47 +268,6 @@ App::FrameResources::FrameResources(FrameResources&& rhs) {
 
 App::FrameResources::~FrameResources() {
 	CloseHandle(fence_event);
-}
-
-int App::Run() && {
-	std::array<HANDLE, BUFFER_COUNT> fence_handles{};
-	for (auto i = 0u; i < BUFFER_COUNT; ++i)
-		fence_handles[i] = frames[i].fence_event;
-
-	MSG msg{};
-	bool running			   = true;
-	uint32_t frames_submitted  = 0;
-	uint32_t back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-	HRESULT present_result	   = S_OK;
-
-	while (running) {
-		frame_debug_log.BeginFrame(frames_submitted);
-		auto wait_result
-			= WaitForFrame(frame_debug_log, fence_handles.data(), back_buffer_index, msg);
-		if (wait_result == FrameWaitResult::Quit)
-			break;
-		if (wait_result == FrameWaitResult::Continue)
-			continue;
-
-		uint64_t completed_value = 0;
-		if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
-			continue;
-		LogFenceStatus(frame_debug_log, completed_value, present_result);
-
-		ExecuteFrame(device.command_queue.Get(), frames[back_buffer_index], present_result);
-		auto signaled_value = frames_submitted + 1;
-		present_result = PresentAndSignal(device.command_queue.Get(), swap_chain.swap_chain.Get(),
-										  frames[back_buffer_index], signaled_value);
-		if (!HandlePresentResult(frame_debug_log, present_result))
-			continue;
-
-		auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-		LogFrameSubmitted(frame_debug_log, back_buffer_index, signaled_value,
-						  new_back_buffer_index);
-		back_buffer_index = new_back_buffer_index;
-		++frames_submitted;
-	}
-	return 0;
 }
 
 void App::InitializeGraphics() {
@@ -318,22 +318,28 @@ void App::InitializeGraphics() {
 		D3D12_CPU_DESCRIPTOR_HANDLE offscreen_rtv
 			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		offscreen_rtv.ptr += i * offscreen_rtv_descriptor_size;
-		device.device->CreateRenderTargetView(offscreen_render_targets[i].Get(), nullptr,
+		device.device->CreateRenderTargetView(*&offscreen_render_targets[i], nullptr,
 											  offscreen_rtv);
-
-		nvenc_d3d12.RegisterTexture(offscreen_render_targets[i].Get(), frame_width, frame_height,
-									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT));
 	}
 
 	frames.reserve(BUFFER_COUNT);
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
-		frames.emplace_back(device.device.Get(), allocator.Get());
+		frames.emplace_back(*&device.device, *&allocator);
+	}
 
+	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+		nvenc_d3d12.RegisterTexture(*&offscreen_render_targets[i], frame_width, frame_height,
+									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
+									*&frames[i].fence);
+	}
+
+	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		D3D12_CPU_DESCRIPTOR_HANDLE offscreen_rtv
 			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		offscreen_rtv.ptr += i * offscreen_rtv_descriptor_size;
 
-		RecordCommandList(frames[i].command_list.Get(), offscreen_rtv,
-						  offscreen_render_targets[i].Get(), *&swap_chain.render_targets[i], i);
+		frames[i].command_list->Reset(*&allocator, nullptr);
+		RecordCommandList(*&frames[i].command_list, offscreen_rtv, *&offscreen_render_targets[i],
+						  *&swap_chain.render_targets[i], i);
 	}
 }

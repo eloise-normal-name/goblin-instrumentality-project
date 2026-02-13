@@ -23,6 +23,7 @@ Review the changed files in this repository since the last highlights commit (lo
         * relevant colored code if available
         * links if relevant
     * update log inside highlights page with build stats
+        * preserve all previous build-log entries already present in the existing `refactor-highlights.html`
         * size of minsizerel binaries created
         * total source lines in /src using cloc (not per-file counts)
     * proposed next steps

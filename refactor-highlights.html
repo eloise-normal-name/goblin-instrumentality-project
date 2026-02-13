@@ -153,36 +153,50 @@
 </head>
 <body>
     <main>
-        <h1>Refactor Highlights since <code>09cd258</code> 🐱</h1>
-        <p class="subtitle">Compared range: <code>09cd258..HEAD</code> · generated on 2026-02-12</p>
+        <h1>Refactor Highlights since <code>dfc75e5</code></h1>
+        <p class="subtitle">Compared range: <code>dfc75e5..WORKTREE</code> · generated on 2026-02-13</p>
 
         <div class="cards">
             <div class="card">
                 <div class="k">Files changed</div>
-                <div class="v">8</div>
+                <div class="v">9</div>
             </div>
             <div class="card">
                 <div class="k">Insertions / Deletions</div>
-                <div class="v">+134 / -57</div>
+                <div class="v">Frame-loop + NVENC fence sync</div>
             </div>
             <div class="card">
                 <div class="k">MinSizeRel binary</div>
-                <div class="v">266,752 bytes</div>
+                <div class="v">267,264 bytes</div>
             </div>
             <div class="card">
                 <div class="k">cloc total in /src</div>
-                <div class="v">913 lines</div>
+                <div class="v">923 lines</div>
             </div>
         </div>
+
+        <section>
+            <h2>High-level goal alignment</h2>
+            <div class="panel">
+                <p>
+                    The current refactor track is consolidating frame ownership inside <code>App</code>, tightening
+                    render-to-encode synchronization, and keeping module/build wiring deterministic.
+                    This delta advances that by inlining the frame loop into <code>App</code>, adding fence-aware NVENC
+                    texture registration/mapping hooks, and fixing source casing in CMake to keep module discovery stable.
+                </p>
+            </div>
+        </section>
 
         <section>
             <h2>What changed and why</h2>
             <div class="panel">
                 <ul>
-                    <li>Added app-owned offscreen render targets that feed both swap-chain presentation and NVENC registration, aligning the render path with the encode path.</li>
-                    <li>Trimmed <code>D3D12SwapChain</code> to only manage back buffers, moving RTV heap ownership into the app where offscreen textures now live.</li>
-                    <li>Updated the frame command list recording to render into offscreen textures, copy into back buffers, and return both resources to steady states.</li>
-                    <li>Refined NVENC session setup with designated initializers and clarified the data flow notes in the README.</li>
+                    <li>Inlined <code>Run()</code> into the exported <code>App</code> class body for tighter locality between frame wait, fence readiness checks, present handling, and debug logging.</li>
+                    <li>Promoted encoder settings to <code>static constexpr ENCODER_CONFIG</code> to remove duplicated literal config and keep defaults explicit at type scope.</li>
+                    <li>Switched command list creation to <code>ID3D12Device4::CreateCommandList1</code> and aligned COM pointer usage with the <code>*&</code> style used elsewhere.</li>
+                    <li>Extended NVENC D3D12 texture registration to carry fence context (<code>pInputFencePoint</code>) and map-time fence wait values.</li>
+                    <li>Fixed CMake source path casing from <code>src/app.ixx</code> to <code>src/App.ixx</code> to avoid module lookup drift.</li>
+                    <li>Cleaned instruction docs to reference the condensed NVENC guide and removed stale/non-project-specific workflow/chat sections.</li>
                 </ul>
             </div>
         </section>
@@ -191,56 +205,67 @@
             <h2>Snippets in context</h2>
             <div class="code-cards">
                 <details>
-                    <summary>Offscreen render targets + NVENC registration</summary>
+                    <summary>Frame loop moved into App class body</summary>
                     <div class="code-card">
-                        <pre><code><span class="type">D3D12_RESOURCE_DESC</span> texture_desc{
-    .Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-    .Width = frame_width,
-    .Height = frame_height,
-    .Format = RENDER_TARGET_FORMAT,
-    .SampleDesc = {.Count = 1, .Quality = 0},
-    .Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+                        <pre><code><span class="kw">int</span> Run() &amp;&amp; {
+    std::array&lt;HANDLE, BUFFER_COUNT&gt; fence_handles{};
+    <span class="kw">for</span> (auto i = <span class="num">0</span>u; i &lt; BUFFER_COUNT; ++i)
+        fence_handles[i] = frames[i].fence_event;
+
+    <span class="kw">while</span> (running) {
+        auto wait_result = WaitForFrame(...);
+        <span class="kw">if</span> (wait_result == FrameWaitResult::Quit) <span class="kw">break</span>;
+
+        <span class="kw">if</span> (!IsFrameReady(...)) <span class="kw">continue</span>;
+        ExecuteFrame(*&amp;device.command_queue, frames[back_buffer_index], present_result);
+        present_result = PresentAndSignal(*&amp;device.command_queue, *&amp;swap_chain.swap_chain,
+            frames[back_buffer_index], frames_submitted + <span class="num">1</span>);
+    }
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>Fence-aware NVENC registration and map entrypoint</summary>
+                    <div class="code-card">
+                        <pre><code><span class="type">NV_ENC_FENCE_POINT_D3D12</span> fence_point{
+    .version = NV_ENC_FENCE_POINT_D3D12_VER,
+    .pFence = fence,
+    .waitValue = <span class="num">0</span>,
+    .bWait = <span class="num">1</span>,
 };
 
-<span class="kw">for</span> (auto i = <span class="num">0</span>u; i &lt; BUFFER_COUNT; ++i) {
-    Try
-        | device.device-&gt;CreateCommittedResource(&amp;default_heap_props,
-            D3D12_HEAP_FLAG_NONE, &amp;texture_desc, D3D12_RESOURCE_STATE_COMMON,
-            &amp;clear_value, IID_PPV_ARGS(&amp;offscreen_render_targets[i]));
+<span class="type">NV_ENC_REGISTER_RESOURCE</span> register_params{
+    .resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
+    .resourceToRegister = texture,
+    .pInputFencePoint = &amp;fence_point,
+};
 
-    device.device-&gt;CreateRenderTargetView(offscreen_render_targets[i].Get(),
-        nullptr, offscreen_rtv);
-
-    nvenc_d3d12.RegisterTexture(offscreen_render_targets[i].Get(), frame_width,
-        frame_height, DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT));
-}</code></pre>
+<span class="kw">void</span> MapInputTexture(uint32_t index, uint64_t fence_wait_value);</code></pre>
                     </div>
                 </details>
                 <details>
-                    <summary>Copy offscreen render into swap-chain buffers</summary>
+                    <summary>Command-list creation + CMake case fix</summary>
                     <div class="code-card">
-                        <pre><code>command_list-&gt;ClearRenderTargetView(rtv, clear_color, <span class="num">0</span>, nullptr);
-command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;offscreen_to_copy);
-command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;back_buffer_to_copy);
-command_list-&gt;CopyResource(swap_chain_render_target, offscreen_render_target);
-command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;back_buffer_to_present);
-command_list-&gt;ResourceBarrier(<span class="num">1</span>, &amp;offscreen_to_common);
-command_list-&gt;Close();</code></pre>
+                        <pre><code><span class="type">ComPtr&lt;ID3D12Device4&gt;</span> device4;
+<span class="type">ComPtr&lt;ID3D12GraphicsCommandList1&gt;</span> command_list1;
+Try | device-&gt;QueryInterface(IID_PPV_ARGS(&amp;device4))
+    | device4-&gt;CreateCommandList1(..., IID_PPV_ARGS(&amp;command_list1));
+command_list.Attach(command_list1.Detach());
+
+# CMakeLists.txt
+set(SOURCES
+    src/App.ixx
+    src/main.cpp
+)</code></pre>
                     </div>
                 </details>
                 <details>
-                    <summary>Swap chain now only manages back buffers</summary>
+                    <summary>References and guides</summary>
                     <div class="code-card">
-                        <pre><code><span class="type">D3D12SwapChain</span>::D3D12SwapChain(...)
-    : device(dev)
-    , factory(fac)
-    , command_queue(queue)
-    , buffer_count(config.buffer_count)
-    , render_target_format(config.render_target_format) {
-    render_targets.resize(buffer_count);
-    CreateSwapChain(window_handle);
-    AcquireBackBuffers();
-}</code></pre>
+                        <pre><code>- .github/prompts/snippets/nvenc-guide.md
+- https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/
+  nvenc-video-encoder-api-prog-guide/index.html</code></pre>
                     </div>
                 </details>
             </div>
@@ -251,8 +276,9 @@ command_list-&gt;Close();</code></pre>
             <div class="panel">
                 <ul>
                     <li>MinSizeRel build: successful (<code>goblin-stream.vcxproj -&gt; bin/MinSizeRel/goblin-stream.exe</code>).</li>
-                    <li>Binary size (MinSizeRel): <code>266,752</code> bytes.</li>
-                    <li>cloc /src total: <code>913</code> lines.</li>
+                    <li>Binary size (MinSizeRel): <code>267,264</code> bytes.</li>
+                    <li>cloc /src total: <code>923</code> lines.</li>
+                    <li>Diagnostics check: no blocking errors; two non-fatal C4100 warnings remain in staged code.</li>
                 </ul>
                 <p class="small">Build command: <code>cmake --build build --config MinSizeRel</code></p>
             </div>
@@ -262,7 +288,8 @@ command_list-&gt;Close();</code></pre>
             <h2>Build log</h2>
             <div class="panel">
                 <ul>
-                    <li>2026-02-12 · MinSizeRel size: <code>266,752</code> bytes · cloc /src: <code>913</code> lines.</li>
+                    <li>2026-02-12 · MinSizeRel size: <code>266,752</code> bytes · cloc /src: <code>913</code> lines · build succeeded.</li>
+                    <li>2026-02-13 · MinSizeRel size: <code>267,264</code> bytes · cloc /src: <code>923</code> lines · build succeeded.</li>
                 </ul>
             </div>
         </section>
@@ -271,9 +298,9 @@ command_list-&gt;Close();</code></pre>
             <h2>Proposed next steps</h2>
             <div class="panel">
                 <ul>
-                    <li>Decide whether the offscreen render targets should become an explicit <code>App</code> sub-structure for clarity.</li>
-                    <li>Replace the NVENC map/unmap stubs with the next real encode pass integration.</li>
-                    <li>Consider a small helper to centralize resource barrier setup in the frame recording path.</li>
+                    <li>Consume <code>fence_wait_value</code> in <code>NvencD3D12::MapInputTexture</code> and wire it to map params to clear the current warning and complete synchronization intent.</li>
+                    <li>Either use or remove the unused allocator parameter in <code>App::FrameResources</code> constructor to keep warning budget at zero.</li>
+                    <li>Add a short encode submission/status card in this highlights page once texture map/unmap is fully wired into the frame loop.</li>
                 </ul>
             </div>
         </section>

@@ -16,6 +16,7 @@ struct RegisteredTexture {
 	uint32_t width;
 	uint32_t height;
 	bool is_mapped;
+	ID3D12Fence* fence;
 };
 
 struct BitstreamBuffer {
@@ -30,7 +31,7 @@ class NvencD3D12 {
 	~NvencD3D12();
 
 	void RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
-						 NV_ENC_BUFFER_FORMAT format);
+						 NV_ENC_BUFFER_FORMAT format, ID3D12Fence* fence);
 	void UnregisterTexture(uint32_t index);
 	void UnregisterAllTextures();
 
@@ -38,7 +39,7 @@ class NvencD3D12 {
 	void UnregisterBitstreamBuffer(uint32_t index);
 	void UnregisterAllBitstreamBuffers();
 
-	void MapInputTexture(uint32_t index);
+	void MapInputTexture(uint32_t index, uint64_t fence_wait_value);
 	void UnmapInputTexture(uint32_t index);
 
 	NvencSession& session;

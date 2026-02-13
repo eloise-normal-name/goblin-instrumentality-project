@@ -30,8 +30,8 @@ NvencConfig::NvencConfig(NvencSession* sess, const EncoderConfig& cfg) {
 
 	init_params = {
 		.version		   = NV_ENC_INITIALIZE_PARAMS_VER,
-		.encodeGUID		   = NV_ENC_CODEC_H264_GUID,
-		.presetGUID		   = NV_ENC_PRESET_P1_GUID,
+		.encodeGUID		   = codec_guid,
+		.presetGUID		   = preset_guid,
 		.encodeWidth	   = config.width,
 		.encodeHeight	   = config.height,
 		.darWidth		   = config.width,
@@ -44,7 +44,8 @@ NvencConfig::NvencConfig(NvencSession* sess, const EncoderConfig& cfg) {
 		.maxEncodeWidth	   = config.width,
 		.maxEncodeHeight   = config.height,
 		.tuningInfo		   = tuning,
-		.bufferFormat	   = NV_ENC_BUFFER_FORMAT_ARGB,
+		.bufferFormat
+		= config.codec == EncoderCodec::AV1 ? NV_ENC_BUFFER_FORMAT_NV12 : NV_ENC_BUFFER_FORMAT_ARGB,
 	};
 
 	ConfigureRateControl();

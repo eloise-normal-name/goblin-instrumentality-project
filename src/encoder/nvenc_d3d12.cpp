@@ -12,8 +12,15 @@ NvencD3D12::~NvencD3D12() {
 }
 
 void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
-								 NV_ENC_BUFFER_FORMAT format) {
+								 NV_ENC_BUFFER_FORMAT format, ID3D12Fence* fence) {
 	void* encoder = session.encoder;
+
+	NV_ENC_FENCE_POINT_D3D12 fence_point{
+		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence	   = fence,
+		.waitValue = 0,
+		.bWait	   = 1,
+	};
 
 	NV_ENC_REGISTER_RESOURCE register_params{
 		.version			= NV_ENC_REGISTER_RESOURCE_VER,
@@ -23,6 +30,7 @@ void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32
 		.resourceToRegister = texture,
 		.bufferFormat		= format,
 		.bufferUsage		= NV_ENC_INPUT_IMAGE,
+		.pInputFencePoint	= &fence_point,
 	};
 
 	Try | session.nvEncRegisterResource(encoder, &register_params);
@@ -33,6 +41,7 @@ void NvencD3D12::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32
 		.buffer_format	= format,
 		.width			= width,
 		.height			= height,
+		.fence			= fence,
 	});
 }
 
@@ -102,7 +111,7 @@ void NvencD3D12::UnregisterAllBitstreamBuffers() {
 	bitstream_buffers.clear();
 }
 
-void NvencD3D12::MapInputTexture(uint32_t index) {
+void NvencD3D12::MapInputTexture(uint32_t index, uint64_t fence_wait_value) {
 	if (index >= textures.size())
 		throw;
 

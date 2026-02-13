@@ -37,8 +37,8 @@ class NvencConfig {
 
 	NvencSession* session = nullptr;
 	EncoderConfig config;
-	NV_ENC_INITIALIZE_PARAMS init_params = {};
-	NV_ENC_CONFIG encode_config			 = {};
+	NV_ENC_INITIALIZE_PARAMS init_params{};
+	NV_ENC_CONFIG encode_config{};
 
   private:
 	GUID GetPresetGuid(EncoderPreset preset) const;
