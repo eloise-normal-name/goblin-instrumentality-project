@@ -22,7 +22,7 @@ constexpr auto RENDER_TARGET_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 export class App {
 	class FrameResources {
 	  public:
-		FrameResources(ID3D12Device* device, ID3D12CommandAllocator* allocator);
+		FrameResources(ID3D12Device* device);
 		FrameResources(FrameResources&& rhs);
 		~FrameResources();
 
@@ -245,7 +245,7 @@ export class App {
 	void InitializeGraphics();
 };
 
-App::FrameResources::FrameResources(ID3D12Device* device, ID3D12CommandAllocator* allocator) {
+App::FrameResources::FrameResources(ID3D12Device* device) {
 	fence_event = CreateEvent(nullptr, FALSE, TRUE, nullptr);
 	if (!fence_event)
 		throw;
@@ -324,7 +324,7 @@ void App::InitializeGraphics() {
 
 	frames.reserve(BUFFER_COUNT);
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
-		frames.emplace_back(*&device.device, *&allocator);
+		frames.emplace_back(*&device.device);
 	}
 
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
