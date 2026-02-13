@@ -1,0 +1,73 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Check for prohibited patterns
+      run: |
+        $errors = @()
+        
+        # Check for Initialize/Shutdown methods (violates RAII)
+        $initFiles = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "\b(Initialize|Shutdown)\s*\(" -Exclude "nvEncodeAPI.h"
+        if ($initFiles) {
+          $errors += "Found Initialize/Shutdown methods (violates RAII):"
+          $initFiles | ForEach-Object { $errors += "  $($_.Filename):$($_.LineNumber)" }
+        }
+        
+        # Check for trailing underscores in variable names
+        $underscoreFiles = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "\b\w+_\s*[=;,)]" -Exclude "nvEncodeAPI.h"
+        if ($underscoreFiles) {
+          Write-Output "::warning::Found potential trailing underscores in variable names (check if these violate style guide)"
+        }
+        
+        # Check for C++ style casts (should use C-style casts)
+        $cppCasts = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "(static_cast|dynamic_cast|reinterpret_cast|const_cast)\s*<" -Exclude "nvEncodeAPI.h"
+        if ($cppCasts) {
+          $errors += ""
+          $errors += "Found C++ style casts (should use C-style casts):"
+          $cppCasts | ForEach-Object { $errors += "  $($_.Filename):$($_.LineNumber)" }
+        }
+        
+        # Check for namespace usage (prohibited)
+        $namespaces = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "^\s*namespace\s+\w+" -Exclude "nvEncodeAPI.h"
+        if ($namespaces) {
+          $errors += ""
+          $errors += "Found namespace declarations (prohibited):"
+          $namespaces | ForEach-Object { $errors += "  $($_.Filename):$($_.LineNumber)" }
+        }
+        
+        # Check for unchecked D3D12/NVENC calls (should use Try |)
+        $uncheckedCalls = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "^\s*[^/\s].*->(Create|Get|Set|Register|Map|Unmap|Encode)" -Exclude "nvEncodeAPI.h" | Where-Object { $_.Line -notmatch "Try\s*\|" }
+        if ($uncheckedCalls) {
+          Write-Output "::warning::Found potential unchecked API calls (should use Try | pattern)"
+          $uncheckedCalls | Select-Object -First 5 | ForEach-Object { Write-Output "  $($_.Filename):$($_.LineNumber)" }
+        }
+        
+        if ($errors.Count -gt 0) {
+          $errors | ForEach-Object { Write-Output "::error::$_" }
+          exit 1
+        }
+        
+        Write-Output "Code quality checks passed ✓"
+      shell: pwsh
+      
+    - name: Check warning level
+      run: |
+        # Verify CMakeLists.txt uses /W4
+        $cmake = Get-Content "CMakeLists.txt" -Raw
+        if ($cmake -notmatch "/W4") {
+          Write-Output "::error::CMakeLists.txt should compile with /W4 warning level"
+          exit 1
+        }
+        Write-Output "Warning level check passed ✓"
+      shell: pwsh

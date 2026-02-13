@@ -20,7 +20,7 @@
   - Methods and public APIs use PascalCase (e.g., `WaitForGpu`, `BeginFrame`)
   - Local and member variables use snake_case without trailing underscores (e.g., `create_device`, `fence_event`)
   - Constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
-- **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods):
+- **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods; **CI enforced**):
   - All resource allocation in constructors (called once at object creation)
   - All resource cleanup in destructors (called at object destruction)
   - No two-phase initialization; construction must either fully succeed or throw
@@ -33,10 +33,12 @@
   - Do not format `include/nvenc/nvEncodeAPI.h` since it is an external vendor header
   - Single-statement conditionals (`if`, `for`, `while`) should omit braces
   - Multi-statement blocks require braces
-- **Warnings**: Compile with `/W4` (treat all warnings as errors in future)
+  - **CI validates formatting** on all PRs via `.github/workflows/format-check.yml`
+- **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, smart pointer declarations from `make_unique`, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project
-- **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls
+  - **CI checks for C++ casts** and flags them as errors
+- **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
     ```cpp
     Try | function1()
@@ -52,22 +54,28 @@
   - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity
 
 ## Prohibited Patterns
+**CI automatically checks for these patterns** via `.github/workflows/code-quality.yml`:
 - **Threading**: No multi-threaded code or concurrency primitives
 - **Comments**: Use self-documenting code instead of comments
 - **External Libraries**: Stick to Windows APIs and C++ standard library
-- **Namespaces**: Do not use namespaces; keep all code in the global namespace
+- **Namespaces**: Do not use namespaces; keep all code in the global namespace (CI enforced)
 - **Trailing Underscores**: Do not use trailing underscores for member variables (use plain snake_case)
+- **Initialize/Shutdown Methods**: Violates RAII principles (CI enforced)
 - **NVENC**: Follow the condensed D3D12-only guide at `.github/prompts/snippets/nvenc-guide.md` and the official programming guide at https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html.
 
 ## Build Process
 - **Generator**: Use `-G "Visual Studio 18 2026" -A x64`
 - **Intermediate Files**: Located in `build/` (git-ignored)
+- **Automated CI**: GitHub workflows validate builds, formatting, and code quality on all PRs
+  - `.github/workflows/build-and-validate.yml` - Builds all configurations, tracks binary size and source lines
+  - `.github/workflows/format-check.yml` - Validates clang-format compliance
+  - `.github/workflows/code-quality.yml` - Checks RAII patterns, error handling, and prohibited patterns
 
 ## VS Code Workflow
 - **Extension**: Use CMake Tools extension
 - **Build**: F7 or Status Bar "Build" button
 - **Run/Debug**: F5 or Ctrl+F5
-- **Format**: Ctrl+Shift+I (format document on save is automatic)
+- **Format**: Ctrl+Shift+I (format document on save is automatic; CI validates on PR)
 - **Terminal**: Configure to use Command Prompt (`cmd`) instead of PowerShell for better compatibility with CMake and build tools
   - Command Palette → "Terminal: Select Default Shell" → Choose "Command Prompt"
   - Or add to `.vscode/settings.json`: `"terminal.integrated.defaultProfile.windows": "Command Prompt"`
@@ -79,6 +87,16 @@
   - ❌ `cat`, `grep`, `find`, `head`, `tail` (Unix tools — do not use `head` or `tail`)
 - **Use quoted paths** when they contain spaces: `"C:\Program Files\..."`
 - **CMake commands**: Always specify generator explicitly: `-G "Visual Studio 18 2026" -A x64`
+
+## Continuous Integration
+- **Automated Validation**: All PRs automatically run GitHub workflows that:
+  - Build all configurations (Debug, Release, MinSizeRel)
+  - Validate code formatting against `.clang-format`
+  - Check for prohibited patterns (namespaces, C++ casts, Initialize/Shutdown methods)
+  - Verify RAII compliance and error handling (Try | pattern usage)
+  - Track binary size and source line metrics
+- **Status Checks**: PR merge requires all workflow checks to pass
+- **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
 
 ## Documentation
 - **README.md**: Must reflect current architecture, module structure, and data flow

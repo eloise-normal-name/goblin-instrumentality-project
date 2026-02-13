@@ -1,0 +1,43 @@
+name: Format Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  format:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install LLVM (includes clang-format)
+      run: choco install llvm -y
+      
+    - name: Check formatting
+      run: |
+        $files = Get-ChildItem -Path src,include -Include *.cpp,*.ixx,*.h -Recurse | Where-Object { $_.FullName -notmatch "nvEncodeAPI\.h" }
+        $failed = @()
+        
+        foreach ($file in $files) {
+          $original = Get-Content $file.FullName -Raw
+          $formatted = & clang-format $file.FullName
+          
+          if ($original -ne $formatted) {
+            $failed += $file.FullName
+            Write-Output "::error file=$($file.FullName)::File is not formatted according to .clang-format"
+          }
+        }
+        
+        if ($failed.Count -gt 0) {
+          Write-Output "The following files need formatting:"
+          $failed | ForEach-Object { Write-Output "  - $_" }
+          Write-Output ""
+          Write-Output "Run 'clang-format -i <file>' to format these files"
+          exit 1
+        }
+        
+        Write-Output "All files are properly formatted ✓"
+      shell: pwsh
