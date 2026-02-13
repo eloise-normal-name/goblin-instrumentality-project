@@ -34,3 +34,8 @@ compile_commands.json
 
 # temp
 codemap-extension/
+
+# Code coverage
+coverage_report/
+coverage.xml
+*.bin

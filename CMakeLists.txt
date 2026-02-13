@@ -35,6 +35,12 @@ target_include_directories(goblin-stream PRIVATE
 # 6. Compiler Flags (Warning Level 4)
 target_compile_options(goblin-stream PRIVATE /W4 /EHs)
 
+# 6b. Debug symbols for coverage (always enabled for Debug builds)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR NOT CMAKE_BUILD_TYPE)
+	target_compile_options(goblin-stream PRIVATE /Zi)
+	target_link_options(goblin-stream PRIVATE /DEBUG)
+endif()
+
 # 7. Definitions
 target_compile_definitions(goblin-stream PRIVATE UNICODE _UNICODE)
 

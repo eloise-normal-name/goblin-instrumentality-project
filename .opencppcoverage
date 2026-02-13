@@ -1,0 +1,28 @@
+# OpenCppCoverage Configuration File
+# This file defines default settings for code coverage runs
+# Usage: OpenCppCoverage --config_file=.opencppcoverage -- <executable>
+
+# Source directories to include in coverage
+--sources src\*
+
+# Exclude external/vendor code
+--excluded_sources *\include\nvenc\*
+--excluded_sources *\include\*
+--excluded_sources *\build\*
+--excluded_sources *\bin\*
+
+# Module filtering (if needed)
+# --modules goblin-stream.exe
+
+# Coverage settings
+# --cover_children (uncomment to cover child processes)
+
+# Export format (can be overridden on command line)
+# Supported: binary, cobertura, html
+# --export_type html:coverage_report
+
+# Verbose output for debugging
+# --verbose
+
+# Continue on failure
+# --continue_after_cpp_exception
