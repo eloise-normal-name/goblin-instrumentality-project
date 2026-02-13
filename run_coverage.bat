@@ -21,13 +21,19 @@ echo is a DirectX 12 GUI application that requires a GPU.
 echo.
 echo To use code coverage:
 echo   1. Implement unit tests or a test harness
-echo   2. Update the EXECUTABLE variable below to point to your test executable
-echo   3. Run this script again
+echo   2. Remove the exit statement below (line 30)
+echo   3. Update the EXECUTABLE variable to point to your test executable
+echo   4. Run this script again
 echo.
 echo See docs/TEST_COVERAGE_INTEGRATION.md for detailed guidance.
 echo.
 pause
+REM TODO: Remove this exit statement when tests are added
 exit /b 1
+
+REM ============================================================
+REM The code below is ready to use once tests are implemented
+REM ============================================================
 
 REM Configuration
 REM TODO: Update this to point to your test executable when tests are added
