@@ -18,20 +18,20 @@ jobs:
         $errors = @()
         
         # Check for Initialize/Shutdown methods (violates RAII)
-        $initFiles = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "\b(Initialize|Shutdown)\s*\(" -Exclude "nvEncodeAPI.h"
+        $initFiles = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "\b(Initialize|Shutdown)\s*\("
         if ($initFiles) {
           $errors += "Found Initialize/Shutdown methods (violates RAII):"
           $initFiles | ForEach-Object { $errors += "  $($_.Filename):$($_.LineNumber)" }
         }
         
         # Check for trailing underscores in variable names
-        $underscoreFiles = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "\b\w+_\s*[=;,)]" -Exclude "nvEncodeAPI.h"
+        $underscoreFiles = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "\b\w+_\s*[=;,)]"
         if ($underscoreFiles) {
           Write-Output "::warning::Found potential trailing underscores in variable names (check if these violate style guide)"
         }
         
         # Check for C++ style casts (should use C-style casts)
-        $cppCasts = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "(static_cast|dynamic_cast|reinterpret_cast|const_cast)\s*<" -Exclude "nvEncodeAPI.h"
+        $cppCasts = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "(static_cast|dynamic_cast|reinterpret_cast|const_cast)\s*<"
         if ($cppCasts) {
           $errors += ""
           $errors += "Found C++ style casts (should use C-style casts):"
@@ -39,7 +39,7 @@ jobs:
         }
         
         # Check for namespace usage (prohibited)
-        $namespaces = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "^\s*namespace\s+\w+" -Exclude "nvEncodeAPI.h"
+        $namespaces = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "^\s*namespace\s+\w+"
         if ($namespaces) {
           $errors += ""
           $errors += "Found namespace declarations (prohibited):"
@@ -47,7 +47,7 @@ jobs:
         }
         
         # Check for unchecked D3D12/NVENC calls (should use Try |)
-        $uncheckedCalls = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "^\s*[^/\s].*->(Create|Get|Set|Register|Map|Unmap|Encode)" -Exclude "nvEncodeAPI.h" | Where-Object { $_.Line -notmatch "Try\s*\|" }
+        $uncheckedCalls = Select-String -Path "src\*.cpp","src\*.ixx" -Pattern "^\s*[^/\s].*->(Create|Get|Set|Register|Map|Unmap|Encode)" | Where-Object { $_.Line -notmatch "Try\s*\|" }
         if ($uncheckedCalls) {
           Write-Output "::warning::Found potential unchecked API calls (should use Try | pattern)"
           $uncheckedCalls | Select-Object -First 5 | ForEach-Object { Write-Output "  $($_.Filename):$($_.LineNumber)" }
