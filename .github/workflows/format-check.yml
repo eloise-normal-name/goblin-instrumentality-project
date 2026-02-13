@@ -18,7 +18,7 @@ jobs:
       
     - name: Check formatting
       run: |
-        $files = Get-ChildItem -Path src,include -Include *.cpp,*.ixx,*.h -Recurse | Where-Object { $_.FullName -notmatch "nvEncodeAPI\.h" }
+        $files = Get-ChildItem -Path src,include -Include *.cpp,*.ixx,*.h -Recurse
         $failed = @()
         
         foreach ($file in $files) {
