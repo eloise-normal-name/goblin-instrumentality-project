@@ -88,6 +88,8 @@ goblin-instrumentality-project/
 
 Code coverage testing infrastructure is available. Tests should be added to validate core functionality.
 
+For information on integrating tests with coverage, see [docs/TEST_COVERAGE_INTEGRATION.md](docs/TEST_COVERAGE_INTEGRATION.md)
+
 ## License
 
 See LICENSE file for details.
