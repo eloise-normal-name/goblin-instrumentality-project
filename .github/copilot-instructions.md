@@ -64,10 +64,10 @@
 - **NVENC**: Follow the condensed D3D12-only guide at `.github/prompts/snippets/nvenc-guide.md` and the official programming guide at https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html.
 
 ## Build Process
-- **Generator**: Use `-G "Visual Studio 18 2026" -A x64`
+- **Generator**: Use `-G "Visual Studio 18 2026" -A x64` (local development)
 - **Intermediate Files**: Located in `build/` (git-ignored)
 - **Automated CI**: GitHub workflows validate builds, formatting, and code quality on all PRs
-  - `.github/workflows/build-and-validate.yml` - Builds all configurations, tracks binary size and source lines
+  - `.github/workflows/build-and-validate.yml` - Builds all configurations, tracks binary size and source lines (uses VS 2022 on GitHub runners)
   - `.github/workflows/format-check.yml` - Validates clang-format compliance
   - `.github/workflows/code-quality.yml` - Checks RAII patterns, error handling, and prohibited patterns
 
