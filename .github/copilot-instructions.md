@@ -97,6 +97,7 @@
   - Track binary size and source line metrics
 - **Status Checks**: PR merge requires all workflow checks to pass
 - **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
+- **Documentation**: See `docs/GITHUB_WORKFLOWS.md` for detailed workflow information
 
 ## Documentation
 - **README.md**: Must reflect current architecture, module structure, and data flow
