@@ -36,6 +36,7 @@ export class App {
 												  .width		= 512,
 												  .height		= 512};
 	HWND hwnd;
+	bool headless;
 	D3D12Device device;
 	NvencSession nvenc_session{*&device.device};
 	NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};
@@ -53,11 +54,14 @@ export class App {
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
-	App(HWND hwnd) : hwnd(hwnd) {
+	App(HWND hwnd, bool headless) : hwnd(hwnd), headless(headless), device(headless) {
 		InitializeGraphics();
 	}
 
 	int Run() && {
+		if (headless)
+			return RunHeadless();
+
 		std::array<HANDLE, BUFFER_COUNT> fence_handles{};
 		for (auto i = 0u; i < BUFFER_COUNT; ++i)
 			fence_handles[i] = frames[i].fence_event;
@@ -104,6 +108,35 @@ export class App {
 		Continue,
 		Proceed,
 	};
+
+	int RunHeadless() {
+		constexpr auto TEST_FRAME_COUNT = 10u;
+
+		for (auto i = 0u; i < TEST_FRAME_COUNT; ++i) {
+			auto back_buffer_index = i % BUFFER_COUNT;
+
+			if (i >= BUFFER_COUNT) {
+				auto wait_result
+					= WaitForSingleObject(frames[back_buffer_index].fence_event, INFINITE);
+				if (wait_result != WAIT_OBJECT_0)
+					return 1;
+			}
+
+			ID3D12CommandList* lists[] = {*&frames[back_buffer_index].command_list};
+			device.command_queue->ExecuteCommandLists(1, lists);
+
+			auto signaled_value = i + 1;
+			device.command_queue->Signal(*&frames[back_buffer_index].fence, signaled_value);
+			frames[back_buffer_index].fence->SetEventOnCompletion(
+				signaled_value, frames[back_buffer_index].fence_event);
+		}
+
+		for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+			WaitForSingleObject(frames[i].fence_event, INFINITE);
+		}
+
+		return 0;
+	}
 
 	static void RecordCommandList(ID3D12GraphicsCommandList* command_list,
 								  D3D12_CPU_DESCRIPTOR_HANDLE rtv,

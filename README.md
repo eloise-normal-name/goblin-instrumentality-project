@@ -17,7 +17,7 @@ A high-performance Windows DirectX 12 graphics application with NVENC hardware e
 - Visual Studio 2026 Community (or later)
 - CMake 3.28+
 - Windows 10/11 SDK
-- NVIDIA GPU with NVENC support (for encoding features)
+- NVIDIA GPU with NVENC support (for encoding features, not required in headless mode)
 
 ### Build Instructions
 
@@ -32,6 +32,20 @@ For Release builds:
 ```cmd
 cmake --build build --config Release
 ```
+
+## Running
+
+### Normal Mode
+```cmd
+bin\Debug\goblin-stream.exe
+```
+
+### Headless Mode (for CI/Testing)
+```cmd
+bin\Debug\goblin-stream.exe --headless
+```
+
+Headless mode uses WARP (software rendering) and runs without displaying a window, making it suitable for CI environments and automated testing. See [docs/HEADLESS_MODE.md](docs/HEADLESS_MODE.md) for details.
 
 ## Code Coverage
 
@@ -54,7 +68,7 @@ For detailed coverage documentation, see [docs/CODE_COVERAGE.md](docs/CODE_COVER
 
 ### CI/CD Coverage
 
-Code coverage is automatically run on pull requests and pushes via GitHub Actions. Coverage reports are uploaded as artifacts.
+Code coverage is automatically run on pull requests and pushes via GitHub Actions using headless mode. Coverage reports are uploaded to Codecov and archived as artifacts. See [docs/HEADLESS_MODE.md](docs/HEADLESS_MODE.md) for implementation details.
 
 ## Project Structure
 

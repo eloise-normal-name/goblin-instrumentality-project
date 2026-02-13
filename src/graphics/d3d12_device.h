@@ -10,7 +10,7 @@ using Microsoft::WRL::ComPtr;
 
 class D3D12Device {
   public:
-	D3D12Device();
+	D3D12Device(bool use_warp = false);
 	~D3D12Device();
 
 	ComPtr<IDXGIFactory7> factory;
@@ -19,6 +19,6 @@ class D3D12Device {
 	ComPtr<ID3D12CommandQueue> command_queue;
 
   private:
-	void create_device();
+	void create_device(bool use_warp);
 	void create_command_queue();
 };
