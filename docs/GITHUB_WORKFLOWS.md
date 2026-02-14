@@ -43,6 +43,7 @@ The repository now includes four GitHub Actions workflows that automate processe
 **Actions**:
 - Installs LLVM toolchain (includes clang-format)
 - Checks all `.cpp`, `.ixx`, `.h` files in `src/` and `include/`
+- Excludes `nvEncodeAPI.h` (3rd party vendor header)
 - Reports formatting violations with file/line annotations
 - Fails PR if any files are improperly formatted
 
