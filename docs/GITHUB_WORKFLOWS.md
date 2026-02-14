@@ -4,12 +4,13 @@ This document describes the GitHub workflow that automates build validation and 
 
 ## Overview
 
-The repository includes GitHub Actions workflows that automate build validation and issue monitoring:
+The repository includes GitHub Actions workflows that automate build validation:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
 2. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
-3. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-4. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+3. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+
+**Note**: This repository does not use GitHub Issues for task tracking.
 
 ## Workflow
 
@@ -65,34 +66,6 @@ The repository includes GitHub Actions workflows that automate build validation 
 - Runs only on main/develop to avoid noise from feature branches
 
 **Note**: The workflow has `contents: write` permission to commit changes back to the repository. It will only commit if there are actual changes to the highlights file.
-
-### Monitor Assigned Issues (`.github/workflows/monitor-assigned-issues.yml`)
-
-**Triggers**: 
-- Scheduled every 6 hours
-- Manual dispatch
-- Issue assignment, edits, labeling
-- Issue comments
-
-**Purpose**: Ensures bot-assigned issues receive timely attention when users provide updates.
-
-**Actions**:
-- Monitors issues assigned to bot accounts (copilot, copilot-swe-agent[bot], github-actions[bot])
-- Detects new user comments since last bot interaction
-- Checks for issue updates (edits, labels, status changes)
-- Adds `needs-bot-attention` label when user input is detected
-- Runs scheduled checks to catch any missed updates
-
-**Benefits**:
-- Prevents issues from going stale when users provide additional information
-- Ensures bot-assigned work items are prioritized when users engage
-- Provides visibility into which issues need bot attention via labels
-- Automated monitoring reduces manual tracking overhead
-
-**Labels Used**:
-- `needs-bot-attention`: Automatically added when user comments or updates are detected on bot-assigned issues. This label helps maintainers and bots identify which issues require action.
-
-**Note**: The workflow will attempt to create the label if it doesn't exist. If label creation fails, it will log a warning but continue processing.
 
 ### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
 
@@ -215,26 +188,6 @@ If bot PRs still require manual approval:
 - Check the workflow run logs in the Actions tab
 - Look for "Check if run is from trusted bot" step output
 - Verify the actor and fork status are correctly detected
-
-### Monitor Assigned Issues Workflow
-
-**Label Creation Failures:**
-If the workflow fails to add the `needs-bot-attention` label:
-- Ensure the workflow has `issues: write` permission (already configured)
-- Check if the label exists in the repository (workflow will attempt to create it)
-- Review workflow logs for permission or API errors
-
-**Workflow Not Triggering:**
-If the workflow doesn't run when expected:
-- Check if the issue is assigned to one of the monitored bots (copilot, copilot-swe-agent[bot], github-actions[bot])
-- Verify the issue event type matches the triggers (assignment, edits, comments)
-- Use manual dispatch to test the scheduled run functionality
-
-**Label Not Applied:**
-If user comments don't result in labeling:
-- Verify the comments are from non-bot users
-- Check if the bot has interacted with the issue previously
-- Review workflow run logs to see comment detection logic
 
 ### Workflow Fails but Builds Locally
 

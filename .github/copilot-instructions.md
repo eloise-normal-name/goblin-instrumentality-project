@@ -94,11 +94,10 @@
 - **Automated Validation**: All PRs automatically run GitHub workflows that:
   - Build all configurations (Debug, Release, MinSizeRel)
   - Track binary size and source line metrics
-  - Monitor bot-assigned issues for updates
 - **Status Checks**: PR merge requires all workflow checks to pass
 - **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
-- **Issue Monitoring**: Bot-assigned issues are automatically monitored for user updates and labeled with `needs-bot-attention` when action is required
 - **Documentation**: See `docs/GITHUB_WORKFLOWS.md` for detailed workflow information
+- **GitHub Issues**: This repository does not use GitHub Issues for task tracking
 
 ### Fixing Workflow Check Failures
 
@@ -127,9 +126,6 @@ Check the build logs and ensure:
   - `stage-changelist` - Review changes and prepare commits with highlights
 - **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
 - **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
-
-### Issue updates
-If you are assigned to an issue, re-open it and skim the latest description and comments before you start or resume work so scope changes aren't missed
 
 ## Future Considerations
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
