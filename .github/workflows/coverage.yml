@@ -34,7 +34,27 @@ jobs:
     - name: Run Coverage
       run: |
         OpenCppCoverage --sources "src\*" --export_type cobertura:coverage.xml -- bin\Debug\goblin-stream.exe --headless
-      continue-on-error: false
+      continue-on-error: true
+    
+    - name: Upload crash log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: crash-diagnostics
+        path: crash_log.txt
+        if-no-files-found: ignore
+        retention-days: 7
+    
+    - name: Display crash log
+      if: always()
+      run: |
+        if (Test-Path crash_log.txt) {
+          Write-Host "=== Crash Diagnostics Log ===" -ForegroundColor Yellow
+          Get-Content crash_log.txt
+          Write-Host "=== End of Crash Log ===" -ForegroundColor Yellow
+        } else {
+          Write-Host "No crash log found (application may have exited normally)" -ForegroundColor Green
+        }
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

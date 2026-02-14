@@ -6,6 +6,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "crash_diagnostics.h"
 #include "encoder/nvenc_config.h"
 #include "encoder/nvenc_d3d12.h"
 #include "encoder/nvenc_session.h"
@@ -37,6 +38,7 @@ export class App {
 												  .height		= 512};
 	HWND hwnd;
 	bool headless;
+	CrashDiagnostics* diagnostics;
 	D3D12Device device;
 	NvencSession nvenc_session{*&device.device};
 	NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};
@@ -54,8 +56,19 @@ export class App {
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
-	App(HWND hwnd, bool headless) : hwnd(hwnd), headless(headless), device(headless) {
-		InitializeGraphics();
+	App(HWND hwnd, bool headless, CrashDiagnostics* diag = nullptr)
+		: hwnd(hwnd), headless(headless), diagnostics(diag), device(headless) {
+		if (diagnostics)
+			diagnostics->LogStep("App constructor - initializing graphics");
+		try {
+			InitializeGraphics();
+			if (diagnostics)
+				diagnostics->Log("Graphics initialized successfully");
+		} catch (...) {
+			if (diagnostics)
+				diagnostics->LogException("App constructor - InitializeGraphics");
+			throw;
+		}
 	}
 
 	int Run() && {
@@ -112,30 +125,62 @@ export class App {
 	int RunHeadless() {
 		constexpr auto TEST_FRAME_COUNT = 10u;
 
-		for (auto i = 0u; i < TEST_FRAME_COUNT; ++i) {
-			auto back_buffer_index = i % BUFFER_COUNT;
+		if (diagnostics) {
+			diagnostics->LogStep("RunHeadless - starting headless execution");
+			diagnostics->Log("Test frame count: " + std::to_string(TEST_FRAME_COUNT));
+		}
 
-			if (i >= BUFFER_COUNT) {
-				auto wait_result
-					= WaitForSingleObject(frames[back_buffer_index].fence_event, INFINITE);
-				if (wait_result != WAIT_OBJECT_0)
-					return 1;
+		try {
+			for (auto i = 0u; i < TEST_FRAME_COUNT; ++i) {
+				if (diagnostics && i == 0)
+					diagnostics->Log("Executing frame 0...");
+
+				auto back_buffer_index = i % BUFFER_COUNT;
+
+				if (i >= BUFFER_COUNT) {
+					auto wait_result
+						= WaitForSingleObject(frames[back_buffer_index].fence_event, INFINITE);
+					if (wait_result != WAIT_OBJECT_0) {
+						if (diagnostics)
+							diagnostics->Log("ERROR: WaitForSingleObject failed on frame "
+											 + std::to_string(i) + ", wait_result: "
+											 + std::to_string(wait_result));
+						return 1;
+					}
+				}
+
+				ID3D12CommandList* lists[] = {*&frames[back_buffer_index].command_list};
+				device.command_queue->ExecuteCommandLists(1, lists);
+
+				auto signaled_value = i + 1;
+				device.command_queue->Signal(*&frames[back_buffer_index].fence, signaled_value);
+				frames[back_buffer_index].fence->SetEventOnCompletion(
+					signaled_value, frames[back_buffer_index].fence_event);
+
+				if (diagnostics && i == 0)
+					diagnostics->Log("Frame 0 submitted successfully");
 			}
 
-			ID3D12CommandList* lists[] = {*&frames[back_buffer_index].command_list};
-			device.command_queue->ExecuteCommandLists(1, lists);
+			if (diagnostics)
+				diagnostics->Log("Waiting for all frames to complete...");
 
-			auto signaled_value = i + 1;
-			device.command_queue->Signal(*&frames[back_buffer_index].fence, signaled_value);
-			frames[back_buffer_index].fence->SetEventOnCompletion(
-				signaled_value, frames[back_buffer_index].fence_event);
+			for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+				WaitForSingleObject(frames[i].fence_event, INFINITE);
+			}
+
+			if (diagnostics)
+				diagnostics->Log("All frames completed successfully");
+
+			return 0;
+		} catch (const std::exception& e) {
+			if (diagnostics)
+				diagnostics->LogException("RunHeadless", e.what());
+			return 1;
+		} catch (...) {
+			if (diagnostics)
+				diagnostics->LogException("RunHeadless", "Unknown exception");
+			return 1;
 		}
-
-		for (auto i = 0u; i < BUFFER_COUNT; ++i) {
-			WaitForSingleObject(frames[i].fence_event, INFINITE);
-		}
-
-		return 0;
 	}
 
 	static void RecordCommandList(ID3D12GraphicsCommandList* command_list,
@@ -304,8 +349,15 @@ App::FrameResources::~FrameResources() {
 }
 
 void App::InitializeGraphics() {
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Getting source size");
 	Try | swap_chain.swap_chain->GetSourceSize(&frame_width, &frame_height);
+	if (diagnostics)
+		diagnostics->Log("Source size: " + std::to_string(frame_width) + "x"
+						 + std::to_string(frame_height));
 
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Creating command allocator");
 	Try
 		| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
 												IID_PPV_ARGS(&allocator));
@@ -315,6 +367,8 @@ void App::InitializeGraphics() {
 		.NumDescriptors = BUFFER_COUNT,
 	};
 
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Creating descriptor heap");
 	Try | device.device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&offscreen_rtv_heap));
 	offscreen_rtv_descriptor_size
 		= device.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -341,6 +395,9 @@ void App::InitializeGraphics() {
 		.Color	= {0, 0, 0, 1},
 	};
 
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Creating " + std::to_string(BUFFER_COUNT)
+						 + " offscreen render targets");
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		Try
 			| device.device->CreateCommittedResource(&default_heap_props, D3D12_HEAP_FLAG_NONE,
@@ -355,17 +412,23 @@ void App::InitializeGraphics() {
 											  offscreen_rtv);
 	}
 
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Creating frame resources");
 	frames.reserve(BUFFER_COUNT);
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		frames.emplace_back(*&device.device);
 	}
 
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Registering textures with NVENC");
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		nvenc_d3d12.RegisterTexture(*&offscreen_render_targets[i], frame_width, frame_height,
 									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
 									*&frames[i].fence);
 	}
 
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Recording command lists");
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		D3D12_CPU_DESCRIPTOR_HANDLE offscreen_rtv
 			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
@@ -375,4 +438,7 @@ void App::InitializeGraphics() {
 		RecordCommandList(*&frames[i].command_list, offscreen_rtv, *&offscreen_render_targets[i],
 						  *&swap_chain.render_targets[i], i);
 	}
+
+	if (diagnostics)
+		diagnostics->Log("InitializeGraphics: Complete");
 }

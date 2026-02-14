@@ -39,3 +39,6 @@ codemap-extension/
 coverage_report/
 coverage.xml
 *.bin
+
+# Crash diagnostics
+crash_log.txt

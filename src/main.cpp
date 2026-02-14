@@ -1,5 +1,7 @@
 #include <windows.h>
 
+#include "crash_diagnostics.h"
+
 import App;
 
 constexpr auto WINDOW_WIDTH	 = 512u;
@@ -79,14 +81,32 @@ HWND CreateAppWindow(HINSTANCE instance, int show_command, bool headless) {
 }
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR cmd_line, int show_command) {
-	try {
-		bool headless = CheckHeadlessFlag(cmd_line);
-		auto hwnd	  = CreateAppWindow(instance, show_command, headless);
-		if (!hwnd)
-			return 1;
+	bool headless = CheckHeadlessFlag(cmd_line);
+	CrashDiagnostics diagnostics("crash_log.txt", headless);
 
-		return App{hwnd, headless}.Run();
+	try {
+		diagnostics.LogStep("Parsing command-line arguments");
+		diagnostics.Log(headless ? "Headless mode: ENABLED" : "Headless mode: DISABLED");
+
+		diagnostics.LogStep("Creating application window");
+		auto hwnd = CreateAppWindow(instance, show_command, headless);
+		if (!hwnd) {
+			diagnostics.Log("ERROR: Failed to create window");
+			return 1;
+		}
+		diagnostics.Log("Window created successfully");
+
+		diagnostics.LogStep("Initializing application");
+		auto return_code = App{hwnd, headless, &diagnostics}.Run();
+
+		diagnostics.Log("Application completed successfully with return code: "
+						+ std::to_string(return_code));
+		return return_code;
+	} catch (const std::exception& e) {
+		diagnostics.LogException("WinMain", e.what());
+		return 1;
 	} catch (...) {
+		diagnostics.LogException("WinMain", "Unknown exception");
 		return 1;
 	}
 }
