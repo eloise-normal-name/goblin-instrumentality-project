@@ -46,7 +46,7 @@ The repository includes the following GitHub Actions workflows:
 - Verifies `.clang-format` exists in repository root
 - Displays first 5 lines of `.clang-format` for debugging
 - Checks all C++ files (`.cpp`, `.ixx`, `.h`, `.hpp`) in `src/` and `include/` directories
-- Excludes vendor files: `include/nvenc/nvEncodeAPI.h`
+- Excludes vendor files: `include/external/nvenc/nvEncodeAPI.h`
 - Uses `clang-format -style=file --dry-run --Werror` to validate formatting
 - Reports files needing formatting with clear fix instructions
 
@@ -58,7 +58,7 @@ The repository includes the following GitHub Actions workflows:
 - Ensures `.clang-format` configuration is respected
 
 **Exclusions**:
-- `include/nvenc/nvEncodeAPI.h` - Third-party NVIDIA vendor header
+- `include/external/nvenc/nvEncodeAPI.h` - Third-party NVIDIA vendor header
 
 ## CI vs Local Development
 
@@ -140,7 +140,7 @@ If the format-check workflow reports files need formatting:
 
 **Notes**:
 - The workflow uses the `.clang-format` file from the repository root
-- `include/nvenc/nvEncodeAPI.h` is automatically excluded (vendor file)
+- `include/external/nvenc/nvEncodeAPI.h` is automatically excluded (vendor file)
 - Format your code before pushing to avoid CI failures
 - VS Code formats on save if configured correctly (Ctrl+Shift+I)
 

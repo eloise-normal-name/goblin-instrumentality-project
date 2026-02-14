@@ -1,7 +1,7 @@
 #pragma once
 
 #include <d3d12.h>
-#include <nvenc/nvEncodeAPI.h>
+#include <external/nvenc/nvEncodeAPI.h>
 
 #include <cstdint>
 #include <vector>

@@ -40,7 +40,7 @@ jobs:
         
         $extensions = @('*.cpp', '*.ixx', '*.h', '*.hpp')
         $paths = @('src', 'include')
-        $exclude_files = @('include/nvenc/nvEncodeAPI.h')
+        $exclude_files = @('include/external/nvenc/nvEncodeAPI.h')
         
         $all_files = @()
         foreach ($path in $paths) {
