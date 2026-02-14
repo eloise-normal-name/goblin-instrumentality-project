@@ -54,7 +54,10 @@ export class App {
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
-	App(HWND hwnd, bool headless) : hwnd(hwnd), headless(headless) {
+	App(HWND hwnd, bool headless)
+		: hwnd(hwnd)
+		, headless(headless)
+		, device(headless ? AdapterType::WARP : AdapterType::Hardware) {
 		InitializeGraphics();
 	}
 
