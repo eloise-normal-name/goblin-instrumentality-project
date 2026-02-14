@@ -11,58 +11,13 @@ The original large PR included:
 
 These have been split into three dependent PRs to make review and testing easier.
 
-## PR #1: Code Coverage Infrastructure
+**Merge Order:** PR #1 (Headless) → PR #2 (Coverage Infrastructure) → PR #3 (Crash Diagnostics)
 
-**Branch:** `feature/code-coverage-infrastructure`
-**Base:** `main`
-**Goal:** Set up all coverage tooling without requiring code execution
-
-### Files to Include
-
-#### Configuration Files
-- `.opencppcoverage` - OpenCppCoverage default settings
-- `.gitignore` - Add coverage_report/, coverage.xml, *.bin, _codeql_detected_source_root
-- `CMakeLists.txt` - Add debug symbols configuration for Debug builds only
-
-#### Scripts
-- `run_coverage.bat` - Windows batch script for running coverage
-- `run_coverage.ps1` - PowerShell script with advanced options
-- `validate_coverage_setup.bat` - Verification script
-
-#### Documentation
-- `docs/CODE_COVERAGE.md` - Complete coverage usage guide
-- `docs/TEST_COVERAGE_INTEGRATION.md` - Guide for future test integration
-- `README.md` - Add "Code Coverage" section with quick start
-
-#### Workflow (Partial)
-- `.github/workflows/coverage.yml` - Basic workflow that:
-  - Builds the project
-  - Has placeholder "Run Coverage" step that just echoes "Waiting for headless mode"
-  - Does NOT upload coverage yet (no coverage.xml generated)
-
-### Testing PR #1
-```cmd
-cmake -B build -G "Visual Studio 18 2026" -A x64
-cmake --build build --config Debug
-# Verify debug symbols are present
-dir build\Debug\*.pdb
-# Verify scripts exist
-.\validate_coverage_setup.bat
-```
-
-### Success Criteria
-- ✅ Build succeeds with debug symbols
-- ✅ Documentation is complete and accurate
-- ✅ Scripts are present (even if they can't run yet)
-- ✅ Workflow runs without errors (even though coverage isn't collected)
-
----
-
-## PR #2: Headless Testing with WARP
+## PR #1: Headless Testing with WARP
 
 **Branch:** `feature/headless-testing`
-**Base:** `feature/code-coverage-infrastructure` (PR #1)
-**Goal:** Enable application to run in CI without GPU/display
+**Base:** `main`
+**Goal:** Enable application to run in CI without GPU/display (prerequisite for coverage)
 
 ### Files to Include
 
@@ -75,20 +30,11 @@ dir build\Debug\*.pdb
 #### Documentation
 - `docs/HEADLESS_MODE.md` - Complete headless mode documentation
 - `README.md` - Add "Running" section with headless instructions
-- `docs/CODE_COVERAGE.md` - Update with headless mode examples
 
-#### Workflow Update
-- `.github/workflows/coverage.yml` - Update "Run Coverage" step to:
-  ```yaml
-  - name: Run Coverage
-    run: |
-      OpenCppCoverage --sources "src\*" --export_type cobertura:coverage.xml -- bin\Debug\goblin-stream.exe --headless
-    continue-on-error: true
-  ```
-  - Enable Codecov upload
-  - Enable coverage artifact archival
+#### Minimal Gitignore
+- `.gitignore` - Add _codeql_detected_source_root
 
-### Testing PR #2
+### Testing PR #1
 ```cmd
 cmake -B build -G "Visual Studio 18 2026" -A x64
 cmake --build build --config Debug
@@ -102,16 +48,84 @@ bin\Debug\goblin-stream.exe --headless
 ### Success Criteria
 - ✅ Normal mode still works (window appears)
 - ✅ Headless mode runs without window and exits cleanly
+- ✅ No breaking changes to existing functionality
+- ✅ WARP adapter properly selected in headless mode
+
+### Why This PR Comes First
+
+Headless testing is the foundational capability that enables:
+- Running the application in CI environments
+- Code coverage execution (can't run coverage without executable running)
+- Automated testing in GitHub Actions
+
+Without headless mode, the coverage infrastructure would be incomplete and non-functional.
+
+---
+
+## PR #2: Code Coverage Infrastructure
+
+**Branch:** `feature/code-coverage-infrastructure`
+**Base:** `feature/headless-testing` (PR #1)
+**Goal:** Set up all coverage tooling that works with headless execution
+
+### Files to Include
+
+#### Configuration Files
+- `.opencppcoverage` - OpenCppCoverage default settings
+- `.gitignore` - Add coverage_report/, coverage.xml, *.bin
+- `CMakeLists.txt` - Add debug symbols configuration for Debug builds only
+
+#### Scripts
+- `run_coverage.bat` - Windows batch script for running coverage
+- `run_coverage.ps1` - PowerShell script with advanced options
+- `validate_coverage_setup.bat` - Verification script
+
+#### Documentation
+- `docs/CODE_COVERAGE.md` - Complete coverage usage guide
+- `docs/TEST_COVERAGE_INTEGRATION.md` - Guide for future test integration
+- `README.md` - Add "Code Coverage" section with quick start
+
+#### Workflow
+- `.github/workflows/coverage.yml` - Full workflow that:
+  - Builds the project
+  - Runs coverage with `--headless` flag
+  - Uploads to Codecov
+  - Archives coverage.xml artifact
+
+### Testing PR #2
+```cmd
+cmake -B build -G "Visual Studio 18 2026" -A x64
+cmake --build build --config Debug
+# Verify debug symbols are present
+dir build\Debug\*.pdb
+# Run coverage locally
+.\run_coverage.ps1 -Executable "bin\Debug\goblin-stream.exe"
+# Verify coverage report generated
+dir coverage_report\index.html
+```
+
+### Success Criteria
+- ✅ Build succeeds with debug symbols
+- ✅ Documentation is complete and accurate
+- ✅ Coverage runs successfully with --headless flag
 - ✅ Workflow generates coverage.xml
 - ✅ Coverage uploaded to Codecov
-- ✅ No breaking changes to existing functionality
+- ✅ Scripts work correctly
+
+### Why This PR Comes Second
+
+With headless mode working (PR #1), we can now:
+- Actually run the application under code coverage
+- Generate real coverage data
+- Upload results to Codecov
+- Provide complete infrastructure for future testing
 
 ---
 
 ## PR #3: Crash Diagnostics
 
 **Branch:** `feature/crash-diagnostics`
-**Base:** `feature/headless-testing` (PR #2)
+**Base:** `feature/code-coverage-infrastructure` (PR #2)
 **Goal:** Add detailed logging to identify CI failures
 
 ### Files to Include
@@ -157,29 +171,32 @@ type crash_log.txt
 
 ## Merge Order
 
-1. Merge PR #1 to `main` first
-2. Merge PR #2 to `main` (will include PR #1 changes)
-3. Merge PR #3 to `main` (will include PR #1 + PR #2 changes)
+1. Merge PR #1 (Headless Testing) to `main` first
+2. Merge PR #2 (Coverage Infrastructure) to `main` (will include PR #1 changes)
+3. Merge PR #3 (Crash Diagnostics) to `main` (will include PR #1 + PR #2 changes)
 
 ## Benefits of This Split
 
-### PR #1 Benefits
-- Pure infrastructure, zero risk to application
+### PR #1 Benefits (Headless Testing)
+- Core functionality needed for everything else
+- Clear value: application can run in CI
+- Easy to test: does it run headlessly?
+- Small, focused code change
+- No dependencies on other features
+
+### PR #2 Benefits (Coverage Infrastructure)
+- Builds on working headless mode
+- Can immediately generate real coverage data
+- Pure infrastructure addition
 - Can be reviewed by documentation/DevOps specialists
-- Sets up tooling for entire team immediately
-- No code execution needed for testing
+- Provides value for entire team
 
-### PR #2 Benefits
-- Focused on one feature: headless execution
-- Clear before/after testing: does it run headlessly?
-- Smaller code surface area for review
-- Can verify coverage actually works
-
-### PR #3 Benefits
+### PR #3 Benefits (Crash Diagnostics)
 - Debugging aid, not core functionality
 - Can be deferred if needed
 - Easy to review: just logging additions
 - Clear value proposition: better error messages
+- Minimal performance impact
 
 ## Creating the Branches
 
@@ -188,18 +205,18 @@ type crash_log.txt
 git checkout main
 git pull origin main
 
-# Create PR #1 branch
-git checkout -b feature/code-coverage-infrastructure
+# Create PR #1 branch (Headless Testing)
+git checkout -b feature/headless-testing
 # Cherry-pick relevant commits or manually apply changes
 # Commit and push
 
-# Create PR #2 branch from PR #1
-git checkout -b feature/headless-testing feature/code-coverage-infrastructure
-# Add headless changes
+# Create PR #2 branch from PR #1 (Coverage Infrastructure)
+git checkout -b feature/code-coverage-infrastructure feature/headless-testing
+# Add coverage infrastructure
 # Commit and push
 
-# Create PR #3 branch from PR #2
-git checkout -b feature/crash-diagnostics feature/headless-testing
+# Create PR #3 branch from PR #2 (Crash Diagnostics)
+git checkout -b feature/crash-diagnostics feature/code-coverage-infrastructure
 # Add crash diagnostics
 # Commit and push
 ```
@@ -213,19 +230,27 @@ git checkout copilot/add-code-coverage-testing
 git reset --soft d7d4209  # Before any changes
 git status  # See all changes
 
-# Create themed commits
-git add .opencppcoverage .gitignore CMakeLists.txt docs/ run_coverage.* validate_coverage_setup.bat README.md .github/workflows/coverage.yml
-git commit -m "Add code coverage infrastructure"
-
-git add src/graphics/ src/main.cpp src/app.ixx docs/HEADLESS_MODE.md
+# Create themed commits IN ORDER
+# First: Headless testing
+git add src/graphics/ src/main.cpp src/app.ixx docs/HEADLESS_MODE.md README.md .gitignore
 git commit -m "Implement headless testing with WARP"
 
+# Second: Coverage infrastructure
+git add .opencppcoverage CMakeLists.txt docs/CODE_COVERAGE.md docs/TEST_COVERAGE_INTEGRATION.md
+git add run_coverage.* validate_coverage_setup.bat .github/workflows/coverage.yml
+git add -u .gitignore README.md  # Updates to these files
+git commit -m "Add code coverage infrastructure"
+
+# Third: Crash diagnostics
 git add src/crash_diagnostics.h include/try.h
-git add -u src/  # Updated files
+git add -u src/  # Updated source files
+git add -u docs/  # Updated docs
+git add -u .github/workflows/  # Updated workflow
+git add -u .gitignore  # Final gitignore update
 git commit -m "Add crash diagnostics system"
 ```
 
-Then split into branches as above.
+Then split into branches as shown above.
 
 ## Updating Instructions
 
