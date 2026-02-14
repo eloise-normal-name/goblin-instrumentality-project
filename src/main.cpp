@@ -56,8 +56,11 @@ HWND CreateAppWindow(HINSTANCE instance, int show_command) {
 }
 
 bool IsHeadlessMode() {
-	int argc		 = 0;
-	auto argv		 = CommandLineToArgvW(GetCommandLineW(), &argc);
+	int argc  = 0;
+	auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	if (!argv)
+		return false;
+
 	bool is_headless = false;
 
 	for (auto i = 1; i < argc; ++i) {
