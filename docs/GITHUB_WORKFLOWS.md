@@ -46,10 +46,11 @@ The repository includes GitHub Actions workflows that automate build validation 
 
 **Actions**:
 - **Markdown Link Check**: Validates all links in markdown files
-  - Checks internal file references
-  - Verifies external URLs are accessible
+  - **Internal markdown links**: Validates relative paths to other `.md` files (e.g., `[text](./other-doc.md)`, `[text](../folder/file.md)`)
+  - **Anchor links**: Validates section references within documents (e.g., `[text](#section-name)`)
+  - **External URLs**: Verifies external links are accessible (e.g., `https://docs.github.com`)
   - Configurable timeout and retry settings
-  - Ignores localhost URLs
+  - Ignores localhost URLs for local development references
 - **Markdown Linting**: Enforces consistent markdown syntax
   - ATX-style headers (using `#`)
   - Consistent list indentation
@@ -57,10 +58,10 @@ The repository includes GitHub Actions workflows that automate build validation 
   - Flexible line length for readability
 
 **Benefits**:
-- Catches broken links before they reach production
-- Maintains documentation quality and readability
-- Enforces consistent markdown formatting across all docs
-- Prevents documentation from becoming outdated with broken references
+- **Enables agent efficiency**: Ensures agents can navigate documentation via internal links without encountering broken references
+- **Catches broken links early**: Validates all link types (internal, external, anchors) before they reach production
+- **Maintains documentation quality**: Enforces consistent markdown formatting across all docs
+- **Prevents link rot**: Detects when files are moved/renamed without updating cross-references
 
 **Configuration**:
 - Link checker config: `.github/markdown-link-check-config.json`
@@ -184,10 +185,10 @@ Potential additions to CI workflows:
 
 **Link Check Failures:**
 If the link checker reports broken links:
-- Verify the link is actually broken (it might be temporarily unavailable)
-- Update or remove broken external URLs
-- Fix internal file references to point to correct paths
-- Add patterns to `.github/markdown-link-check-config.json` to ignore specific links (e.g., localhost, private URLs)
+- **Internal markdown links**: Verify the referenced file exists at the specified path; update paths if files were moved/renamed
+- **Anchor links**: Ensure the target section heading exists in the referenced document; check for correct heading format
+- **External URLs**: Verify the link is actually broken (it might be temporarily unavailable); update or remove broken external URLs
+- Add patterns to `.github/markdown-link-check-config.json` to ignore specific links (e.g., localhost, private URLs) if needed
 
 **Markdown Lint Failures:**
 If markdown linting reports issues:
