@@ -75,20 +75,20 @@ jobs:
         # Update the comparison range and date
         $htmlContent = $htmlContent -replace '<p class="subtitle">Compared range: <code>[^<]+</code> · generated on [^<]+</p>', "<p class=`"subtitle`">Compared range: <code>$baseCommit..$currentCommit</code> · generated on $date</p>"
         
-        # Update files changed count
-        $htmlContent = $htmlContent -replace '(<div class="card">[\s\S]*?<div class="k">Files changed</div>[\s\S]*?<div class="v">)\d+', "`$1$filesChanged"
+        # Update files changed count (simpler direct replacement)
+        $htmlContent = $htmlContent -replace '(<div class="k">Files changed</div>\s*<div class="v">)\d+', "`${1}$filesChanged"
         
         # Update binary size
-        $htmlContent = $htmlContent -replace '(<div class="card">[\s\S]*?<div class="k">MinSizeRel binary</div>[\s\S]*?<div class="v">)[\d,]+ bytes', "`$1$binarySizeFormatted bytes"
+        $htmlContent = $htmlContent -replace '(<div class="k">MinSizeRel binary</div>\s*<div class="v">)[\d,]+ bytes', "`${1}$binarySizeFormatted bytes"
         
         # Update source lines count
-        $htmlContent = $htmlContent -replace '(<div class="card">[\s\S]*?<div class="k">cloc total in /src</div>[\s\S]*?<div class="v">)\d+ lines', "`$1$sourceLines lines"
+        $htmlContent = $htmlContent -replace '(<div class="k">cloc total in /src</div>\s*<div class="v">)\d+ lines', "`${1}$sourceLines lines"
         
         # Update binary size in build status section
-        $htmlContent = $htmlContent -replace '(<li>Binary size \(MinSizeRel\): <code>)[\d,]+', "`$1$binarySizeFormatted"
+        $htmlContent = $htmlContent -replace '(Binary size \(MinSizeRel\): <code>)[\d,]+', "`${1}$binarySizeFormatted"
         
         # Update source lines in build status section  
-        $htmlContent = $htmlContent -replace '(<li>cloc /src total: <code>)\d+', "`$1$sourceLines"
+        $htmlContent = $htmlContent -replace '(cloc /src total: <code>)\d+', "`${1}$sourceLines"
         
         # Add new entry to build log (insert after the opening <ul> tag in the build log section)
         $newLogEntry = "                    <li>$date · MinSizeRel size: <code>$binarySizeFormatted</code> bytes · cloc /src: <code>$sourceLines</code> lines · build succeeded.</li>"
