@@ -118,9 +118,10 @@ Check the build logs and ensure:
   - `review-error-handling` - Check Try | usage and error handling
   - `review-frame-logic` - Review D3D12 frame submission and synchronization
   - `debug-resources` - Diagnose D3D12 resource state issues
-  - `explain-nvenc` - Explain NVENC API usage and integration
-  - `refactor-extract` - Assist with extracting cohesive functionality
-  - `stage-changelist` - Review changes and prepare commits with highlights
+- `explain-nvenc` - Explain NVENC API usage and integration
+- `refactor-extract` - Assist with extracting cohesive functionality
+- `stage-changelist` - Review changes and prepare commits with highlights
+- **Issue updates**: If you are assigned to an issue, re-open it and skim the latest description and comments before you start or resume work so scope changes aren't missed
 - **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
 - **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
 
@@ -128,4 +129,3 @@ Check the build logs and ensure:
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
 - Maintain static linking preference for portable deployment
-
