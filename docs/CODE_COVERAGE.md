@@ -127,6 +127,40 @@ Visual Studio Enterprise includes built-in code coverage:
 
 Not recommended due to licensing requirements.
 
+## Troubleshooting
+
+### Application Crashes During Coverage
+
+If the application crashes while running under code coverage, check the crash diagnostics:
+
+1. **crash_log.txt**: Created automatically in headless mode
+   - Contains timestamped log of initialization steps
+   - Shows exactly where the crash occurred
+   - Includes HRESULT error codes for D3D12 failures
+
+2. **In CI/CD**: 
+   - Crash log automatically displayed in workflow output
+   - Also archived as "crash-diagnostics" artifact for download
+
+3. **Common Issues**:
+   - DirectX 12 initialization failures → Check WARP adapter setup
+   - NVENC initialization → May not be available on all CI runners
+   - Resource creation failures → Check for out-of-memory conditions
+
+Example crash log:
+```
+[2026-02-14 00:13:51.545] Crash diagnostics initialized
+[2026-02-14 00:13:51.546] >>> Parsing command-line arguments
+[2026-02-14 00:13:51.546] Headless mode: ENABLED
+[2026-02-14 00:13:51.547] >>> Creating application window
+[2026-02-14 00:13:51.548] Window created successfully
+[2026-02-14 00:13:51.549] >>> Initializing application
+[2026-02-14 00:13:51.550] >>> App constructor - initializing graphics
+[2026-02-14 00:13:51.551] InitializeGraphics: Getting source size
+[2026-02-14 00:13:51.552] ERROR in InitializeGraphics: HRESULT = 0x887A0005 (-2005270523)
+[2026-02-14 00:13:51.553] EXCEPTION in App constructor - InitializeGraphics
+```
+
 ## Future Enhancements
 
 - Automated coverage reporting in CI/CD pipeline

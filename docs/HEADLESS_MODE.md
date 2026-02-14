@@ -14,6 +14,19 @@ bin\Debug\goblin-stream.exe --headless
 
 ## Implementation Details
 
+### Crash Diagnostics
+
+In headless mode, detailed crash diagnostics are automatically enabled:
+
+- **Log File**: `crash_log.txt` created in the working directory
+- **Timestamp**: Each log entry includes precise timestamp
+- **Step Tracking**: Logs each major initialization and execution step
+- **Exception Capture**: Catches and logs C++ exceptions with context
+- **HRESULT Logging**: D3D12/DXGI errors logged with hex error codes
+- **CI Integration**: Crash log automatically uploaded as artifact if crash occurs
+
+The crash log helps identify exactly where and why the application fails, making debugging much easier in headless CI environments.
+
 ### Command-Line Parsing
 - `main.cpp`: Added `CheckHeadlessFlag()` function to parse command-line arguments
 - Supports `--headless` flag
