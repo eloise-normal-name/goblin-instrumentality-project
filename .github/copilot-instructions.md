@@ -91,34 +91,12 @@
 ## Continuous Integration
 - **Automated Validation**: All PRs automatically run GitHub workflows that:
   - Build all configurations (Debug, Release, MinSizeRel)
-  - Validate code formatting against `.clang-format`
-  - Check for prohibited patterns (namespaces, C++ casts, Initialize/Shutdown methods)
-  - Verify RAII compliance and error handling (Try | pattern usage)
   - Track binary size and source line metrics
 - **Status Checks**: PR merge requires all workflow checks to pass
 - **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
 - **Documentation**: See `docs/GITHUB_WORKFLOWS.md` for detailed workflow information
 
 ### Fixing Workflow Check Failures
-
-**Format Check Failures:**
-If the Format Check workflow fails, files need to be formatted according to `.clang-format`:
-```bash
-# Format all source files (run from repository root)
-# Use -style=file to ensure .clang-format is used
-clang-format -i -style=file src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
-
-# Or format individual files
-clang-format -i -style=file path/to/file.cpp
-```
-After formatting, commit and push the changes. Note: nvEncodeAPI.h is excluded as a 3rd party file.
-
-**Code Quality Failures:**
-Review the workflow logs for specific violations and fix them:
-- **RAII violations**: Remove Initialize/Shutdown methods, use constructor/destructor
-- **C++ casts**: Replace with C-style casts `(Type)value`
-- **Namespaces**: Remove namespace declarations (global namespace only)
-- **Unchecked API calls**: Add `Try |` pattern for D3D12/NVENC calls
 
 **Build Failures:**
 Check the build logs and ensure:
