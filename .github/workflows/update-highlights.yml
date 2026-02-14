@@ -70,11 +70,11 @@ jobs:
         # Read the current highlights HTML
         $htmlContent = Get-Content "refactor-highlights.html" -Raw
         
-        # Update the title with current commit
-        $htmlContent = $htmlContent -replace '<h1>Refactor Highlights since <code>[^<]+</code></h1>', "<h1>Refactor Highlights since <code>$baseCommit</code></h1>"
+        # Update the title with current commit (match SHA pattern more specifically)
+        $htmlContent = $htmlContent -replace '<h1>Refactor Highlights since <code>[a-f0-9]{7,40}</code></h1>', "<h1>Refactor Highlights since <code>$baseCommit</code></h1>"
         
         # Update the comparison range and date
-        $htmlContent = $htmlContent -replace '<p class="subtitle">Compared range: <code>[^<]+</code> · generated on [^<]+</p>', "<p class=`"subtitle`">Compared range: <code>$baseCommit..$currentCommit</code> · generated on $date</p>"
+        $htmlContent = $htmlContent -replace '<p class="subtitle">Compared range: <code>[a-f0-9]{7,40}\.\.[a-zA-Z0-9_-]+</code> · generated on [\d-]+</p>', "<p class=`"subtitle`">Compared range: <code>$baseCommit..$currentCommit</code> · generated on $date</p>"
         
         # Update files changed count (flexible whitespace)
         $htmlContent = $htmlContent -replace '(<div class="k">Files changed</div>\s*<div class="v">)\d+', "`${1}$filesChanged"
