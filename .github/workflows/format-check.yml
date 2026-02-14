@@ -1,0 +1,108 @@
+name: Format Check
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - '.clang-format'
+      - '.github/workflows/format-check.yml'
+  workflow_dispatch:
+
+jobs:
+  format-check:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Verify .clang-format exists
+      run: |
+        if (!(Test-Path .clang-format)) {
+          Write-Error ".clang-format configuration file not found in repository root"
+          exit 1
+        }
+        Write-Output "✓ .clang-format found"
+      shell: pwsh
+      
+    - name: Display .clang-format configuration
+      run: |
+        Write-Output "First 5 lines of .clang-format:"
+        Get-Content .clang-format -Head 5
+      shell: pwsh
+      
+    - name: Check code formatting
+      run: |
+        Write-Output "Checking C++ code formatting..."
+        
+        $extensions = @('*.cpp', '*.ixx', '*.h', '*.hpp')
+        $paths = @('src', 'include')
+        $exclude_files = @('include/nvenc/nvEncodeAPI.h')
+        
+        $all_files = @()
+        foreach ($path in $paths) {
+          if (Test-Path $path) {
+            foreach ($ext in $extensions) {
+              $files = Get-ChildItem -Path $path -Filter $ext -Recurse -File
+              $all_files += $files
+            }
+          }
+        }
+        
+        $files_to_check = $all_files | Where-Object {
+          $file_path = $_.FullName -replace '\\', '/'
+          $relative_path = $file_path -replace [regex]::Escape((Get-Location).Path -replace '\\', '/'), ''
+          $relative_path = $relative_path.TrimStart('/')
+          
+          $exclude = $false
+          foreach ($excluded in $exclude_files) {
+            $excluded_normalized = $excluded -replace '\\', '/'
+            if ($relative_path -eq $excluded_normalized) {
+              $exclude = $true
+              break
+            }
+          }
+          -not $exclude
+        }
+        
+        if ($files_to_check.Count -eq 0) {
+          Write-Output "No C++ files found to check"
+          exit 0
+        }
+        
+        Write-Output "Found $($files_to_check.Count) files to check"
+        
+        $files_needing_format = @()
+        $check_failed = $false
+        
+        foreach ($file in $files_to_check) {
+          $result = clang-format -style=file --dry-run --Werror $file.FullName 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            $files_needing_format += $file.FullName
+            $check_failed = $true
+          }
+        }
+        
+        if ($check_failed) {
+          Write-Output ""
+          Write-Output "❌ Formatting check failed!"
+          Write-Output ""
+          Write-Output "The following files need formatting:"
+          foreach ($file in $files_needing_format) {
+            $relative = $file -replace [regex]::Escape((Get-Location).Path + '\'), ''
+            Write-Output "  - $relative"
+          }
+          Write-Output ""
+          Write-Output "To fix formatting issues, run:"
+          Write-Output "  clang-format -i -style=file <file>"
+          Write-Output ""
+          Write-Output "Or format all files at once:"
+          Write-Output "  Get-ChildItem -Recurse -Include *.cpp,*.ixx,*.h,*.hpp -Path src,include | ForEach-Object { clang-format -i -style=file `$_.FullName }"
+          Write-Output ""
+          exit 1
+        }
+        
+        Write-Output ""
+        Write-Output "✓ All files are properly formatted!"
+      shell: pwsh

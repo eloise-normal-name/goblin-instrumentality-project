@@ -104,6 +104,13 @@ Check the build logs and ensure:
 - Code compiles with `/W4` warning level
 - No missing headers or undefined references
 
+**Format Check Failures:**
+If the format-check workflow fails:
+- Run `clang-format -i -style=file <file>` on each file listed in the error
+- Or format all files at once: `Get-ChildItem -Recurse -Include *.cpp,*.ixx,*.h,*.hpp -Path src,include | ForEach-Object { clang-format -i -style=file $_.FullName }`
+- Commit and push the formatting changes
+- Note: `nvEncodeAPI.h` is excluded from formatting checks (vendor file)
+
 ## Documentation
 - **README.md**: Must reflect current architecture, module structure, and data flow
 - **Update README** when adding, removing, or restructuring modules
