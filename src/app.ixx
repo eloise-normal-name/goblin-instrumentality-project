@@ -16,6 +16,10 @@ module;
 
 export module App;
 
+static AdapterType SelectAdapterType(bool headless) {
+	return headless ? AdapterType::WARP : AdapterType::Hardware;
+}
+
 constexpr auto BUFFER_COUNT			= 3u;
 constexpr auto RENDER_TARGET_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 
@@ -55,9 +59,7 @@ export class App {
 
   public:
 	App(HWND hwnd, bool headless)
-		: hwnd(hwnd)
-		, headless(headless)
-		, device(headless ? AdapterType::WARP : AdapterType::Hardware) {
+		: hwnd(hwnd), headless(headless), device(SelectAdapterType(headless)) {
 		InitializeGraphics();
 	}
 
