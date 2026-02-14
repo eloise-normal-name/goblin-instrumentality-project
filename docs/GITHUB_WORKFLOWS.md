@@ -96,6 +96,11 @@ The repository includes GitHub Actions workflows that automate build validation 
 - `copilot-swe-agent[bot]` - Copilot SWE agent
 - `github-actions[bot]` - GitHub Actions bot
 
+**Maintenance**:
+- When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
+- When adding trusted bot accounts, update the `trustedBots` array in the workflow script
+- Review workflow logs periodically to ensure approvals are working as expected
+
 ## CI vs Local Development
 
 | Aspect | Local Development | GitHub Actions CI |
@@ -139,6 +144,25 @@ Potential additions to CI workflows:
 - Release automation
 
 ## Troubleshooting
+
+### Auto-Approve Bot Workflow Runs
+
+**Adding New Workflows:**
+If a new workflow that runs on PRs is added:
+- Update `.github/workflows/auto-approve-bot-workflows.yml` to include the new workflow name in the `workflows:` list
+- This ensures trusted bots can trigger the new workflow without manual approval
+
+**Approval Not Working:**
+If bot PRs still require manual approval:
+- Verify the bot account is in the `trustedBots` list in the workflow
+- Check that the workflow has `actions: write` permission
+- Review workflow logs for API errors or permission issues
+- Ensure the actor login matches exactly (e.g., `copilot` vs `copilot[bot]`)
+
+**Debugging:**
+- Check the workflow run logs in the Actions tab
+- Look for "Check if run is from trusted bot" step output
+- Verify the actor and fork status are correctly detected
 
 ### Monitor Assigned Issues Workflow
 
