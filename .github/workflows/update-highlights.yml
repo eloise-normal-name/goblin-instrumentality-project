@@ -49,7 +49,7 @@ jobs:
         
         # Get files changed since last highlights update
         # Try to find the last commit that updated refactor-highlights.html
-        $lastHighlightsCommit = git log -1 --format="%H" -- refactor-highlights.html
+        $lastHighlightsCommit = git log -1 --format="%H" -- refactor-highlights.html 2>$null
         if ($lastHighlightsCommit) {
           $baseCommit = git rev-parse --short $lastHighlightsCommit
           $filesChanged = (git diff --name-only $lastHighlightsCommit HEAD | Measure-Object).Count
@@ -94,6 +94,24 @@ jobs:
         # Add new entry to build log (insert after the opening <ul> tag in the build log section)
         $newLogEntry = "                    <li>$date · MinSizeRel size: <code>$binarySizeFormatted</code> bytes · cloc /src: <code>$sourceLines</code> lines · build succeeded.</li>"
         $htmlContent = $htmlContent -replace '(<h2>Build log</h2>\s*<div class="panel">\s*<ul>)', "`${1}`n$newLogEntry"
+        
+        # Validate that critical replacements succeeded
+        $validationErrors = @()
+        if (-not ($htmlContent -match "since <code>$baseCommit</code>")) {
+            $validationErrors += "Title update failed"
+        }
+        if (-not ($htmlContent -match "$baseCommit\.\.$currentCommit")) {
+            $validationErrors += "Comparison range update failed"
+        }
+        if (-not ($htmlContent -match "generated on $date")) {
+            $validationErrors += "Generation date update failed"
+        }
+        
+        if ($validationErrors.Count -gt 0) {
+            Write-Error "Validation failed: $($validationErrors -join ', ')"
+            Write-Error "HTML updates may have failed due to unexpected structure changes"
+            exit 1
+        }
         
         # Save the updated HTML
         $htmlContent | Set-Content "refactor-highlights.html" -NoNewline
