@@ -279,8 +279,20 @@ set(SOURCES
                     <li>Binary size (MinSizeRel): <code>267,264</code> bytes.</li>
                     <li>cloc /src total: <code>923</code> lines.</li>
                     <li>Diagnostics check: no blocking errors; two non-fatal C4100 warnings remain in staged code.</li>
+                    <li><strong>CI automation</strong>: GitHub workflow now automatically validates builds on all PRs.</li>
                 </ul>
                 <p class="small">Build command: <code>cmake --build build --config MinSizeRel</code></p>
+            </div>
+        </section>
+
+        <section>
+            <h2>CI/CD automation</h2>
+            <div class="panel">
+                <p>A GitHub workflow now automates build validation tasks previously done manually:</p>
+                <ul>
+                    <li><code>.github/workflows/build-and-validate.yml</code> — Builds all configurations, tracks binary size and source line count.</li>
+                </ul>
+                <p class="small">This streamlines the development process by catching build issues early and automating metric tracking that was previously manual. Additional workflows for code formatting and quality checks will be added in future PRs.</p>
             </div>
         </section>
 
