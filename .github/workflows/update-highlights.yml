@@ -1,0 +1,117 @@
+name: Update Highlights Page
+
+on:
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-highlights:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: Configure CMake
+      run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      
+    - name: Build MinSizeRel
+      run: cmake --build build --config MinSizeRel
+      
+    - name: Install cloc
+      run: choco install cloc -y
+      
+    - name: Collect metrics and update highlights
+      run: |
+        # Get current date
+        $date = Get-Date -Format "yyyy-MM-dd"
+        
+        # Get binary size
+        $binarySize = (Get-Item "bin/MinSizeRel/goblin-stream.exe").Length
+        $binarySizeFormatted = "{0:N0}" -f $binarySize
+        
+        # Get source line count
+        $clocOutput = cloc src --json | Out-String
+        $clocJson = $clocOutput | ConvertFrom-Json
+        $sourceLines = $clocJson.SUM.code
+        
+        # Get current commit SHA (short)
+        $currentCommit = git rev-parse --short HEAD
+        
+        # Get files changed since last highlights update
+        # Try to find the last commit that updated refactor-highlights.html
+        $lastHighlightsCommit = git log -1 --format="%H" -- refactor-highlights.html
+        if ($lastHighlightsCommit) {
+          $baseCommit = git rev-parse --short $lastHighlightsCommit
+          $filesChanged = (git diff --name-only $lastHighlightsCommit HEAD | Measure-Object).Count
+        } else {
+          # If no previous highlights commit, use a sensible default
+          $baseCommit = git rev-parse --short HEAD~10
+          $filesChanged = (git diff --name-only HEAD~10 HEAD | Measure-Object).Count
+        }
+        
+        Write-Output "Date: $date"
+        Write-Output "Binary Size: $binarySize bytes ($binarySizeFormatted)"
+        Write-Output "Source Lines: $sourceLines"
+        Write-Output "Current Commit: $currentCommit"
+        Write-Output "Base Commit: $baseCommit"
+        Write-Output "Files Changed: $filesChanged"
+        
+        # Read the current highlights HTML
+        $htmlContent = Get-Content "refactor-highlights.html" -Raw
+        
+        # Update the title with current commit
+        $htmlContent = $htmlContent -replace '<h1>Refactor Highlights since <code>[^<]+</code></h1>', "<h1>Refactor Highlights since <code>$baseCommit</code></h1>"
+        
+        # Update the comparison range and date
+        $htmlContent = $htmlContent -replace '<p class="subtitle">Compared range: <code>[^<]+</code> · generated on [^<]+</p>', "<p class=`"subtitle`">Compared range: <code>$baseCommit..$currentCommit</code> · generated on $date</p>"
+        
+        # Update files changed count
+        $htmlContent = $htmlContent -replace '(<div class="card">[\s\S]*?<div class="k">Files changed</div>[\s\S]*?<div class="v">)\d+', "`$1$filesChanged"
+        
+        # Update binary size
+        $htmlContent = $htmlContent -replace '(<div class="card">[\s\S]*?<div class="k">MinSizeRel binary</div>[\s\S]*?<div class="v">)[\d,]+ bytes', "`$1$binarySizeFormatted bytes"
+        
+        # Update source lines count
+        $htmlContent = $htmlContent -replace '(<div class="card">[\s\S]*?<div class="k">cloc total in /src</div>[\s\S]*?<div class="v">)\d+ lines', "`$1$sourceLines lines"
+        
+        # Update binary size in build status section
+        $htmlContent = $htmlContent -replace '(<li>Binary size \(MinSizeRel\): <code>)[\d,]+', "`$1$binarySizeFormatted"
+        
+        # Update source lines in build status section  
+        $htmlContent = $htmlContent -replace '(<li>cloc /src total: <code>)\d+', "`$1$sourceLines"
+        
+        # Add new entry to build log (insert after the opening <ul> tag in the build log section)
+        $newLogEntry = "                    <li>$date · MinSizeRel size: <code>$binarySizeFormatted</code> bytes · cloc /src: <code>$sourceLines</code> lines · build succeeded.</li>"
+        $htmlContent = $htmlContent -replace '(<section>[\s\S]*?<h2>Build log</h2>[\s\S]*?<ul>)', "`$1`n$newLogEntry"
+        
+        # Save the updated HTML
+        $htmlContent | Set-Content "refactor-highlights.html" -NoNewline
+        
+        Write-Output "Highlights page updated successfully"
+      shell: pwsh
+      
+    - name: Commit and push changes
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add refactor-highlights.html
+        
+        # Only commit if there are changes
+        if (git diff --staged --quiet) {
+          Write-Output "No changes to commit"
+        } else {
+          git commit -m "Update highlights page with latest metrics"
+          git push
+          Write-Output "Changes committed and pushed"
+        }
+      shell: pwsh

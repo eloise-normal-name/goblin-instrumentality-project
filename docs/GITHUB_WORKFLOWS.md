@@ -7,8 +7,9 @@ This document describes the GitHub workflow that automates build validation and 
 The repository includes GitHub Actions workflows that automate build validation and issue monitoring:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
-2. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-3. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+2. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
+3. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
+4. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
 
 ## Workflow
 
@@ -36,6 +37,34 @@ The repository includes GitHub Actions workflows that automate build validation 
 - Counts changed files since base
 - Builds MinSizeRel configuration
 - Reports binary size and source line count
+
+### Update Highlights Page (`.github/workflows/update-highlights.yml`)
+
+**Triggers**: Push to main/develop, manual dispatch
+
+**Purpose**: Automatically updates the `refactor-highlights.html` page with latest build metrics and project statistics.
+
+**Actions**:
+- Builds MinSizeRel configuration to get current binary
+- Collects metrics: binary size, source line count (via cloc)
+- Determines base commit from last highlights update
+- Counts files changed since base
+- Updates HTML file with current metrics:
+  - Comparison range and generation date
+  - Files changed count
+  - Binary size
+  - Source lines count
+  - Build log entry with timestamp
+- Commits and pushes updated highlights page
+
+**Benefits**:
+- Eliminates manual updates to highlights page
+- Ensures metrics are always current with latest build
+- Maintains historical build log automatically
+- Provides automated documentation of project progress
+- Runs only on main/develop to avoid noise from feature branches
+
+**Note**: The workflow has `contents: write` permission to commit changes back to the repository. It will only commit if there are actual changes to the highlights file.
 
 ### Monitor Assigned Issues (`.github/workflows/monitor-assigned-issues.yml`)
 
@@ -144,6 +173,29 @@ Potential additions to CI workflows:
 - Release automation
 
 ## Troubleshooting
+
+### Update Highlights Page
+
+**Highlights Not Updating:**
+If the highlights page doesn't update after a push to main/develop:
+- Check the workflow run logs in the Actions tab
+- Verify the workflow has `contents: write` permission
+- Ensure the build completed successfully (workflow builds MinSizeRel)
+- Check if there are actual changes to commit (workflow skips commit if no changes)
+
+**Metric Extraction Failures:**
+If metrics are incorrect or missing:
+- Verify `cloc` installation succeeded in the workflow
+- Check that the MinSizeRel binary exists at expected path
+- Review regex patterns in the PowerShell script for HTML updates
+- Ensure git history is available (workflow uses `fetch-depth: 0`)
+
+**Commit/Push Failures:**
+If the workflow fails to commit changes:
+- Verify git configuration is set correctly (user.name, user.email)
+- Check for permission errors in workflow logs
+- Ensure no protected branch rules prevent bot commits
+- Review if there are merge conflicts (shouldn't happen on main)
 
 ### Auto-Approve Bot Workflow Runs
 
