@@ -7,8 +7,9 @@ This document describes the GitHub workflow that automates build validation and 
 The repository includes GitHub Actions workflows that automate build validation and issue monitoring:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
-2. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-3. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+2. **Documentation Linting** - Validates markdown documentation for link correctness and consistency
+3. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
+4. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
 
 ## Workflow
 
@@ -36,6 +37,40 @@ The repository includes GitHub Actions workflows that automate build validation 
 - Counts changed files since base
 - Builds MinSizeRel configuration
 - Reports binary size and source line count
+
+### Documentation Linting (`.github/workflows/docs-lint.yml`)
+
+**Triggers**: Push to main, PRs, manual dispatch
+
+**Purpose**: Ensures documentation maintains quality standards and all links are valid.
+
+**Actions**:
+- **Markdown Link Check**: Validates all links in markdown files
+  - Checks internal file references
+  - Verifies external URLs are accessible
+  - Configurable timeout and retry settings
+  - Ignores localhost URLs
+- **Markdown Linting**: Enforces consistent markdown syntax
+  - ATX-style headers (using `#`)
+  - Consistent list indentation
+  - Allows HTML elements where needed (br, details, summary)
+  - Flexible line length for readability
+
+**Benefits**:
+- Catches broken links before they reach production
+- Maintains documentation quality and readability
+- Enforces consistent markdown formatting across all docs
+- Prevents documentation from becoming outdated with broken references
+
+**Configuration**:
+- Link checker config: `.github/markdown-link-check-config.json`
+- Markdown lint rules: `.markdownlint.json`
+
+**Scanned Files**:
+- All `.md` files in the repository
+- `docs/*.md` - Project documentation
+- `.github/prompts/*.md` - Custom agent prompts
+- `.github/copilot-instructions.md` - Development guidelines
 
 ### Monitor Assigned Issues (`.github/workflows/monitor-assigned-issues.yml`)
 
@@ -144,6 +179,34 @@ Potential additions to CI workflows:
 - Release automation
 
 ## Troubleshooting
+
+### Documentation Linting Workflow
+
+**Link Check Failures:**
+If the link checker reports broken links:
+- Verify the link is actually broken (it might be temporarily unavailable)
+- Update or remove broken external URLs
+- Fix internal file references to point to correct paths
+- Add patterns to `.github/markdown-link-check-config.json` to ignore specific links (e.g., localhost, private URLs)
+
+**Markdown Lint Failures:**
+If markdown linting reports issues:
+- Review the specific rule that failed (e.g., MD003, MD007)
+- Fix formatting to match the rule requirements
+- Update `.markdownlint.json` to adjust or disable specific rules if needed
+- Run `markdownlint-cli2` locally to test changes before pushing
+
+**External URL Timeouts:**
+If external links timeout:
+- The workflow retries up to 3 times with 30s delay
+- Increase `timeout` in config if legitimate sites are slow
+- Add to `ignorePatterns` if the site blocks CI runners
+
+**False Positives:**
+If valid links are incorrectly flagged:
+- Check for typos in the URL
+- Verify the site allows automated requests (some block bots)
+- Add the URL pattern to config's `ignorePatterns` if necessary
 
 ### Auto-Approve Bot Workflow Runs
 
