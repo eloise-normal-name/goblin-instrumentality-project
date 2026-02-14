@@ -36,25 +36,35 @@ export class App {
 												  .width		= 512,
 												  .height		= 512};
 	HWND hwnd;
+	bool headless;
 	D3D12Device device;
 	NvencSession nvenc_session{*&device.device};
 	NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};
 	NvencD3D12 nvenc_d3d12{nvenc_session, BUFFER_COUNT};
-	D3D12SwapChain swap_chain{*&device.device, *&device.factory, *&device.command_queue, hwnd,
-							  SwapChainConfig{.buffer_count			= BUFFER_COUNT,
-											  .render_target_format = RENDER_TARGET_FORMAT}};
+	D3D12SwapChain* swap_chain = nullptr;
 	ComPtr<ID3D12CommandAllocator> allocator;
 	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
 	uint32_t offscreen_rtv_descriptor_size;
 	uint32_t frame_width;
 	uint32_t frame_height;
 	std::vector<ComPtr<ID3D12Resource>> offscreen_render_targets;
+	std::vector<ComPtr<ID3D12Resource>> swap_chain_render_targets;
 	std::vector<FrameResources> frames;
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
-	App(HWND hwnd) : hwnd(hwnd) {
+	App(HWND hwnd, bool headless) : hwnd(hwnd), headless(headless) {
+		if (!headless) {
+			swap_chain = new D3D12SwapChain{
+				*&device.device, *&device.factory, *&device.command_queue, hwnd,
+				SwapChainConfig{.buffer_count		  = BUFFER_COUNT,
+								.render_target_format = RENDER_TARGET_FORMAT}};
+		}
 		InitializeGraphics();
+	}
+
+	~App() {
+		delete swap_chain;
 	}
 
 	int Run() && {
@@ -63,15 +73,16 @@ export class App {
 			fence_handles[i] = frames[i].fence_event;
 
 		MSG msg{};
-		bool running			   = true;
-		uint32_t frames_submitted  = 0;
-		uint32_t back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-		HRESULT present_result	   = S_OK;
+		bool running			  = true;
+		uint32_t frames_submitted = 0;
+		uint32_t back_buffer_index
+			= headless ? 0 : swap_chain->swap_chain->GetCurrentBackBufferIndex();
+		HRESULT present_result = S_OK;
 
 		while (running) {
 			frame_debug_log.BeginFrame(frames_submitted);
-			auto wait_result
-				= WaitForFrame(frame_debug_log, fence_handles.data(), back_buffer_index, msg);
+			auto wait_result = WaitForFrame(frame_debug_log, fence_handles.data(),
+											back_buffer_index, msg, headless);
 			if (wait_result == FrameWaitResult::Quit)
 				break;
 			if (wait_result == FrameWaitResult::Continue)
@@ -84,16 +95,28 @@ export class App {
 
 			ExecuteFrame(*&device.command_queue, frames[back_buffer_index], present_result);
 			auto signaled_value = frames_submitted + 1;
-			present_result		= PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
-												   frames[back_buffer_index], signaled_value);
+
+			if (headless) {
+				SignalFence(*&device.command_queue, frames[back_buffer_index], signaled_value);
+				present_result = S_OK;
+			} else {
+				present_result = PresentAndSignal(*&device.command_queue, *&swap_chain->swap_chain,
+												  frames[back_buffer_index], signaled_value);
+			}
+
 			if (!HandlePresentResult(frame_debug_log, present_result))
 				continue;
 
-			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
+			auto new_back_buffer_index = headless
+											 ? ((back_buffer_index + 1) % BUFFER_COUNT)
+											 : swap_chain->swap_chain->GetCurrentBackBufferIndex();
 			LogFrameSubmitted(frame_debug_log, back_buffer_index, signaled_value,
 							  new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
+
+			if (headless && frames_submitted >= 300)
+				break;
 		}
 		return 0;
 	}
@@ -108,7 +131,8 @@ export class App {
 	static void RecordCommandList(ID3D12GraphicsCommandList* command_list,
 								  D3D12_CPU_DESCRIPTOR_HANDLE rtv,
 								  ID3D12Resource* offscreen_render_target,
-								  ID3D12Resource* swap_chain_render_target, uint32_t index) {
+								  ID3D12Resource* swap_chain_render_target, uint32_t index,
+								  bool headless) {
 		{
 			D3D12_RESOURCE_BARRIER barrier{
 				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -126,37 +150,40 @@ export class App {
 				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 				.Transition = {.pResource	= offscreen_render_target,
 							   .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
-							   .StateAfter	= D3D12_RESOURCE_STATE_COPY_SOURCE}};
+							   .StateAfter	= headless ? D3D12_RESOURCE_STATE_COMMON
+													   : D3D12_RESOURCE_STATE_COPY_SOURCE}};
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= swap_chain_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
-							   .StateAfter	= D3D12_RESOURCE_STATE_COPY_DEST}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
+		if (!headless) {
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Transition = {.pResource	= swap_chain_render_target,
+								   .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
+								   .StateAfter	= D3D12_RESOURCE_STATE_COPY_DEST}};
+				command_list->ResourceBarrier(1, &barrier);
+			}
 
-		command_list->CopyResource(swap_chain_render_target, offscreen_render_target);
+			command_list->CopyResource(swap_chain_render_target, offscreen_render_target);
 
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= swap_chain_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-							   .StateAfter	= D3D12_RESOURCE_STATE_PRESENT}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Transition = {.pResource	= swap_chain_render_target,
+								   .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
+								   .StateAfter	= D3D12_RESOURCE_STATE_PRESENT}};
+				command_list->ResourceBarrier(1, &barrier);
+			}
 
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= offscreen_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
-							   .StateAfter	= D3D12_RESOURCE_STATE_COMMON}};
-			command_list->ResourceBarrier(1, &barrier);
+			{
+				D3D12_RESOURCE_BARRIER barrier{
+					.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Transition = {.pResource	= offscreen_render_target,
+								   .StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
+								   .StateAfter	= D3D12_RESOURCE_STATE_COMMON}};
+				command_list->ResourceBarrier(1, &barrier);
+			}
 		}
 
 		command_list->Close();
@@ -182,9 +209,17 @@ export class App {
 	}
 
 	static FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log, HANDLE* fence_handles,
-										uint32_t back_buffer_index, MSG& msg) {
+										uint32_t back_buffer_index, MSG& msg, bool headless) {
 		frame_debug_log.Line() << "MsgWaitForMultipleObjects..." << "\n";
 		auto wait_handle = fence_handles[back_buffer_index];
+
+		if (headless) {
+			auto wait_result = WaitForSingleObject(wait_handle, INFINITE);
+			frame_debug_log.Line() << "Wait result of fence_handles[" << back_buffer_index
+								   << "]: " << wait_result << "\n";
+			return FrameWaitResult::Proceed;
+		}
+
 		auto wait_result = MsgWaitForMultipleObjects(1, &wait_handle, FALSE, INFINITE, QS_ALLINPUT);
 		frame_debug_log.Line() << "Wait result of fence_handles[" << back_buffer_index
 							   << "]: " << wait_result << "\n";
@@ -224,6 +259,12 @@ export class App {
 		command_queue->Signal(*&frame_resources.fence, signaled_value);
 		frame_resources.fence->SetEventOnCompletion(signaled_value, frame_resources.fence_event);
 		return present_result;
+	}
+
+	static void SignalFence(ID3D12CommandQueue* command_queue, FrameResources& frame_resources,
+							uint64_t signaled_value) {
+		command_queue->Signal(*&frame_resources.fence, signaled_value);
+		frame_resources.fence->SetEventOnCompletion(signaled_value, frame_resources.fence_event);
 	}
 
 	static bool HandlePresentResult(FrameDebugLog& frame_debug_log, HRESULT present_result) {
@@ -271,7 +312,12 @@ App::FrameResources::~FrameResources() {
 }
 
 void App::InitializeGraphics() {
-	Try | swap_chain.swap_chain->GetSourceSize(&frame_width, &frame_height);
+	if (headless) {
+		frame_width	 = ENCODER_CONFIG.width;
+		frame_height = ENCODER_CONFIG.height;
+	} else {
+		Try | swap_chain->swap_chain->GetSourceSize(&frame_width, &frame_height);
+	}
 
 	Try
 		| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -287,6 +333,9 @@ void App::InitializeGraphics() {
 		= device.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	offscreen_render_targets.resize(BUFFER_COUNT);
+	if (!headless)
+		swap_chain_render_targets.resize(BUFFER_COUNT);
+
 	D3D12_HEAP_PROPERTIES default_heap_props{
 		.Type = D3D12_HEAP_TYPE_DEFAULT,
 	};
@@ -322,6 +371,12 @@ void App::InitializeGraphics() {
 											  offscreen_rtv);
 	}
 
+	if (!headless) {
+		for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+			Try | swap_chain->swap_chain->GetBuffer(i, IID_PPV_ARGS(&swap_chain_render_targets[i]));
+		}
+	}
+
 	frames.reserve(BUFFER_COUNT);
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		frames.emplace_back(*&device.device);
@@ -340,6 +395,6 @@ void App::InitializeGraphics() {
 
 		frames[i].command_list->Reset(*&allocator, nullptr);
 		RecordCommandList(*&frames[i].command_list, offscreen_rtv, *&offscreen_render_targets[i],
-						  *&swap_chain.render_targets[i], i);
+						  headless ? nullptr : *&swap_chain_render_targets[i], i, headless);
 	}
 }
