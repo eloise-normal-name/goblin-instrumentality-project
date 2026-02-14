@@ -40,7 +40,7 @@ jobs:
         
         $extensions = @('*.cpp', '*.ixx', '*.h', '*.hpp')
         $paths = @('src', 'include')
-        $exclude_files = @('include/external/nvenc/nvEncodeAPI.h')
+        $exclude_pattern = 'include/external/'
         
         $all_files = @()
         foreach ($path in $paths) {
@@ -57,15 +57,7 @@ jobs:
           $relative_path = $file_path -replace [regex]::Escape(((Get-Location).Path -replace '\\', '/')), ''
           $relative_path = $relative_path.TrimStart('/')
           
-          $exclude = $false
-          foreach ($excluded in $exclude_files) {
-            $excluded_normalized = $excluded -replace '\\', '/'
-            if ($relative_path -eq $excluded_normalized) {
-              $exclude = $true
-              break
-            }
-          }
-          -not $exclude
+          -not ($relative_path -like "$exclude_pattern*")
         }
         
         if ($files_to_check.Count -eq 0) {
