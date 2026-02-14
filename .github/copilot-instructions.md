@@ -86,6 +86,20 @@
 - **Architecture diagrams**: Keep ASCII diagrams in README current with implementation
 - **Known errors**: Add reproducible, solvable command/build errors to `docs/KNOWN_ERRORS.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
 
+## Custom Agents
+- **Location**: Specialized agents in `.github/prompts/` directory
+- **Usage Guide**: See `.github/prompts/README.md` for complete usage recommendations
+- **Available Agents**:
+  - `check-raii` - Verify RAII patterns and resource management
+  - `review-error-handling` - Check Try | usage and error handling
+  - `review-frame-logic` - Review D3D12 frame submission and synchronization
+  - `debug-resources` - Diagnose D3D12 resource state issues
+  - `explain-nvenc` - Explain NVENC API usage and integration
+  - `refactor-extract` - Assist with extracting cohesive functionality
+  - `stage-changelist` - Review changes and prepare commits with highlights
+- **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
+- **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
+
 ## Future Considerations
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
