@@ -92,7 +92,7 @@ jobs:
         
         # Add new entry to build log (insert after the opening <ul> tag in the build log section)
         $newLogEntry = "                    <li>$date · MinSizeRel size: <code>$binarySizeFormatted</code> bytes · cloc /src: <code>$sourceLines</code> lines · build succeeded.</li>"
-        $htmlContent = $htmlContent -replace '(<section>[\s\S]*?<h2>Build log</h2>[\s\S]*?<ul>)', "`$1`n$newLogEntry"
+        $htmlContent = $htmlContent -replace '(<h2>Build log</h2>\s*<div class="panel">\s*<ul>)', "`${1}`n$newLogEntry"
         
         # Save the updated HTML
         $htmlContent | Set-Content "refactor-highlights.html" -NoNewline
