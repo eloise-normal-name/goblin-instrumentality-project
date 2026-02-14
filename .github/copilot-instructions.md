@@ -128,8 +128,10 @@ Check the build logs and ensure:
 - **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
 - **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
 
+### Issue updates
+If you are assigned to an issue, re-open it and skim the latest description and comments before you start or resume work so scope changes aren't missed
+
 ## Future Considerations
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
 - Maintain static linking preference for portable deployment
-

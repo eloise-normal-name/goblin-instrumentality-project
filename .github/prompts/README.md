@@ -172,6 +172,7 @@ This directory contains specialized custom agents designed for the Goblin Instru
 ## Best Practices
 
 ### Agent Usage Tips
+- **Re-check issues**: When you're assigned to an issue, re-open it and skim the latest description and comments before running agents or resuming work
 - **Be specific**: Provide file names and line ranges when relevant
 - **Chain agents**: Use multiple agents sequentially for comprehensive review
 - **Iterate**: Re-run agents after addressing feedback
