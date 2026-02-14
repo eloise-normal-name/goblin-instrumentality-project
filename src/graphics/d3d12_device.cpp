@@ -3,14 +3,14 @@
 #include "try.h"
 
 D3D12Device::D3D12Device(GpuAdapterType adapter_type) {
-	create_device(adapter_type);
-	create_command_queue();
+	CreateDevice(adapter_type);
+	CreateCommandQueue();
 }
 
 D3D12Device::~D3D12Device() {
 }
 
-void D3D12Device::create_device(GpuAdapterType adapter_type) {
+void D3D12Device::CreateDevice(GpuAdapterType adapter_type) {
 	auto dxgi_factory_flags = 0u;
 
 #if defined(_DEBUG)
@@ -41,7 +41,7 @@ void D3D12Device::create_device(GpuAdapterType adapter_type) {
 	Try | D3D12CreateDevice(*&selected_adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 }
 
-void D3D12Device::create_command_queue() {
+void D3D12Device::CreateCommandQueue() {
 	D3D12_COMMAND_QUEUE_DESC queue_desc{
 		.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
 	};

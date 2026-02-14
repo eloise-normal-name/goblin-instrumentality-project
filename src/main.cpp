@@ -78,8 +78,9 @@ bool IsHeadlessMode() {
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	try {
-		auto headless = IsHeadlessMode();
-		auto hwnd	  = CreateAppWindow(instance, headless ? SW_HIDE : show_command);
+		auto headless = true;
+		// IsHeadlessMode();
+		auto hwnd = CreateAppWindow(instance, headless ? SW_HIDE : show_command);
 		if (!hwnd)
 			return 1;
 

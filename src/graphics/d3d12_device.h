@@ -24,6 +24,6 @@ class D3D12Device {
 	ComPtr<ID3D12CommandQueue> command_queue;
 
   private:
-	void create_device(GpuAdapterType adapter_type);
-	void create_command_queue();
+	void CreateDevice(GpuAdapterType adapter_type);
+	void CreateCommandQueue();
 };

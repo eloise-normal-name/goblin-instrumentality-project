@@ -8,10 +8,10 @@ D3D12CommandAllocators::D3D12CommandAllocators(ID3D12Device* device,
 	if (buffer_count > 3)
 		buffer_count = 3;
 
-	create_command_allocators(device);
+	CreateCommandAllocators(device);
 }
 
-void D3D12CommandAllocators::create_command_allocators(ID3D12Device* device) {
+void D3D12CommandAllocators::CreateCommandAllocators(ID3D12Device* device) {
 	for (uint32_t i = 0; i < buffer_count; ++i) {
 		Try
 			| device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,

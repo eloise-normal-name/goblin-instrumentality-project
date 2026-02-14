@@ -25,5 +25,5 @@ class D3D12CommandAllocators {
   private:
 	ComPtr<ID3D12CommandAllocator> command_allocators[3];
 
-	void create_command_allocators(ID3D12Device* device);
+	void CreateCommandAllocators(ID3D12Device* device);
 };

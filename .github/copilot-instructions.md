@@ -37,8 +37,7 @@
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
-- **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project
-  - **CI checks for C++ casts** and flags them as errors
+- **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project (**CI enforced**)
 - **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
     ```cpp
@@ -56,12 +55,14 @@
 
 ## Prohibited Patterns
 **CI automatically checks for these patterns** via `.github/workflows/code-quality.yml`:
+- **snake_case Methods**: All methods must use PascalCase, not snake_case (CI enforced)
+- **C++ Casts**: Use C-style casts `(Type)value` instead of `static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast` (CI enforced)
+- **Namespaces**: Do not use namespaces; keep all code in the global namespace (CI enforced)
+- **Trailing Underscores**: Do not use trailing underscores for member variables (use plain snake_case) (CI enforced)
+- **Initialize/Shutdown Methods**: Violates RAII principles (CI enforced)
 - **Threading**: No multi-threaded code or concurrency primitives
 - **Comments**: Use self-documenting code instead of comments
 - **External Libraries**: Stick to Windows APIs and C++ standard library
-- **Namespaces**: Do not use namespaces; keep all code in the global namespace (CI enforced)
-- **Trailing Underscores**: Do not use trailing underscores for member variables (use plain snake_case)
-- **Initialize/Shutdown Methods**: Violates RAII principles (CI enforced)
 - **NVENC**: Follow the condensed D3D12-only guide at `.github/prompts/snippets/nvenc-guide.md` and the official programming guide at https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html.
 
 ## Build Process
