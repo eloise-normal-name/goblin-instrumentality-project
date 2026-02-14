@@ -54,9 +54,10 @@ jobs:
           $baseCommit = git rev-parse --short $lastHighlightsCommit
           $filesChanged = (git diff --name-only $lastHighlightsCommit HEAD | Measure-Object).Count
         } else {
-          # If no previous highlights commit, use a sensible default
-          $baseCommit = git rev-parse --short HEAD~10
-          $filesChanged = (git diff --name-only HEAD~10 HEAD | Measure-Object).Count
+          # If no previous highlights commit, use the root commit
+          $rootCommit = git rev-list --max-parents=0 HEAD
+          $baseCommit = git rev-parse --short $rootCommit
+          $filesChanged = (git diff --name-only $rootCommit HEAD | Measure-Object).Count
         }
         
         Write-Output "Date: $date"
@@ -75,20 +76,20 @@ jobs:
         # Update the comparison range and date
         $htmlContent = $htmlContent -replace '<p class="subtitle">Compared range: <code>[^<]+</code> · generated on [^<]+</p>', "<p class=`"subtitle`">Compared range: <code>$baseCommit..$currentCommit</code> · generated on $date</p>"
         
-        # Update files changed count (simpler direct replacement)
+        # Update files changed count (flexible whitespace)
         $htmlContent = $htmlContent -replace '(<div class="k">Files changed</div>\s*<div class="v">)\d+', "`${1}$filesChanged"
         
-        # Update binary size
-        $htmlContent = $htmlContent -replace '(<div class="k">MinSizeRel binary</div>\s*<div class="v">)[\d,]+ bytes', "`${1}$binarySizeFormatted bytes"
+        # Update binary size (flexible whitespace)
+        $htmlContent = $htmlContent -replace '(<div class="k">MinSizeRel binary</div>\s*<div class="v">)[\d,]+\s*bytes', "`${1}$binarySizeFormatted bytes"
         
-        # Update source lines count
-        $htmlContent = $htmlContent -replace '(<div class="k">cloc total in /src</div>\s*<div class="v">)\d+ lines', "`${1}$sourceLines lines"
+        # Update source lines count (flexible whitespace)
+        $htmlContent = $htmlContent -replace '(<div class="k">cloc total in /src</div>\s*<div class="v">)\d+\s*lines', "`${1}$sourceLines lines"
         
-        # Update binary size in build status section
-        $htmlContent = $htmlContent -replace '(Binary size \(MinSizeRel\): <code>)[\d,]+', "`${1}$binarySizeFormatted"
+        # Update binary size in build status section (flexible whitespace)
+        $htmlContent = $htmlContent -replace '(Binary size \(MinSizeRel\):\s*<code>)[\d,]+', "`${1}$binarySizeFormatted"
         
-        # Update source lines in build status section  
-        $htmlContent = $htmlContent -replace '(cloc /src total: <code>)\d+', "`${1}$sourceLines"
+        # Update source lines in build status section (flexible whitespace)
+        $htmlContent = $htmlContent -replace '(cloc /src total:\s*<code>)\d+', "`${1}$sourceLines"
         
         # Add new entry to build log (insert after the opening <ul> tag in the build log section)
         $newLogEntry = "                    <li>$date · MinSizeRel size: <code>$binarySizeFormatted</code> bytes · cloc /src: <code>$sourceLines</code> lines · build succeeded.</li>"
@@ -106,12 +107,14 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add refactor-highlights.html
         
-        # Only commit if there are changes
-        if (git diff --staged --quiet) {
-          Write-Output "No changes to commit"
-        } else {
+        # Check if there are staged changes
+        git diff --staged --quiet
+        if ($LASTEXITCODE -ne 0) {
+          # There are changes, commit them
           git commit -m "Update highlights page with latest metrics"
           git push
           Write-Output "Changes committed and pushed"
+        } else {
+          Write-Output "No changes to commit"
         }
       shell: pwsh
