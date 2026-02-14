@@ -4,9 +4,10 @@ This document describes the GitHub workflow that automates build validation and 
 
 ## Overview
 
-The repository includes a GitHub Actions workflow that automates the build process previously done manually:
+The repository includes GitHub Actions workflows that automate build validation and issue monitoring:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
+2. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
 
 ## Workflow
 
@@ -34,6 +35,35 @@ The repository includes a GitHub Actions workflow that automates the build proce
 - Counts changed files since base
 - Builds MinSizeRel configuration
 - Reports binary size and source line count
+
+### Monitor Assigned Issues (`.github/workflows/monitor-assigned-issues.yml`)
+
+**Triggers**: 
+- Scheduled every 6 hours
+- Manual dispatch
+- Issue assignment, edits, labeling
+- Issue comments
+
+**Purpose**: Ensures bot-assigned issues receive timely attention when users provide updates.
+
+**Actions**:
+- Monitors issues assigned to bot accounts (copilot, copilot-swe-agent[bot], github-actions[bot])
+- Detects new user comments since last bot interaction
+- Checks for issue updates (edits, labels, status changes)
+- Adds `needs-bot-attention` label when user input is detected
+- Runs scheduled checks to catch any missed updates
+
+**Benefits**:
+- Prevents issues from going stale when users provide additional information
+- Ensures bot-assigned work items are prioritized when users engage
+- Provides visibility into which issues need bot attention via labels
+- Automated monitoring reduces manual tracking overhead
+
+**Labels Used**:
+- `needs-bot-attention`: Automatically added when user comments or updates are detected on bot-assigned issues. This label helps maintainers and bots identify which issues require action.
+
+**Note**: The workflow will attempt to create the label if it doesn't exist. If label creation fails, it will log a warning but continue processing.
+
 ## CI vs Local Development
 
 | Aspect | Local Development | GitHub Actions CI |
@@ -77,6 +107,26 @@ Potential additions to CI workflows:
 - Release automation
 
 ## Troubleshooting
+
+### Monitor Assigned Issues Workflow
+
+**Label Creation Failures:**
+If the workflow fails to add the `needs-bot-attention` label:
+- Ensure the workflow has `issues: write` permission (already configured)
+- Check if the label exists in the repository (workflow will attempt to create it)
+- Review workflow logs for permission or API errors
+
+**Workflow Not Triggering:**
+If the workflow doesn't run when expected:
+- Check if the issue is assigned to one of the monitored bots (copilot, copilot-swe-agent[bot], github-actions[bot])
+- Verify the issue event type matches the triggers (assignment, edits, comments)
+- Use manual dispatch to test the scheduled run functionality
+
+**Label Not Applied:**
+If user comments don't result in labeling:
+- Verify the comments are from non-bot users
+- Check if the bot has interacted with the issue previously
+- Review workflow run logs to see comment detection logic
 
 ### Workflow Fails but Builds Locally
 
