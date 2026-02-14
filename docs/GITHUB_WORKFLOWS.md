@@ -45,12 +45,10 @@ The repository includes GitHub Actions workflows that automate build validation 
 **Purpose**: Ensures documentation maintains quality standards and all links are valid.
 
 **Actions**:
-- **Markdown Link Check**: Validates all links in markdown files
+- **Markdown Link Check**: Validates internal links in markdown files
   - **Internal markdown links**: Validates relative paths to other `.md` files (e.g., `[text](./other-doc.md)`, `[text](../folder/file.md)`)
   - **Anchor links**: Validates section references within documents (e.g., `[text](#section-name)`)
-  - **External URLs**: Verifies external links are accessible (e.g., `https://docs.github.com`)
-  - Configurable timeout and retry settings
-  - Ignores localhost URLs for local development references
+  - **External URLs ignored**: HTTP/HTTPS links are not checked to focus on internal documentation structure
 - **Markdown Linting**: Enforces consistent markdown syntax
   - ATX-style headers (using `#`)
   - Consistent list indentation
@@ -59,7 +57,7 @@ The repository includes GitHub Actions workflows that automate build validation 
 
 **Benefits**:
 - **Enables agent efficiency**: Ensures agents can navigate documentation via internal links without encountering broken references
-- **Catches broken links early**: Validates all link types (internal, external, anchors) before they reach production
+- **Catches broken internal links early**: Validates internal file references and anchors before they reach production
 - **Maintains documentation quality**: Enforces consistent markdown formatting across all docs
 - **Prevents link rot**: Detects when files are moved/renamed without updating cross-references
 
@@ -187,8 +185,7 @@ Potential additions to CI workflows:
 If the link checker reports broken links:
 - **Internal markdown links**: Verify the referenced file exists at the specified path; update paths if files were moved/renamed
 - **Anchor links**: Ensure the target section heading exists in the referenced document; check for correct heading format
-- **External URLs**: Verify the link is actually broken (it might be temporarily unavailable); update or remove broken external URLs
-- Add patterns to `.github/markdown-link-check-config.json` to ignore specific links (e.g., localhost, private URLs) if needed
+- Add patterns to `.github/markdown-link-check-config.json` to ignore specific link patterns if needed
 
 **Markdown Lint Failures:**
 If markdown linting reports issues:
@@ -196,18 +193,6 @@ If markdown linting reports issues:
 - Fix formatting to match the rule requirements
 - Update `.markdownlint.json` to adjust or disable specific rules if needed
 - Run `markdownlint-cli2` locally to test changes before pushing
-
-**External URL Timeouts:**
-If external links timeout:
-- The workflow retries up to 3 times with 30s delay
-- Increase `timeout` in `.github/markdown-link-check-config.json` if legitimate sites are slow (use string format like `"30s"` or `"60s"`)
-- Add to `ignorePatterns` if the site blocks CI runners
-
-**False Positives:**
-If valid links are incorrectly flagged:
-- Check for typos in the URL
-- Verify the site allows automated requests (some block bots)
-- Add the URL pattern to config's `ignorePatterns` if necessary
 
 ### Auto-Approve Bot Workflow Runs
 
