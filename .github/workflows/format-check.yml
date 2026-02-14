@@ -54,7 +54,7 @@ jobs:
         
         $files_to_check = $all_files | Where-Object {
           $file_path = $_.FullName -replace '\\', '/'
-          $relative_path = $file_path -replace [regex]::Escape((Get-Location).Path -replace '\\', '/'), ''
+          $relative_path = $file_path -replace [regex]::Escape(((Get-Location).Path -replace '\\', '/')), ''
           $relative_path = $relative_path.TrimStart('/')
           
           $exclude = $false
