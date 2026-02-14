@@ -5,6 +5,8 @@ on:
     types: [requested]
     workflows:
       - "Build and Validate"
+      - "Code Quality Checks"
+      - "Documentation Linting"
 
 permissions:
   actions: write
