@@ -199,7 +199,7 @@ If markdown linting reports issues:
 **External URL Timeouts:**
 If external links timeout:
 - The workflow retries up to 3 times with 30s delay
-- Increase `timeout` in config if legitimate sites are slow
+- Increase `timeout` in `.github/markdown-link-check-config.json` if legitimate sites are slow (use string format like `"30s"` or `"60s"`)
 - Add to `ignorePatterns` if the site blocks CI runners
 
 **False Positives:**
