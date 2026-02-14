@@ -77,7 +77,7 @@ jobs:
         $check_failed = $false
         
         foreach ($file in $files_to_check) {
-          $result = clang-format -style=file --dry-run --Werror $file.FullName 2>&1
+          $null = clang-format -style=file --dry-run --Werror $file.FullName 2>&1
           if ($LASTEXITCODE -ne 0) {
             $files_needing_format += $file.FullName
             $check_failed = $true

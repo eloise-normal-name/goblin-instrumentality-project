@@ -73,7 +73,7 @@ The repository includes the following GitHub Actions workflows:
 ### For Contributors
 
 1. **Before committing**: Build locally to catch errors early
-2. **Before pushing**: Ensure code compiles with `/W4` warning level and is properly formatted
+2. **Before pushing**: Ensure code compiles with `/W4` warning level and is properly formatted (use `clang-format -style=file --dry-run --Werror <file>` to check)
 3. **After creating PR**: Wait for CI checks to complete (build and format validation)
 4. **If checks fail**: Review GitHub Actions logs, fix issues, push updates
 
