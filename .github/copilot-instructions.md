@@ -1,5 +1,14 @@
 # Goblin Instrumentality Project - Instructions
 
+## Quick Links (Table of Contents)
+
+- Project overview: `README.md`
+- CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
+- Known errors & fixes: `docs/copilot-known-errors.md`
+- Custom agent guide: `.github/prompts/README.md`
+- NVENC integration guide: `.github/prompts/snippets/nvenc-guide.md`
+- Refactor highlights: `refactor-highlights.html`
+
 ## Technology Stack
 
 > Formal project name: Goblin Instrumentality Project (formerly Goblin Stream)
@@ -109,10 +118,10 @@ Check the build logs and ensure:
 - No missing headers or undefined references
 
 ## Documentation
-- **README.md**: Must reflect current architecture, module structure, and data flow
+- **README.md**: Create/update as needed; must reflect current architecture, module structure, and data flow
 - **Update README** when adding, removing, or restructuring modules
 - **Architecture diagrams**: Keep ASCII diagrams in README current with implementation
-- **Known errors**: Add reproducible, solvable command/build errors to `docs/KNOWN_ERRORS.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
+- **Known errors**: Add reproducible, solvable command/build errors to `docs/copilot-known-errors.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
 
 ## Custom Agents
 - **Location**: Specialized agents in `.github/prompts/` directory
