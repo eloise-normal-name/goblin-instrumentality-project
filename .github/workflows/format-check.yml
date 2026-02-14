@@ -18,12 +18,23 @@ jobs:
       
     - name: Check formatting
       run: |
+        # Verify .clang-format file exists
+        if (!(Test-Path ".clang-format")) {
+          Write-Output "::error::.clang-format file not found in repository root"
+          exit 1
+        }
+        
+        Write-Output "Using .clang-format from repository root"
+        Get-Content ".clang-format" | Select-Object -First 5
+        Write-Output ""
+        
         $files = Get-ChildItem -Path src,include -Include *.cpp,*.ixx,*.h -Recurse | Where-Object { $_.FullName -notmatch "nvEncodeAPI\.h" }
         $failed = @()
         
         foreach ($file in $files) {
           $original = Get-Content $file.FullName -Raw
-          $formatted = & clang-format $file.FullName
+          # Explicitly use -style=file to ensure .clang-format is used
+          $formatted = & clang-format -style=file $file.FullName
           
           if ($original -ne $formatted) {
             $failed += $file.FullName
@@ -35,7 +46,7 @@ jobs:
           Write-Output "The following files need formatting:"
           $failed | ForEach-Object { Write-Output "  - $_" }
           Write-Output ""
-          Write-Output "Run 'clang-format -i <file>' to format these files"
+          Write-Output "Run 'clang-format -i -style=file <file>' to format these files"
           exit 1
         }
         

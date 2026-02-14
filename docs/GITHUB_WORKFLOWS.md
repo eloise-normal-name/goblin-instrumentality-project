@@ -150,21 +150,22 @@ Check the workflow logs to see the list of files that need formatting.
 **Step 2: Format the files locally**
 ```bash
 # Format all source files (run from repository root)
-clang-format -i src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
+# Use -style=file to ensure .clang-format from repository root is used
+clang-format -i -style=file src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
 
 # Or format specific files listed in the error
-clang-format -i src/encoder/nvenc_config.cpp
-clang-format -i src/graphics/d3d12_device.cpp
+clang-format -i -style=file src/encoder/nvenc_config.cpp
+clang-format -i -style=file src/graphics/d3d12_device.cpp
 # ... etc
 
 # Or use a loop for multiple files
-for file in src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h; do clang-format -i "$file"; done
+for file in src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h; do clang-format -i -style=file "$file"; done
 ```
 
 **Step 3: Verify formatting**
 ```bash
-# Check that formatting matches
-clang-format src/main.cpp | diff src/main.cpp -
+# Check that formatting matches (use -style=file)
+clang-format -style=file src/main.cpp | diff src/main.cpp -
 ```
 
 **Step 4: Commit and push**

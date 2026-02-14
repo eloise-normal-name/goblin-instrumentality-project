@@ -105,10 +105,11 @@
 If the Format Check workflow fails, files need to be formatted according to `.clang-format`:
 ```bash
 # Format all source files (run from repository root)
-clang-format -i src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
+# Use -style=file to ensure .clang-format is used
+clang-format -i -style=file src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
 
 # Or format individual files
-clang-format -i path/to/file.cpp
+clang-format -i -style=file path/to/file.cpp
 ```
 After formatting, commit and push the changes. Note: nvEncodeAPI.h is excluded as a 3rd party file.
 
