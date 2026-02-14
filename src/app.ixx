@@ -3,6 +3,7 @@ module;
 #include <windows.h>
 
 #include <array>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -41,7 +42,7 @@ export class App {
 	NvencSession nvenc_session{*&device.device};
 	NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};
 	NvencD3D12 nvenc_d3d12{nvenc_session, BUFFER_COUNT};
-	D3D12SwapChain* swap_chain = nullptr;
+	std::unique_ptr<D3D12SwapChain> swap_chain;
 	ComPtr<ID3D12CommandAllocator> allocator;
 	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
 	uint32_t offscreen_rtv_descriptor_size;
@@ -53,19 +54,19 @@ export class App {
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
-	App(HWND hwnd, bool headless) : hwnd(hwnd), headless(headless) {
-		if (!headless) {
-			swap_chain = new D3D12SwapChain{
-				*&device.device, *&device.factory, *&device.command_queue, hwnd,
-				SwapChainConfig{.buffer_count		  = BUFFER_COUNT,
-								.render_target_format = RENDER_TARGET_FORMAT}};
-		}
+	App(HWND hwnd, bool headless)
+		: hwnd(hwnd)
+		, headless(headless)
+		, swap_chain(headless
+						 ? nullptr
+						 : std::make_unique<D3D12SwapChain>(
+							   *&device.device, *&device.factory, *&device.command_queue, hwnd,
+							   SwapChainConfig{.buffer_count		 = BUFFER_COUNT,
+											   .render_target_format = RENDER_TARGET_FORMAT})) {
 		InitializeGraphics();
 	}
 
-	~App() {
-		delete swap_chain;
-	}
+	~App() = default;
 
 	int Run() && {
 		std::array<HANDLE, BUFFER_COUNT> fence_handles{};
