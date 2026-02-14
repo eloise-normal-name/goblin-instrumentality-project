@@ -99,6 +99,32 @@
 - **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
 - **Documentation**: See `docs/GITHUB_WORKFLOWS.md` for detailed workflow information
 
+### Fixing Workflow Check Failures
+
+**Format Check Failures:**
+If the Format Check workflow fails, files need to be formatted according to `.clang-format`:
+```bash
+# Format all source files (run from repository root)
+clang-format -i src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
+
+# Or format individual files
+clang-format -i path/to/file.cpp
+```
+After formatting, commit and push the changes. Note: nvEncodeAPI.h is excluded as a 3rd party file.
+
+**Code Quality Failures:**
+Review the workflow logs for specific violations and fix them:
+- **RAII violations**: Remove Initialize/Shutdown methods, use constructor/destructor
+- **C++ casts**: Replace with C-style casts `(Type)value`
+- **Namespaces**: Remove namespace declarations (global namespace only)
+- **Unchecked API calls**: Add `Try |` pattern for D3D12/NVENC calls
+
+**Build Failures:**
+Check the build logs and ensure:
+- All source files are listed in CMakeLists.txt
+- Code compiles with `/W4` warning level
+- No missing headers or undefined references
+
 ## Documentation
 - **README.md**: Must reflect current architecture, module structure, and data flow
 - **Update README** when adding, removing, or restructuring modules

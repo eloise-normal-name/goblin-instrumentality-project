@@ -142,15 +142,114 @@ Potential additions to CI workflows:
 
 ### Format Check Fails
 
-- Run `clang-format -i <file>` locally
-- Commit formatted files
-- Ensure `.clang-format` config is up to date
+The Format Check workflow validates that all code follows the `.clang-format` configuration. When it fails:
+
+**Step 1: Identify which files need formatting**
+Check the workflow logs to see the list of files that need formatting.
+
+**Step 2: Format the files locally**
+```bash
+# Format all source files (run from repository root)
+clang-format -i src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h
+
+# Or format specific files listed in the error
+clang-format -i src/encoder/nvenc_config.cpp
+clang-format -i src/graphics/d3d12_device.cpp
+# ... etc
+
+# Or use a loop for multiple files
+for file in src/**/*.cpp src/**/*.h src/**/*.ixx include/*.h; do clang-format -i "$file"; done
+```
+
+**Step 3: Verify formatting**
+```bash
+# Check that formatting matches
+clang-format src/main.cpp | diff src/main.cpp -
+```
+
+**Step 4: Commit and push**
+```bash
+git add .
+git commit -m "Format code according to .clang-format"
+git push
+```
+
+**Note:** `nvEncodeAPI.h` is excluded from formatting checks as it's a 3rd party vendor header.
 
 ### Code Quality Check Fails
 
-- Review specific pattern violations in workflow log
-- Consult `.github/copilot-instructions.md` for project conventions
-- Fix violations or discuss exceptions if necessary
+Review the workflow logs for specific violations and fix them according to project conventions:
+
+**RAII Violations:**
+- Error: Found `Initialize()` or `Shutdown()` methods
+- Fix: Move resource allocation to constructors and cleanup to destructors
+- Example:
+  ```cpp
+  // ✗ Wrong
+  class Resource {
+      void Initialize() { /* allocate */ }
+      void Shutdown() { /* cleanup */ }
+  };
+  
+  // ✓ Correct
+  class Resource {
+      Resource() { /* allocate */ }
+      ~Resource() { /* cleanup */ }
+  };
+  ```
+
+**C++ Cast Violations:**
+- Error: Found `static_cast`, `dynamic_cast`, `reinterpret_cast`, or `const_cast`
+- Fix: Replace with C-style casts: `(Type)value`
+- Example:
+  ```cpp
+  // ✗ Wrong
+  auto ptr = static_cast<ID3D12Device*>(device);
+  
+  // ✓ Correct
+  auto ptr = (ID3D12Device*)device;
+  ```
+
+**Namespace Violations:**
+- Error: Found `namespace` declarations
+- Fix: Remove namespaces, use global namespace only
+- Example:
+  ```cpp
+  // ✗ Wrong
+  namespace MyNamespace {
+      void Function() {}
+  }
+  
+  // ✓ Correct
+  void Function() {}
+  ```
+
+**Unchecked API Calls:**
+- Warning: D3D12/NVENC calls without `Try |` pattern
+- Fix: Use `Try |` for all API calls that return HRESULT
+- Example:
+  ```cpp
+  // ✗ Wrong
+  device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+  
+  // ✓ Correct
+  Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+  ```
+
+### Build Failures
+
+Check the build logs and ensure:
+- All source files are listed in `CMakeLists.txt`
+- Code compiles with `/W4` warning level
+- No missing headers or undefined references
+- Static linking flags are correct (`/MT` runtime)
+
+### Accessing Workflow Logs
+
+1. Go to the PR on GitHub
+2. Scroll to the bottom and click "Details" next to the failed check
+3. Click on the failed job to see detailed logs
+4. Review error messages and file paths
 
 ## References
 
