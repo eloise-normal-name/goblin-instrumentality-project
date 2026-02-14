@@ -8,6 +8,7 @@ The repository includes GitHub Actions workflows that automate build validation 
 
 1. **Build and Validate** - Automated build verification and metrics tracking
 2. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
+3. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
 
 ## Workflow
 
@@ -64,6 +65,42 @@ The repository includes GitHub Actions workflows that automate build validation 
 
 **Note**: The workflow will attempt to create the label if it doesn't exist. If label creation fails, it will log a warning but continue processing.
 
+### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
+
+**Triggers**: 
+- `workflow_run` event when "Build and Validate" workflow is requested
+- Only for pull request events
+
+**Purpose**: Enables trusted bot accounts to trigger PR review workflows without manual approval.
+
+**Actions**:
+- Detects when a workflow run is triggered by a pull request
+- Checks if the actor is a trusted bot (copilot, copilot-swe-agent[bot], github-actions[bot])
+- Automatically approves the workflow run using GitHub API
+- Logs approval status for auditing
+
+**Benefits**:
+- Allows bot-created PRs to run automated checks immediately
+- Eliminates manual approval requirement for trusted bots
+- Improves automation workflow efficiency
+- Maintains security by restricting auto-approval to trusted bots only
+
+**Security**:
+- Only trusted bot accounts are approved (explicitly listed)
+- Uses `actions: write` permission to approve runs
+- Logs all approval actions for audit trail
+- Gracefully handles approval errors (e.g., already approved)
+
+**Trusted Bots**:
+- `copilot` - GitHub Copilot agent
+- `copilot-swe-agent[bot]` - Copilot SWE agent
+- `github-actions[bot]` - GitHub Actions bot
+
+**Maintenance**:
+- When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
+- When adding trusted bot accounts, update the `trustedBots` array in the workflow script
+- Review workflow logs periodically to ensure approvals are working as expected
+
 ## CI vs Local Development
 
 | Aspect | Local Development | GitHub Actions CI |
@@ -107,6 +144,25 @@ Potential additions to CI workflows:
 - Release automation
 
 ## Troubleshooting
+
+### Auto-Approve Bot Workflow Runs
+
+**Adding New Workflows:**
+If a new workflow that runs on PRs is added:
+- Update `.github/workflows/auto-approve-bot-workflows.yml` to include the new workflow name in the `workflows:` list
+- This ensures trusted bots can trigger the new workflow without manual approval
+
+**Approval Not Working:**
+If bot PRs still require manual approval:
+- Verify the bot account is in the `trustedBots` list in the workflow
+- Check that the workflow has `actions: write` permission
+- Review workflow logs for API errors or permission issues
+- Ensure the actor login matches exactly (e.g., `copilot` vs `copilot[bot]`)
+
+**Debugging:**
+- Check the workflow run logs in the Actions tab
+- Look for "Check if run is from trusted bot" step output
+- Verify the actor and fork status are correctly detected
 
 ### Monitor Assigned Issues Workflow
 
