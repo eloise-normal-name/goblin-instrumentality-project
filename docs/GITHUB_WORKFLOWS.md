@@ -8,6 +8,7 @@ The repository includes GitHub Actions workflows that automate build validation 
 
 1. **Build and Validate** - Automated build verification and metrics tracking
 2. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
+3. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
 
 ## Workflow
 
@@ -63,6 +64,37 @@ The repository includes GitHub Actions workflows that automate build validation 
 - `needs-bot-attention`: Automatically added when user comments or updates are detected on bot-assigned issues. This label helps maintainers and bots identify which issues require action.
 
 **Note**: The workflow will attempt to create the label if it doesn't exist. If label creation fails, it will log a warning but continue processing.
+
+### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
+
+**Triggers**: 
+- `workflow_run` event when "Build and Validate" workflow is requested
+- Only for pull request events
+
+**Purpose**: Enables trusted bot accounts to trigger PR review workflows without manual approval.
+
+**Actions**:
+- Detects when a workflow run is triggered by a pull request
+- Checks if the actor is a trusted bot (copilot, copilot-swe-agent[bot], github-actions[bot])
+- Automatically approves the workflow run using GitHub API
+- Logs approval status for auditing
+
+**Benefits**:
+- Allows bot-created PRs to run automated checks immediately
+- Eliminates manual approval requirement for trusted bots
+- Improves automation workflow efficiency
+- Maintains security by restricting auto-approval to trusted bots only
+
+**Security**:
+- Only trusted bot accounts are approved (explicitly listed)
+- Uses `actions: write` permission to approve runs
+- Logs all approval actions for audit trail
+- Gracefully handles approval errors (e.g., already approved)
+
+**Trusted Bots**:
+- `copilot` - GitHub Copilot agent
+- `copilot-swe-agent[bot]` - Copilot SWE agent
+- `github-actions[bot]` - GitHub Actions bot
 
 ## CI vs Local Development
 
