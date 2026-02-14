@@ -4,9 +4,10 @@ This document describes the GitHub workflow that automates build validation and 
 
 ## Overview
 
-The repository includes a GitHub Actions workflow that automates the build process previously done manually:
+The repository includes GitHub Actions workflows that automate build validation and issue monitoring:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
+2. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
 
 ## Workflow
 
@@ -34,6 +35,30 @@ The repository includes a GitHub Actions workflow that automates the build proce
 - Counts changed files since base
 - Builds MinSizeRel configuration
 - Reports binary size and source line count
+
+### Monitor Assigned Issues (`.github/workflows/monitor-assigned-issues.yml`)
+
+**Triggers**: 
+- Scheduled every 6 hours
+- Manual dispatch
+- Issue assignment, edits, labeling
+- Issue comments
+
+**Purpose**: Ensures bot-assigned issues receive timely attention when users provide updates.
+
+**Actions**:
+- Monitors issues assigned to bot accounts (copilot, copilot-swe-agent[bot], github-actions[bot])
+- Detects new user comments since last bot interaction
+- Checks for issue updates (edits, labels, status changes)
+- Adds `needs-bot-attention` label when user input is detected
+- Runs scheduled checks to catch any missed updates
+
+**Benefits**:
+- Prevents issues from going stale when users provide additional information
+- Ensures bot-assigned work items are prioritized when users engage
+- Provides visibility into which issues need bot attention via labels
+- Automated monitoring reduces manual tracking overhead
+
 ## CI vs Local Development
 
 | Aspect | Local Development | GitHub Actions CI |

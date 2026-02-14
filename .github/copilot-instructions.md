@@ -92,8 +92,10 @@
 - **Automated Validation**: All PRs automatically run GitHub workflows that:
   - Build all configurations (Debug, Release, MinSizeRel)
   - Track binary size and source line metrics
+  - Monitor bot-assigned issues for updates
 - **Status Checks**: PR merge requires all workflow checks to pass
 - **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
+- **Issue Monitoring**: Bot-assigned issues are automatically monitored for user updates and labeled with `needs-bot-attention` when action is required
 - **Documentation**: See `docs/GITHUB_WORKFLOWS.md` for detailed workflow information
 
 ### Fixing Workflow Check Failures
