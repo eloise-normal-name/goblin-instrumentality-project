@@ -42,3 +42,6 @@ coverage.xml
 
 # Crash diagnostics
 crash_log.txt
+
+# CodeQL analysis artifacts
+_codeql_detected_source_root
