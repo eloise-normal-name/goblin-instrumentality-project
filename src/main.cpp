@@ -1,4 +1,7 @@
+// clang-format off
 #include <windows.h>
+#include <shellapi.h>
+// clang-format on
 
 import App;
 
@@ -54,13 +57,33 @@ HWND CreateAppWindow(HINSTANCE instance, int show_command) {
 	return hwnd;
 }
 
+bool IsHeadlessMode() {
+	int argc  = 0;
+	auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	if (!argv)
+		return false;
+
+	bool is_headless = false;
+
+	for (auto i = 1; i < argc; ++i) {
+		if (wcscmp(argv[i], L"--headless") == 0) {
+			is_headless = true;
+			break;
+		}
+	}
+
+	LocalFree(argv);
+	return is_headless;
+}
+
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	try {
-		auto hwnd = CreateAppWindow(instance, show_command);
+		auto headless = IsHeadlessMode();
+		auto hwnd	  = CreateAppWindow(instance, headless ? SW_HIDE : show_command);
 		if (!hwnd)
 			return 1;
 
-		return App{hwnd}.Run();
+		return App{hwnd, headless}.Run();
 	} catch (...) {
 		return 1;
 	}

@@ -35,7 +35,8 @@
   - Multi-statement blocks require braces
   - **CI validates formatting** on all PRs via `.github/workflows/format-check.yml`
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
-- **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, smart pointer declarations from `make_unique`, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
+- **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
+- **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project
   - **CI checks for C++ casts** and flags them as errors
 - **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls (**CI warns on unchecked calls**):

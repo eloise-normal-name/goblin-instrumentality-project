@@ -16,6 +16,10 @@ module;
 
 export module App;
 
+static GpuAdapterType SelectAdapterType(bool headless) {
+	return headless ? GpuAdapterType::WARP : GpuAdapterType::Hardware;
+}
+
 constexpr auto BUFFER_COUNT			= 3u;
 constexpr auto RENDER_TARGET_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 
@@ -36,6 +40,7 @@ export class App {
 												  .width		= 512,
 												  .height		= 512};
 	HWND hwnd;
+	bool headless;
 	D3D12Device device;
 	NvencSession nvenc_session{*&device.device};
 	NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};
@@ -53,7 +58,8 @@ export class App {
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
-	App(HWND hwnd) : hwnd(hwnd) {
+	App(HWND hwnd, bool headless)
+		: hwnd(hwnd), headless(headless), device(SelectAdapterType(headless)) {
 		InitializeGraphics();
 	}
 
@@ -70,8 +76,8 @@ export class App {
 
 		while (running) {
 			frame_debug_log.BeginFrame(frames_submitted);
-			auto wait_result
-				= WaitForFrame(frame_debug_log, fence_handles.data(), back_buffer_index, msg);
+			auto wait_result = WaitForFrame(frame_debug_log, fence_handles.data(),
+											back_buffer_index, msg, headless);
 			if (wait_result == FrameWaitResult::Quit)
 				break;
 			if (wait_result == FrameWaitResult::Continue)
@@ -94,6 +100,9 @@ export class App {
 							  new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
+
+			if (headless && frames_submitted >= 300)
+				break;
 		}
 		return 0;
 	}
@@ -182,9 +191,17 @@ export class App {
 	}
 
 	static FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log, HANDLE* fence_handles,
-										uint32_t back_buffer_index, MSG& msg) {
+										uint32_t back_buffer_index, MSG& msg, bool headless) {
 		frame_debug_log.Line() << "MsgWaitForMultipleObjects..." << "\n";
 		auto wait_handle = fence_handles[back_buffer_index];
+
+		if (headless) {
+			auto wait_result = WaitForSingleObject(wait_handle, INFINITE);
+			frame_debug_log.Line() << "Wait result of fence_handles[" << back_buffer_index
+								   << "]: " << wait_result << "\n";
+			return FrameWaitResult::Proceed;
+		}
+
 		auto wait_result = MsgWaitForMultipleObjects(1, &wait_handle, FALSE, INFINITE, QS_ALLINPUT);
 		frame_debug_log.Line() << "Wait result of fence_handles[" << back_buffer_index
 							   << "]: " << wait_result << "\n";
