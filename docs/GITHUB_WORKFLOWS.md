@@ -1,14 +1,15 @@
 # GitHub Workflows - Automated Build Validation
 
-This document describes the GitHub workflow that automates build validation and metrics tracking for the Goblin Instrumentality Project.
+This document describes the GitHub workflows that automate build validation, code formatting, and metrics tracking for the Goblin Instrumentality Project.
 
 ## Overview
 
-The repository includes a GitHub Actions workflow that automates the build process previously done manually:
+The repository includes the following GitHub Actions workflows:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
+2. **Format Check** - Code formatting validation using clang-format
 
-## Workflow
+## Workflows
 
 ### Build and Validate (`.github/workflows/build-and-validate.yml`)
 
@@ -34,6 +35,31 @@ The repository includes a GitHub Actions workflow that automates the build proce
 - Counts changed files since base
 - Builds MinSizeRel configuration
 - Reports binary size and source line count
+
+### Format Check (`.github/workflows/format-check.yml`)
+
+**Triggers**: PRs modifying source files, .clang-format, or the workflow itself; manual dispatch
+
+**Purpose**: Ensures all C++ code follows the project's formatting standards defined in `.clang-format`.
+
+**Actions**:
+- Verifies `.clang-format` exists in repository root
+- Displays first 5 lines of `.clang-format` for debugging
+- Checks all C++ files (`.cpp`, `.ixx`, `.h`, `.hpp`) in `src/` and `include/` directories
+- Excludes all vendor files in `include/external/` directory
+- Uses `clang-format -style=file --dry-run --Werror` to validate formatting
+- Reports files needing formatting with clear fix instructions
+
+**Benefits**:
+- Enforces consistent code style across the project
+- Catches formatting violations before code review
+- Provides actionable error messages with fix commands
+- Prevents formatting debates during PR reviews
+- Ensures `.clang-format` configuration is respected
+
+**Exclusions**:
+- All files in `include/external/` - Third-party vendor code
+
 ## CI vs Local Development
 
 | Aspect | Local Development | GitHub Actions CI |
@@ -47,13 +73,13 @@ The repository includes a GitHub Actions workflow that automates the build proce
 ### For Contributors
 
 1. **Before committing**: Build locally to catch errors early
-2. **Before pushing**: Ensure code compiles with `/W4` warning level
-3. **After creating PR**: Wait for CI checks to complete
+2. **Before pushing**: Ensure code compiles with `/W4` warning level and is properly formatted (use `clang-format -style=file --dry-run --Werror <file>` to check)
+3. **After creating PR**: Wait for CI checks to complete (build and format validation)
 4. **If checks fail**: Review GitHub Actions logs, fix issues, push updates
 
 ### For Maintainers
 
-1. **Merge requirements**: Build workflow check must pass
+1. **Merge requirements**: Both build and format-check workflows must pass
 2. **Binary size**: Monitor trends in build summaries
 3. **Metrics tracking**: Use workflow outputs to track project size over time
 
@@ -68,7 +94,6 @@ The workflow uses:
 ## Future Enhancements
 
 Potential additions to CI workflows:
-- Code formatting validation
 - Code quality checks (RAII, casts, namespaces)
 - Static analysis (if external tools are approved)
 - Performance benchmarking (track frame time)
@@ -91,6 +116,33 @@ Check the build logs and ensure:
 - Code compiles with `/W4` warning level
 - No missing headers or undefined references
 - Static linking flags are correct (`/MT` runtime)
+
+### Format Check Failures
+
+If the format-check workflow reports files need formatting:
+
+1. **Fix a single file**:
+   ```powershell
+   clang-format -i -style=file path/to/file.cpp
+   ```
+
+2. **Fix all files at once**:
+   ```powershell
+   Get-ChildItem -Recurse -Include *.cpp,*.ixx,*.h,*.hpp -Path src,include | ForEach-Object { clang-format -i -style=file $_.FullName }
+   ```
+
+3. **Verify formatting locally** (before committing):
+   ```powershell
+   clang-format -style=file --dry-run --Werror path/to/file.cpp
+   ```
+
+4. **Commit and push** the formatting changes
+
+**Notes**:
+- The workflow uses the `.clang-format` file from the repository root
+- All files in `include/external/` are automatically excluded (vendor code)
+- Format your code before pushing to avoid CI failures
+- VS Code formats on save if configured correctly (Ctrl+Shift+I)
 
 ### Accessing Workflow Logs
 

@@ -30,7 +30,7 @@
 - **Command Lists**: Command lists and allocators must be generated once and reused efficiently (via Reset); do not recreate them every frame
 - **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
   - When providing code in chat, format it as if `.clang-format` has been applied to avoid bad formatting being written
-  - Do not format `include/nvenc/nvEncodeAPI.h` since it is a 3rd party vendor header
+  - Do not format files in `include/external/` since they are 3rd party vendor headers
   - Single-statement conditionals (`if`, `for`, `while`) should omit braces
   - Multi-statement blocks require braces
   - **CI validates formatting** on all PRs via `.github/workflows/format-check.yml`
@@ -103,6 +103,13 @@ Check the build logs and ensure:
 - All source files are listed in CMakeLists.txt
 - Code compiles with `/W4` warning level
 - No missing headers or undefined references
+
+**Format Check Failures:**
+If the format-check workflow fails:
+- Run `clang-format -i -style=file <file>` on each file listed in the error
+- Or format all files at once: `Get-ChildItem -Recurse -Include *.cpp,*.ixx,*.h,*.hpp -Path src,include | ForEach-Object { clang-format -i -style=file $_.FullName }`
+- Commit and push the formatting changes
+- Note: `nvEncodeAPI.h` is excluded from formatting checks (vendor file)
 
 ## Documentation
 - **README.md**: Must reflect current architecture, module structure, and data flow

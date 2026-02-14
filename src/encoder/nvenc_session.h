@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nvenc/nvEncodeAPI.h>
+#include <external/nvenc/nvEncodeAPI.h>
 #include <windows.h>
 
 #include <cstdint>
