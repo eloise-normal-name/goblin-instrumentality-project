@@ -86,8 +86,19 @@
 - **Architecture diagrams**: Keep ASCII diagrams in README current with implementation
 - **Known errors**: Add reproducible, solvable command/build errors to `docs/KNOWN_ERRORS.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
 
+## Pull Request Guidelines
+- **Size**: Keep PRs focused and reasonably sized for effective review
+- **Large Features**: Split into multiple sequential PRs by logical separation:
+  - **Infrastructure first** - configs, docs, scripts (no code changes)
+  - **Core implementation** - minimal code changes for feature functionality
+  - **Enhancements** - logging, diagnostics, optimizations
+- **Dependencies**: Later PRs build on earlier ones; merge in order
+- **Example**: See `docs/PR_SPLIT_GUIDE.md` for code coverage feature split pattern
+- **Benefits**: Easier review, isolated testing, incremental integration, clearer history
+
 ## Future Considerations
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
 - Maintain static linking preference for portable deployment
+
 
