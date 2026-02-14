@@ -2,7 +2,7 @@
 
 #include "try.h"
 
-D3D12Device::D3D12Device(AdapterType adapter_type) {
+D3D12Device::D3D12Device(GpuAdapterType adapter_type) {
 	create_device(adapter_type);
 	create_command_queue();
 }
@@ -10,7 +10,7 @@ D3D12Device::D3D12Device(AdapterType adapter_type) {
 D3D12Device::~D3D12Device() {
 }
 
-void D3D12Device::create_device(AdapterType adapter_type) {
+void D3D12Device::create_device(GpuAdapterType adapter_type) {
 	auto dxgi_factory_flags = 0u;
 
 #if defined(_DEBUG)
@@ -25,7 +25,7 @@ void D3D12Device::create_device(AdapterType adapter_type) {
 
 	ComPtr<IDXGIAdapter1> selected_adapter;
 
-	if (adapter_type == AdapterType::WARP) {
+	if (adapter_type == GpuAdapterType::WARP) {
 		Try | factory->EnumWarpAdapter(IID_PPV_ARGS(&selected_adapter));
 	} else {
 		DXGI_ADAPTER_DESC1 desc;

@@ -16,8 +16,8 @@ module;
 
 export module App;
 
-static AdapterType SelectAdapterType(bool headless) {
-	return headless ? AdapterType::WARP : AdapterType::Hardware;
+static GpuAdapterType SelectAdapterType(bool headless) {
+	return headless ? GpuAdapterType::WARP : GpuAdapterType::Hardware;
 }
 
 constexpr auto BUFFER_COUNT			= 3u;
