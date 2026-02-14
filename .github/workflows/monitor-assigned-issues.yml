@@ -48,7 +48,7 @@ jobs:
               });
               
               const recentComments = comments.data.slice(-5);
-              const lastBotComment = recentComments.reverse().find(c => 
+              const lastBotComment = recentComments.slice().reverse().find(c => 
                 botUsers.some(bot => c.user.login.includes(bot))
               );
               
@@ -101,16 +101,17 @@ jobs:
                       per_page: 100
                     });
                     
-                    const lastBotComment = comments.data.reverse().find(c => 
+                    const allComments = comments.data;
+                    const lastBotComment = allComments.slice().reverse().find(c => 
                       botUsers.some(bot => c.user.login.includes(bot))
                     );
                     
                     const userCommentsSinceBot = lastBotComment 
-                      ? comments.data.filter(c => 
+                      ? allComments.filter(c => 
                           new Date(c.created_at) > new Date(lastBotComment.created_at) &&
                           !botUsers.some(bot => c.user.login.includes(bot))
                         )
-                      : comments.data.filter(c => !botUsers.some(bot => c.user.login.includes(bot)));
+                      : allComments.filter(c => !botUsers.some(bot => c.user.login.includes(bot)));
                     
                     // Check if issue has been updated since last bot interaction
                     const issueUpdated = new Date(issue.updated_at);
@@ -141,3 +142,4 @@ jobs:
                 }
               }
             }
+
