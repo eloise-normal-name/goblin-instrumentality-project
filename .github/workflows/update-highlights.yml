@@ -27,8 +27,9 @@ jobs:
     - name: Build MinSizeRel
       run: cmake --build build --config MinSizeRel
       
-    - name: Install cloc
-      run: choco install cloc -y
+    - name: Download cloc
+      run: Invoke-WebRequest -Uri "https://github.com/AlDanial/cloc/releases/download/v1.98/cloc-1.98.exe" -OutFile cloc.exe
+      shell: pwsh
       
     - name: Collect metrics and update highlights
       run: |
@@ -40,7 +41,7 @@ jobs:
         $binarySizeFormatted = "{0:N0}" -f $binarySize
         
         # Get source line count
-        $clocOutput = cloc src --json | Out-String
+        $clocOutput = ./cloc.exe src --json | Out-String
         $clocJson = $clocOutput | ConvertFrom-Json
         $sourceLines = $clocJson.SUM.code
         
