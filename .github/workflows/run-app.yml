@@ -91,7 +91,7 @@ jobs:
           Get-Content "debug_output.txt" -Head 20 >> $env:GITHUB_STEP_SUMMARY
           Write-Output '```' >> $env:GITHUB_STEP_SUMMARY
           Write-Output "" >> $env:GITHUB_STEP_SUMMARY
-          Write-Output "Full logs available in artifacts: [app-execution-logs](../artifacts)" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "Download the **app-execution-logs** artifact from this workflow run for full logs." >> $env:GITHUB_STEP_SUMMARY
         } else {
           Write-Output "**Debug Output**: Not found" >> $env:GITHUB_STEP_SUMMARY
         }
