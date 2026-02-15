@@ -124,12 +124,18 @@ jobs:
         # Get the current branch name (main or develop)
         $sourceBranch = $env:GITHUB_REF_NAME
         
+        # Fetch gh-pages branch if it exists remotely
+        git fetch origin gh-pages:gh-pages 2>$null
+        
         # Switch to gh-pages branch
         git checkout gh-pages 2>$null
         if ($LASTEXITCODE -ne 0) {
-          # Branch doesn't exist locally, create it
+          # Branch doesn't exist, create it
+          Write-Output "Creating new gh-pages branch"
           git checkout --orphan gh-pages
           git rm -rf . 2>$null
+        } else {
+          Write-Output "Using existing gh-pages branch"
         }
         
         # Copy the updated highlights file from the source branch
