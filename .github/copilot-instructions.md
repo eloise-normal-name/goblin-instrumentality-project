@@ -5,6 +5,7 @@
 - Project overview: `README.md`
 - CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
 - Known errors & fixes: `docs/copilot-known-errors.md`
+- Copilot setup validation: `.github/COPILOT_SETUP_VALIDATION.md`
 - Custom agent guide: `.github/prompts/README.md`
 - NVENC integration guide: `.github/prompts/snippets/nvenc-guide.md`
 - Refactor highlights: `refactor-highlights.html`
@@ -93,6 +94,11 @@
 - **Extension**: Use CMake Tools extension
 - **Build**: F7 or Status Bar "Build" button
 - **Run/Debug**: F5 or Ctrl+F5
+  - Debug configurations available in `.vscode/launch.json`:
+    - **Debug (Normal)**: Run Debug build with window visible
+    - **Debug (Headless)**: Run Debug build with `--headless` flag (no window, exits after 300 frames)
+    - **Release (Normal)**: Run Release build with window visible
+    - **Release (Headless)**: Run Release build with `--headless` flag
 - **Format**: Ctrl+Shift+I (format document on save is automatic; CI validates on PR)
 - **Terminal**: Configure to use Command Prompt (`cmd`) instead of PowerShell for better compatibility with CMake and build tools
   - Command Palette → "Terminal: Select Default Shell" → Choose "Command Prompt"
@@ -130,9 +136,9 @@ Check the build logs and ensure:
 - **Known errors**: Add reproducible, solvable command/build errors to `docs/copilot-known-errors.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
 
 ## Custom Agents
-- **Location**: Specialized agents in `.github/prompts/` directory
-- **Usage Guide**: See `.github/prompts/README.md` for complete usage recommendations
-- **Available Agents**:
+- **Agent Profiles** (`.github/agents/`): GitHub Copilot agent profiles (`.agent.md` files) that appear in the Copilot agent dropdown for code review and assistance
+  - `gobbo` - Elegant C++ code reviewer focused on concise, readable code
+- **Prompt Agents** (`.github/prompts/`): Specialized task agents (`.prompt.md` files) for specific development workflows
   - `check-raii` - Verify RAII patterns and resource management
   - `review-error-handling` - Check Try | usage and error handling
   - `review-frame-logic` - Review D3D12 frame submission and synchronization
@@ -140,6 +146,7 @@ Check the build logs and ensure:
   - `explain-nvenc` - Explain NVENC API usage and integration
   - `refactor-extract` - Assist with extracting cohesive functionality
   - `stage-changelist` - Review changes and prepare commits with highlights
+- **Usage Guide**: See `.github/prompts/README.md` for complete usage recommendations
 - **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
 - **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
 
