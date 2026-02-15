@@ -5,7 +5,7 @@
 - Project overview: `README.md`
 - CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
 - Known errors & fixes: `docs/copilot-known-errors.md`
-- Copilot setup validation: `.github/COPILOT_SETUP_VALIDATION.md`
+- Copilot setup validation: [.github/COPILOT_SETUP_VALIDATION.md](.github/COPILOT_SETUP_VALIDATION.md)
 - Custom agent guide: `.github/prompts/README.md`
 - NVENC integration guide: `.github/prompts/snippets/nvenc-guide.md`
 - Refactor highlights: `refactor-highlights.html`

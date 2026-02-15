@@ -25,11 +25,9 @@ void D3D12Device::CreateDevice() {
 
 	ComPtr<IDXGIAdapter1> selected_adapter;
 
-	DXGI_ADAPTER_DESC1 desc;
 	Try
 		| factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
 											  IID_PPV_ARGS(&selected_adapter))
-		| selected_adapter->GetDesc1(&desc)
 		| D3D12CreateDevice(*&selected_adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 }
 
