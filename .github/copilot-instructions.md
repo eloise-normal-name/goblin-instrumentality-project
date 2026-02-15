@@ -46,6 +46,13 @@
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
+- **Member Initialization**: Keep member initialization logic as inline member declarations (e.g., `Member member{...};` in the class body), **not** in the constructor initializer list. This keeps initialization close to the data and maintains readability.
+  - **Do not refactor inline member initializers into constructor initializer lists** unless the user explicitly requests that exact change.
+  - Constructor initializer lists may only wire constructor parameters to simple scalar/data members (e.g., `width(width)`, `headless(headless)`) and perform straightforward constructor calls.
+  - If a member currently has a meaningful inline initializer, keep it inline during refactors; changing location of initialization logic is considered a behavior/style regression.
+  - Avoid embedding large designated-initializer objects or multi-line config construction in constructor initializer lists.
+  - Example (✓ correct): keep `NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};` in the member declaration, and keep constructor list focused on simple parameter plumbing.
+  - Example (✗ wrong): moving `EncoderConfig{ .width = width, .height = height, ... }` into the constructor initializer list during unrelated refactors.
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project (**CI enforced**)
 - **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
