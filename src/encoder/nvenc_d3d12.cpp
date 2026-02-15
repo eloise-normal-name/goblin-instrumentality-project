@@ -88,9 +88,7 @@ void NvencD3D12::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) 
 	bitstream_buffers.push_back({
 		.resource		= buffer,
 		.registered_ptr = register_params.registeredResource,
-		.mapped_ptr		= nullptr,
 		.size			= size,
-		.is_mapped		= false,
 	});
 }
 
