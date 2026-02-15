@@ -9,7 +9,9 @@ The repository includes GitHub Actions workflows that automate build validation:
 1. **Build and Validate** - Automated build verification and metrics tracking
 2. **Run App and Log Output** - Executes the app in headless mode and captures output logs
 3. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
-4. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+4. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
+5. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+6. **Docs Index Check** - Ensures docs are indexed in README
 
 **Note**: This repository does not use GitHub Issues for task tracking.
 
@@ -127,6 +129,22 @@ The repository includes GitHub Actions workflows that automate build validation:
 - When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
 - When adding trusted bot accounts, update the `trustedBots` array in the workflow script
 - Review workflow logs periodically to ensure approvals are working as expected
+
+### Docs Index Check (`.github/workflows/docs-index-check.yml`)
+
+**Triggers**: Push, PRs, manual dispatch
+
+**Purpose**: Prevents orphaned documentation by ensuring every file in `docs/` is linked from `README.md`.
+
+**Actions**:
+- Scans `docs/` for markdown files
+- Parses `README.md` for markdown links
+- Fails if any `docs/*.md` file is not referenced in the README documentation index
+
+**Benefits**:
+- Keeps documentation easy to discover
+- Flags unused or forgotten docs early in CI
+- Encourages a single, maintained index of docs
 
 ## CI vs Local Development
 

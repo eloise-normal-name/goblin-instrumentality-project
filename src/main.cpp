@@ -5,9 +5,6 @@
 
 import App;
 
-constexpr auto WINDOW_WIDTH	 = 512u;
-constexpr auto WINDOW_HEIGHT = 512u;
-
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"GoblinStreamWindow";
 constexpr wchar_t WINDOW_TITLE[]	  = L"Goblin Stream";
 
@@ -26,7 +23,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 	return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
-HWND CreateAppWindow(HINSTANCE instance, int show_command) {
+HWND CreateAppWindow(HINSTANCE instance, int show_command, unsigned int width,
+					 unsigned int height) {
 	WNDCLASS wc{
 		.lpfnWndProc   = WindowProc,
 		.hInstance	   = instance,
@@ -40,8 +38,8 @@ HWND CreateAppWindow(HINSTANCE instance, int show_command) {
 	RECT rect{
 		.left	= 0,
 		.top	= 0,
-		.right	= (LONG)WINDOW_WIDTH,
-		.bottom = (LONG)WINDOW_HEIGHT,
+		.right	= (LONG)width,
+		.bottom = (LONG)height,
 	};
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -78,12 +76,15 @@ bool IsHeadlessMode() {
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	try {
-		auto headless = IsHeadlessMode();
-		auto hwnd = CreateAppWindow(instance, headless ? SW_HIDE : show_command);
+		auto headless	   = IsHeadlessMode();
+		auto window_width  = 512u;
+		auto window_height = 512u;
+		auto hwnd = CreateAppWindow(instance, headless ? SW_HIDE : show_command, window_width,
+									window_height);
 		if (!hwnd)
 			return 1;
 
-		return App{hwnd, headless}.Run();
+		return App{hwnd, headless, window_width, window_height}.Run();
 	} catch (...) {
 		return 1;
 	}
