@@ -133,6 +133,20 @@ Check the build logs and ensure:
 - Code compiles with `/W4` warning level
 - No missing headers or undefined references
 
+## Git Merge and PR Management
+- **Review Changes Before Merging**: Always carefully review git changes when merging a PR
+  - Use `git --no-pager status` and `git --no-pager diff` to inspect pending changes
+  - Consider the impact of changes on existing code and functionality
+  - Check for merge conflicts and resolve them thoughtfully
+- **Integration Considerations**: When merging changes from main into a feature branch:
+  - Review the commit history to understand what changed
+  - Test the integrated code after merging
+  - Verify that CI workflows still pass after integration
+- **Code Review**: Before finalizing a PR merge:
+  - Ensure all CI checks pass
+  - Review the cumulative diff of all changes
+  - Verify changes align with project conventions and standards
+
 ## Documentation
 - **README.md**: Create/update as needed; must reflect current architecture, module structure, and data flow
 - **Update README** when adding, removing, or restructuring modules
