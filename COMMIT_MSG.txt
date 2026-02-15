@@ -1,5 +1,0 @@
-refactor(app): consolidate frame loop and swap-chain ownership
-
-- replace frame coordinator path with app module runtime flow
-- simplify D3D12 swap-chain RTV ownership and initialization
-- add frame debug logging and refresh review highlights/metrics

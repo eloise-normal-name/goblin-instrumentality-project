@@ -2,7 +2,6 @@
 bin/
 obj/
 build/
-_codeql_build_dir/
 
 # Visual Studio
 .vs/
