@@ -46,7 +46,7 @@ jobs:
       shell: pwsh
       
     - name: Download cloc
-      run: Invoke-WebRequest -Uri "https://github.com/AlDanial/cloc/releases/latest/download/cloc-1.98.exe" -OutFile cloc.exe
+      run: Invoke-WebRequest -Uri "https://github.com/AlDanial/cloc/releases/download/v1.98/cloc-1.98.exe" -OutFile cloc.exe
       shell: pwsh
       
     - name: Count source lines
