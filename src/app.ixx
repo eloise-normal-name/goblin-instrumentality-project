@@ -54,6 +54,7 @@ export class App {
 	uint32_t frame_width;
 	uint32_t frame_height;
 	std::vector<ComPtr<ID3D12Resource>> offscreen_render_targets;
+	std::vector<ComPtr<ID3D12Resource>> output_buffers;
 	std::vector<FrameResources> frames;
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
@@ -88,10 +89,17 @@ export class App {
 				continue;
 			LogFenceStatus(frame_debug_log, completed_value, present_result);
 
+			nvenc_d3d12.MapInputTexture(back_buffer_index, completed_value);
+			nvenc_d3d12.MapOutputBuffer(back_buffer_index);
+
 			ExecuteFrame(*&device.command_queue, frames[back_buffer_index], present_result);
 			auto signaled_value = frames_submitted + 1;
 			present_result		= PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 												   frames[back_buffer_index], signaled_value);
+
+			nvenc_d3d12.UnmapInputTexture(back_buffer_index);
+			nvenc_d3d12.UnmapOutputBuffer(back_buffer_index);
+
 			if (!HandlePresentResult(frame_debug_log, present_result))
 				continue;
 
@@ -169,14 +177,6 @@ export class App {
 		}
 
 		command_list->Close();
-	}
-
-	void MapEncodeTextureStub(uint32_t index, uint64_t fence_wait_value) {
-		nvenc_d3d12.MapInputTexture(index, fence_wait_value);
-	}
-
-	void UnmapEncodeTextureStub(uint32_t index) {
-		nvenc_d3d12.UnmapInputTexture(index);
 	}
 
 	static bool ProcessWindowMessages(MSG& msg) {
@@ -348,6 +348,29 @@ void App::InitializeGraphics() {
 		nvenc_d3d12.RegisterTexture(*&offscreen_render_targets[i], frame_width, frame_height,
 									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
 									*&frames[i].fence);
+	}
+
+	output_buffers.resize(BUFFER_COUNT);
+	uint32_t output_buffer_size = frame_width * frame_height;
+	D3D12_HEAP_PROPERTIES readback_heap_props{
+		.Type = D3D12_HEAP_TYPE_READBACK,
+	};
+	D3D12_RESOURCE_DESC buffer_desc{
+		.Dimension		  = D3D12_RESOURCE_DIMENSION_BUFFER,
+		.Width			  = output_buffer_size,
+		.Height			  = 1,
+		.DepthOrArraySize = 1,
+		.MipLevels		  = 1,
+		.SampleDesc		  = {.Count = 1},
+		.Layout			  = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+	};
+
+	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+		Try
+			| device.device->CreateCommittedResource(&readback_heap_props, D3D12_HEAP_FLAG_NONE,
+													 &buffer_desc, D3D12_RESOURCE_STATE_COPY_DEST,
+													 nullptr, IID_PPV_ARGS(&output_buffers[i]));
+		nvenc_d3d12.RegisterBitstreamBuffer(*&output_buffers[i], output_buffer_size);
 	}
 
 	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
