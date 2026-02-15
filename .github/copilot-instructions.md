@@ -93,6 +93,9 @@
 - **Extension**: Use CMake Tools extension
 - **Build**: F7 or Status Bar "Build" button
 - **Run/Debug**: F5 or Ctrl+F5
+  - Debug configurations available in `.vscode/launch.json`:
+    - **Debug (Normal)**: Run with window visible
+    - **Debug (Headless)**: Run with `--headless` flag (no window, exits after 300 frames)
 - **Format**: Ctrl+Shift+I (format document on save is automatic; CI validates on PR)
 - **Terminal**: Configure to use Command Prompt (`cmd`) instead of PowerShell for better compatibility with CMake and build tools
   - Command Palette → "Terminal: Select Default Shell" → Choose "Command Prompt"
