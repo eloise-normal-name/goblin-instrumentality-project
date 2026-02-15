@@ -168,14 +168,14 @@ void NvencD3D12::MapOutputBuffer(uint32_t index) {
 
 	void* encoder = session.encoder;
 
-	NV_ENC_MAP_INPUT_RESOURCE map_params{
+	NV_ENC_MAP_INPUT_RESOURCE output_map_params{
 		.version			= NV_ENC_MAP_INPUT_RESOURCE_VER,
 		.registeredResource = buffer.registered_ptr,
 	};
 
-	Try | session.nvEncMapInputResource(encoder, &map_params);
+	Try | session.nvEncMapInputResource(encoder, &output_map_params);
 
-	buffer.mapped_ptr = map_params.mappedResource;
+	buffer.mapped_ptr = output_map_params.mappedResource;
 	buffer.is_mapped  = true;
 }
 
