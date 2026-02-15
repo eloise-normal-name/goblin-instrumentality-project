@@ -2,15 +2,15 @@
 
 #include "try.h"
 
-D3D12Device::D3D12Device(GpuAdapterType adapter_type) {
-	CreateDevice(adapter_type);
+D3D12Device::D3D12Device() {
+	CreateDevice();
 	CreateCommandQueue();
 }
 
 D3D12Device::~D3D12Device() {
 }
 
-void D3D12Device::CreateDevice(GpuAdapterType adapter_type) {
+void D3D12Device::CreateDevice() {
 	auto dxgi_factory_flags = 0u;
 
 #if defined(_DEBUG)
@@ -25,20 +25,12 @@ void D3D12Device::CreateDevice(GpuAdapterType adapter_type) {
 
 	ComPtr<IDXGIAdapter1> selected_adapter;
 
-	if (adapter_type == GpuAdapterType::WARP) {
-		Try | factory->EnumWarpAdapter(IID_PPV_ARGS(&selected_adapter));
-	} else {
-		DXGI_ADAPTER_DESC1 desc;
-		Try
-			| factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-												  IID_PPV_ARGS(&selected_adapter))
-			| selected_adapter->GetDesc1(&desc);
-
-		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			throw;
-	}
-
-	Try | D3D12CreateDevice(*&selected_adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
+	DXGI_ADAPTER_DESC1 desc;
+	Try
+		| factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+											  IID_PPV_ARGS(&selected_adapter))
+		| selected_adapter->GetDesc1(&desc)
+		| D3D12CreateDevice(*&selected_adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 }
 
 void D3D12Device::CreateCommandQueue() {
