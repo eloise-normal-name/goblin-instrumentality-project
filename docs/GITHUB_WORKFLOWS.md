@@ -63,7 +63,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Captures runtime output for debugging
 - Detects initialization or encoding errors early
 - Provides downloadable logs for detailed analysis
-- Uses headless mode (WARP adapter) for reliable CI execution
+- Uses hardware GPU adapter (not WARP) to test with actual NVENC encoder
 - Continues on error to ensure logs are always captured
 
 ### Update Highlights Page (`.github/workflows/update-highlights.yml`)
@@ -197,8 +197,9 @@ If the app fails to run in the workflow:
 - Check the "Run app in headless mode" step output for exit codes
 - Review uploaded `debug_output.txt` artifact for error messages
 - Verify the app builds successfully (check "Build MinSizeRel" step)
-- Ensure headless mode is compatible with WARP adapter (no hardware GPU required)
-- Check for DirectX 12 initialization failures in logs
+- Ensure GitHub Actions runner has hardware GPU support (uses Hardware adapter, not WARP)
+- Check for DirectX 12 or NVENC initialization failures in logs
+- Verify NVIDIA GPU drivers are available on the runner
 
 **Missing debug_output.txt:**
 If the debug output file is not created:
