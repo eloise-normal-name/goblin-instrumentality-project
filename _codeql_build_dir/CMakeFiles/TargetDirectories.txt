@@ -1,0 +1,3 @@
+/home/runner/work/goblin-instrumentality-project/goblin-instrumentality-project/_codeql_build_dir/CMakeFiles/goblin-stream.dir
+/home/runner/work/goblin-instrumentality-project/goblin-instrumentality-project/_codeql_build_dir/CMakeFiles/edit_cache.dir
+/home/runner/work/goblin-instrumentality-project/goblin-instrumentality-project/_codeql_build_dir/CMakeFiles/rebuild_cache.dir
