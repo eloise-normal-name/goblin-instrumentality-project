@@ -1,2 +1,5 @@
+dir: cannot access '/S': No such file or directory
 dir: cannot access '/B': No such file or directory
-dir: cannot access 'GEMINI.md': No such file or directory
+dir: cannot access 'src*.ixx': No such file or directory
+dir: cannot access 'src*.cpp': No such file or directory
+dir: cannot access 'include*.h': No such file or directory
