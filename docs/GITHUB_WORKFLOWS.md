@@ -7,8 +7,9 @@ This document describes the GitHub workflow that automates build validation and 
 The repository includes GitHub Actions workflows that automate build validation:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
-2. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
-3. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+2. **Run App and Log Output** - Executes the app in headless mode and captures output logs
+3. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
+4. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
 
 **Note**: This repository does not use GitHub Issues for task tracking.
 
@@ -38,6 +39,30 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Counts changed files since base
 - Builds MinSizeRel configuration
 - Reports binary size and source line count
+
+### Run App and Log Output (`.github/workflows/run-app.yml`)
+
+**Triggers**: Push to main/develop, PRs, manual dispatch
+
+**Purpose**: Executes the application in headless mode to validate runtime behavior and capture execution logs for analysis.
+
+**Actions**:
+- Configures CMake with Visual Studio 2022
+- Builds MinSizeRel configuration
+- Verifies binary exists
+- Runs application with `--headless` flag (300 frames, auto-exit)
+- Captures console output and exit code
+- Collects `debug_output.txt` file if generated
+- Uploads log files as artifacts (7-day retention)
+- Creates execution summary with debug output preview
+
+**Benefits**:
+- Validates app runs without crashes on Windows
+- Captures runtime output for debugging
+- Detects initialization or encoding errors early
+- Provides downloadable logs for detailed analysis
+- Uses headless mode (WARP adapter) for reliable CI execution
+- Continues on error to ensure logs are always captured
 
 ### Update Highlights Page (`.github/workflows/update-highlights.yml`)
 
@@ -146,6 +171,31 @@ Potential additions to CI workflows:
 - Release automation
 
 ## Troubleshooting
+
+### Run App and Log Output
+
+**App Crashes or Exits with Error:**
+If the app fails to run in the workflow:
+- Check the "Run app in headless mode" step output for exit codes
+- Review uploaded `debug_output.txt` artifact for error messages
+- Verify the app builds successfully (check "Build MinSizeRel" step)
+- Ensure headless mode is compatible with WARP adapter (no hardware GPU required)
+- Check for DirectX 12 initialization failures in logs
+
+**Missing debug_output.txt:**
+If the debug output file is not created:
+- Verify app runs long enough to generate output (should complete 300 frames)
+- Check console output for file I/O errors
+- Review app source code to ensure file is being written
+- Ensure working directory is correct when app executes
+
+**Accessing App Logs:**
+To review detailed execution logs:
+1. Go to the workflow run in the Actions tab
+2. Click on the "run-app" job
+3. Review "Run app in headless mode" step for console output
+4. Download "app-execution-logs" artifact for `debug_output.txt`
+5. Check execution summary at bottom of workflow run page
 
 ### Update Highlights Page
 

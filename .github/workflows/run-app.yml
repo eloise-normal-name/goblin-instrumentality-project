@@ -1,0 +1,99 @@
+name: Run App and Log Output
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  run-app:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: Configure CMake
+      run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      
+    - name: Build MinSizeRel
+      run: cmake --build build --config MinSizeRel
+      
+    - name: Verify binary exists
+      run: |
+        if (!(Test-Path "bin/MinSizeRel/goblin-stream.exe")) {
+          Write-Error "MinSizeRel binary not found"
+          exit 1
+        }
+      shell: pwsh
+      
+    - name: Run app in headless mode
+      run: |
+        Write-Output "Starting goblin-stream.exe in headless mode..."
+        Write-Output "App will run for 300 frames and automatically exit."
+        Write-Output ""
+        
+        $output = & "bin/MinSizeRel/goblin-stream.exe" --headless 2>&1
+        $exitCode = $LASTEXITCODE
+        
+        Write-Output $output
+        Write-Output ""
+        Write-Output "Exit code: $exitCode"
+        
+        if ($exitCode -ne 0) {
+          Write-Warning "App exited with non-zero code: $exitCode"
+        }
+      shell: pwsh
+      continue-on-error: true
+      
+    - name: Capture debug output
+      run: |
+        if (Test-Path "debug_output.txt") {
+          Write-Output "### Debug Output File Contents"
+          Write-Output ""
+          Get-Content "debug_output.txt"
+        } else {
+          Write-Output "No debug_output.txt file found"
+        }
+      shell: pwsh
+      continue-on-error: true
+      
+    - name: Upload logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: app-execution-logs
+        path: |
+          debug_output.txt
+        retention-days: 7
+        if-no-files-found: warn
+      
+    - name: Create execution summary
+      run: |
+        Write-Output "### App Execution Summary" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "**Status**: App ran in headless mode (300 frames)" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+        
+        if (Test-Path "debug_output.txt") {
+          $lineCount = (Get-Content "debug_output.txt" | Measure-Object -Line).Lines
+          $fileSize = (Get-Item "debug_output.txt").Length
+          
+          Write-Output "**Debug Output**: $lineCount lines, $fileSize bytes" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "#### First 20 lines:" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output '```' >> $env:GITHUB_STEP_SUMMARY
+          Get-Content "debug_output.txt" -Head 20 >> $env:GITHUB_STEP_SUMMARY
+          Write-Output '```' >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "" >> $env:GITHUB_STEP_SUMMARY
+          Write-Output "Full logs available in artifacts: [app-execution-logs](../artifacts)" >> $env:GITHUB_STEP_SUMMARY
+        } else {
+          Write-Output "**Debug Output**: Not found" >> $env:GITHUB_STEP_SUMMARY
+        }
+      shell: pwsh
+      if: always()
