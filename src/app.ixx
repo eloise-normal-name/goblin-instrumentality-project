@@ -16,10 +16,6 @@ module;
 
 export module App;
 
-static GpuAdapterType SelectAdapterType(bool headless) {
-	return GpuAdapterType::Hardware;
-}
-
 constexpr auto BUFFER_COUNT			= 3u;
 constexpr auto RENDER_TARGET_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 
@@ -63,7 +59,7 @@ export class App {
 		, headless(headless)
 		, width(width)
 		, height(height)
-		, device(SelectAdapterType(headless)) {
+		, device(GpuAdapterType::Hardware) {
 		InitializeGraphics();
 	}
 

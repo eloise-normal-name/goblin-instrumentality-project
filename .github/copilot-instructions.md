@@ -68,6 +68,10 @@
   - Example (✓ correct): `WNDCLASSEXW wc{.cbSize = sizeof(WNDCLASSEXW), .style = CS_HREDRAW};`
   - Example (✗ wrong): `WNDCLASSEXW wc{}; wc.cbSize = ...; wc.style = ...;`
   - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity
+- **Code Simplification**: Remove trivial wrapper functions and stubs when making changes
+  - If a function becomes a simple pass-through or constant return after refactoring, inline it directly at call sites
+  - Example: Remove `static Type Select(bool) { return Type::Value; }` and use `Type::Value` directly
+  - Keep code minimal and direct; avoid unnecessary indirection
 
 ## Prohibited Patterns
 **CI automatically checks for these patterns** via `.github/workflows/code-quality.yml`:
