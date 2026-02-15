@@ -22,7 +22,9 @@ struct RegisteredTexture {
 struct BitstreamBuffer {
 	ID3D12Resource* resource;
 	NV_ENC_REGISTERED_PTR registered_ptr;
+	NV_ENC_OUTPUT_PTR mapped_ptr;
 	uint32_t size;
+	bool is_mapped;
 };
 
 class NvencD3D12 {
@@ -41,6 +43,9 @@ class NvencD3D12 {
 
 	void MapInputTexture(uint32_t index, uint64_t fence_wait_value);
 	void UnmapInputTexture(uint32_t index);
+
+	void MapOutputBuffer(uint32_t index);
+	void UnmapOutputBuffer(uint32_t index);
 
 	NvencSession& session;
 	std::vector<RegisteredTexture> textures;

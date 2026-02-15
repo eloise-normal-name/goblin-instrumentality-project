@@ -88,7 +88,9 @@ void NvencD3D12::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) 
 	bitstream_buffers.push_back({
 		.resource		= buffer,
 		.registered_ptr = register_params.registeredResource,
+		.mapped_ptr		= nullptr,
 		.size			= size,
+		.is_mapped		= false,
 	});
 }
 
@@ -97,6 +99,9 @@ void NvencD3D12::UnregisterBitstreamBuffer(uint32_t index) {
 		return;
 
 	BitstreamBuffer& buffer = bitstream_buffers[index];
+	if (buffer.is_mapped)
+		UnmapOutputBuffer(index);
+
 	if (buffer.registered_ptr) {
 		void* encoder = session.encoder;
 		Try | session.nvEncUnregisterResource(encoder, buffer.registered_ptr);
@@ -149,6 +154,45 @@ void NvencD3D12::UnmapInputTexture(uint32_t index) {
 
 	texture.mapped_ptr = nullptr;
 	texture.is_mapped  = false;
+}
+
+void NvencD3D12::MapOutputBuffer(uint32_t index) {
+	if (index >= bitstream_buffers.size())
+		throw;
+
+	BitstreamBuffer& buffer = bitstream_buffers[index];
+	if (buffer.is_mapped)
+		return;
+	if (!buffer.registered_ptr)
+		throw;
+
+	void* encoder = session.encoder;
+
+	NV_ENC_MAP_INPUT_RESOURCE map_params{
+		.version			= NV_ENC_MAP_INPUT_RESOURCE_VER,
+		.registeredResource = buffer.registered_ptr,
+	};
+
+	Try | session.nvEncMapInputResource(encoder, &map_params);
+
+	buffer.mapped_ptr = map_params.mappedResource;
+	buffer.is_mapped  = true;
+}
+
+void NvencD3D12::UnmapOutputBuffer(uint32_t index) {
+	if (index >= bitstream_buffers.size())
+		throw;
+
+	BitstreamBuffer& buffer = bitstream_buffers[index];
+	if (!buffer.is_mapped)
+		return;
+
+	void* encoder = session.encoder;
+
+	Try | session.nvEncUnmapInputResource(encoder, buffer.mapped_ptr);
+
+	buffer.mapped_ptr = nullptr;
+	buffer.is_mapped  = false;
 }
 
 NV_ENC_BUFFER_FORMAT DxgiFormatToNvencFormat(DXGI_FORMAT format) {
