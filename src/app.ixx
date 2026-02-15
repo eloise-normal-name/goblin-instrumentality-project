@@ -345,10 +345,10 @@ void App::InitializeGraphics() {
 											  offscreen_rtv);
 	}
 
-	for (auto j = 0u; j < BUFFER_COUNT; ++j) {
-		nvenc_d3d12.RegisterTexture(*&frames.offscreen_render_targets[j], width, height,
+	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
+		nvenc_d3d12.RegisterTexture(*&frames.offscreen_render_targets[i], width, height,
 									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
-									*&frames.fences[j]);
+									*&frames.fences[i]);
 	}
 
 	output_buffers.resize(BUFFER_COUNT);
@@ -374,13 +374,13 @@ void App::InitializeGraphics() {
 		nvenc_d3d12.RegisterBitstreamBuffer(*&output_buffers[i], output_buffer_size);
 	}
 
-	for (auto k = 0u; k < BUFFER_COUNT; ++k) {
+	for (auto i = 0u; i < BUFFER_COUNT; ++i) {
 		D3D12_CPU_DESCRIPTOR_HANDLE cmd_rtv
 			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
-		cmd_rtv.ptr += k * offscreen_rtv_descriptor_size;
+		cmd_rtv.ptr += i * offscreen_rtv_descriptor_size;
 
-		frames.command_lists[k]->Reset(*&allocator, nullptr);
-		RecordCommandList(*&frames.command_lists[k], cmd_rtv, *&frames.offscreen_render_targets[k],
-						  *&swap_chain.render_targets[k], k);
+		frames.command_lists[i]->Reset(*&allocator, nullptr);
+		RecordCommandList(*&frames.command_lists[i], cmd_rtv, *&frames.offscreen_render_targets[i],
+						  *&swap_chain.render_targets[i], i);
 	}
 }
