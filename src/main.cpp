@@ -26,7 +26,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpara
 	return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
-HWND CreateAppWindow(HINSTANCE instance, int show_command) {
+HWND CreateAppWindow(HINSTANCE instance, int show_command, unsigned int width,
+					 unsigned int height) {
 	WNDCLASS wc{
 		.lpfnWndProc   = WindowProc,
 		.hInstance	   = instance,
@@ -40,8 +41,8 @@ HWND CreateAppWindow(HINSTANCE instance, int show_command) {
 	RECT rect{
 		.left	= 0,
 		.top	= 0,
-		.right	= (LONG)WINDOW_WIDTH,
-		.bottom = (LONG)WINDOW_HEIGHT,
+		.right	= (LONG)width,
+		.bottom = (LONG)height,
 	};
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -78,13 +79,13 @@ bool IsHeadlessMode() {
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, PSTR, int show_command) {
 	try {
-		auto headless = true;
-		// IsHeadlessMode();
-		auto hwnd = CreateAppWindow(instance, headless ? SW_HIDE : show_command);
+		auto headless = IsHeadlessMode();
+		auto hwnd	  = CreateAppWindow(instance, headless ? SW_HIDE : show_command, WINDOW_WIDTH,
+										WINDOW_HEIGHT);
 		if (!hwnd)
 			return 1;
 
-		return App{hwnd, headless}.Run();
+		return App{hwnd, headless, WINDOW_WIDTH, WINDOW_HEIGHT}.Run();
 	} catch (...) {
 		return 1;
 	}
