@@ -55,11 +55,7 @@ export class App {
 
   public:
 	App(HWND hwnd, bool headless, uint32_t width, uint32_t height)
-		: hwnd(hwnd)
-		, headless(headless)
-		, width(width)
-		, height(height)
-		, device(GpuAdapterType::Hardware) {
+		: hwnd(hwnd), headless(headless), width(width), height(height) {
 		InitializeGraphics();
 	}
 

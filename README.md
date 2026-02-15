@@ -28,7 +28,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Documentation Index
 
 - Project instructions: `.github/copilot-instructions.md`
-- CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
-- Known errors & fixes: `docs/copilot-known-errors.md`
+- CI workflows & troubleshooting: [docs/GITHUB_WORKFLOWS.md](docs/GITHUB_WORKFLOWS.md)
+- Known errors & fixes: [docs/copilot-known-errors.md](docs/copilot-known-errors.md)
 - Custom agent guide: `.github/prompts/README.md`
 - Refactor highlights: `refactor-highlights.html`

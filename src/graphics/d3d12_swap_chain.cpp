@@ -38,8 +38,8 @@ void D3D12SwapChain::CreateSwapChain(HWND window_handle) {
 	Try
 		| factory->CreateSwapChainForHwnd(command_queue, window_handle, &sc_desc, nullptr, nullptr,
 										  &sc1)
-		| factory->MakeWindowAssociation(window_handle, DXGI_MWA_NO_ALT_ENTER);
-	Try | sc1->QueryInterface(IID_PPV_ARGS(&swap_chain));
+		| factory->MakeWindowAssociation(window_handle, DXGI_MWA_NO_ALT_ENTER)
+		| sc1->QueryInterface(IID_PPV_ARGS(&swap_chain));
 }
 
 void D3D12SwapChain::AcquireBackBuffers() {
