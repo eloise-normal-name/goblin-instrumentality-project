@@ -8,7 +8,7 @@
 - Copilot setup validation: `.github/COPILOT_SETUP_VALIDATION.md`
 - Custom agent guide: `.github/prompts/README.md`
 - NVENC integration guide: `.github/prompts/snippets/nvenc-guide.md`
-- Refactor highlights: `refactor-highlights.html`
+- Refactor highlights: `refactor-highlights.html` (published to `gh-pages` branch)
 
 ## Technology Stack
 
