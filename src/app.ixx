@@ -351,7 +351,7 @@ void App::InitializeGraphics() {
 	}
 
 	output_buffers.resize(BUFFER_COUNT);
-	uint32_t output_buffer_size = frame_width * frame_height;
+	uint32_t output_buffer_size = frame_width * frame_height * 2;
 	D3D12_HEAP_PROPERTIES readback_heap_props{
 		.Type = D3D12_HEAP_TYPE_READBACK,
 	};
