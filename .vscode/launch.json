@@ -10,8 +10,7 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
-			"console": "externalTerminal",
-			"preLaunchTask": ""
+			"console": "externalTerminal"
 		},
 		{
 			"name": "Debug (Headless)",
@@ -22,8 +21,29 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
-			"console": "externalTerminal",
-			"preLaunchTask": ""
+			"console": "externalTerminal"
+		},
+		{
+			"name": "Release (Normal)",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/bin/Release/goblin-stream.exe",
+			"args": [],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"console": "externalTerminal"
+		},
+		{
+			"name": "Release (Headless)",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/bin/Release/goblin-stream.exe",
+			"args": ["--headless"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"console": "externalTerminal"
 		}
 	]
 }

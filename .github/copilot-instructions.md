@@ -94,8 +94,10 @@
 - **Build**: F7 or Status Bar "Build" button
 - **Run/Debug**: F5 or Ctrl+F5
   - Debug configurations available in `.vscode/launch.json`:
-    - **Debug (Normal)**: Run with window visible
-    - **Debug (Headless)**: Run with `--headless` flag (no window, exits after 300 frames)
+    - **Debug (Normal)**: Run Debug build with window visible
+    - **Debug (Headless)**: Run Debug build with `--headless` flag (no window, exits after 300 frames)
+    - **Release (Normal)**: Run Release build with window visible
+    - **Release (Headless)**: Run Release build with `--headless` flag
 - **Format**: Ctrl+Shift+I (format document on save is automatic; CI validates on PR)
 - **Terminal**: Configure to use Command Prompt (`cmd`) instead of PowerShell for better compatibility with CMake and build tools
   - Command Palette → "Terminal: Select Default Shell" → Choose "Command Prompt"
