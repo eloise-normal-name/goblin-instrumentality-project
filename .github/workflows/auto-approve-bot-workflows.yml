@@ -5,6 +5,7 @@ on:
     types: [requested]
     workflows:
       - "Build and Validate"
+      - "Run App and Log Output"
 
 permissions:
   actions: write

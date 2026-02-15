@@ -1,5 +1,15 @@
 # Goblin Instrumentality Project - Instructions
 
+## Quick Links (Table of Contents)
+
+- Project overview: `README.md`
+- CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
+- Known errors & fixes: `docs/copilot-known-errors.md`
+- Copilot setup validation: `.github/COPILOT_SETUP_VALIDATION.md`
+- Custom agent guide: `.github/prompts/README.md`
+- NVENC integration guide: `.github/prompts/snippets/nvenc-guide.md`
+- Refactor highlights: `refactor-highlights.html`
+
 ## Technology Stack
 
 > Formal project name: Goblin Instrumentality Project (formerly Goblin Stream)
@@ -37,6 +47,13 @@
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
+- **Member Initialization**: Keep member initialization logic as inline member declarations (e.g., `Member member{...};` in the class body), **not** in the constructor initializer list. This keeps initialization close to the data and maintains readability.
+  - **Do not refactor inline member initializers into constructor initializer lists** unless the user explicitly requests that exact change.
+  - Constructor initializer lists may only wire constructor parameters to simple scalar/data members (e.g., `width(width)`, `headless(headless)`) and perform straightforward constructor calls.
+  - If a member currently has a meaningful inline initializer, keep it inline during refactors; changing location of initialization logic is considered a behavior/style regression.
+  - Avoid embedding large designated-initializer objects or multi-line config construction in constructor initializer lists.
+  - Example (✓ correct): keep `NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};` in the member declaration, and keep constructor list focused on simple parameter plumbing.
+  - Example (✗ wrong): moving `EncoderConfig{ .width = width, .height = height, ... }` into the constructor initializer list during unrelated refactors.
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project (**CI enforced**)
 - **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
@@ -52,6 +69,10 @@
   - Example (✓ correct): `WNDCLASSEXW wc{.cbSize = sizeof(WNDCLASSEXW), .style = CS_HREDRAW};`
   - Example (✗ wrong): `WNDCLASSEXW wc{}; wc.cbSize = ...; wc.style = ...;`
   - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity
+- **Code Simplification**: Remove trivial wrapper functions and stubs when making changes
+  - If a function becomes a simple pass-through or constant return after refactoring, inline it directly at call sites
+  - Example: Remove `static Type Select(bool) { return Type::Value; }` and use `Type::Value` directly
+  - Keep code minimal and direct; avoid unnecessary indirection
 
 ## Prohibited Patterns
 **CI automatically checks for these patterns** via `.github/workflows/code-quality.yml`:
@@ -77,6 +98,11 @@
 - **Extension**: Use CMake Tools extension
 - **Build**: F7 or Status Bar "Build" button
 - **Run/Debug**: F5 or Ctrl+F5
+  - Debug configurations available in `.vscode/launch.json`:
+    - **Debug (Normal)**: Run Debug build with window visible
+    - **Debug (Headless)**: Run Debug build with `--headless` flag (no window, exits after 300 frames)
+    - **Release (Normal)**: Run Release build with window visible
+    - **Release (Headless)**: Run Release build with `--headless` flag
 - **Format**: Ctrl+Shift+I (format document on save is automatic; CI validates on PR)
 - **Terminal**: Configure to use Command Prompt (`cmd`) instead of PowerShell for better compatibility with CMake and build tools
   - Command Palette → "Terminal: Select Default Shell" → Choose "Command Prompt"
@@ -87,7 +113,7 @@
   - ✅ `Get-Item`, `dir`, `Get-ChildItem` (Windows/PowerShell)
   - ❌ `ls -la`, `ls -l` (Unix/Linux syntax)
   - ❌ `cat`, `grep`, `find`, `head`, `tail` (Unix tools — do not use `head` or `tail`)
-- **Use quoted paths** when they contain spaces: `"C:\Program Files\..."`
+- **Use quoted paths** when they contain spaces: `"C:\\Program Files\\..."`
 - **CMake commands**: Always specify generator explicitly: `-G "Visual Studio 18 2026" -A x64`
 
 ## Continuous Integration
@@ -108,15 +134,15 @@ Check the build logs and ensure:
 - No missing headers or undefined references
 
 ## Documentation
-- **README.md**: Must reflect current architecture, module structure, and data flow
+- **README.md**: Create/update as needed; must reflect current architecture, module structure, and data flow
 - **Update README** when adding, removing, or restructuring modules
 - **Architecture diagrams**: Keep ASCII diagrams in README current with implementation
-- **Known errors**: Add reproducible, solvable command/build errors to `docs/KNOWN_ERRORS.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
+- **Known errors**: Add reproducible, solvable command/build errors to `docs/copilot-known-errors.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
 
 ## Custom Agents
-- **Location**: Specialized agents in `.github/prompts/` directory
-- **Usage Guide**: See `.github/prompts/README.md` for complete usage recommendations
-- **Available Agents**:
+- **Agent Profiles** (`.github/agents/`): GitHub Copilot agent profiles (`.agent.md` files) that appear in the Copilot agent dropdown for code review and assistance
+  - `gobbo` - Elegant C++ code reviewer focused on concise, readable code
+- **Prompt Agents** (`.github/prompts/`): Specialized task agents (`.prompt.md` files) for specific development workflows
   - `check-raii` - Verify RAII patterns and resource management
   - `review-error-handling` - Check Try | usage and error handling
   - `review-frame-logic` - Review D3D12 frame submission and synchronization
@@ -124,6 +150,7 @@ Check the build logs and ensure:
   - `explain-nvenc` - Explain NVENC API usage and integration
   - `refactor-extract` - Assist with extracting cohesive functionality
   - `stage-changelist` - Review changes and prepare commits with highlights
+- **Usage Guide**: See `.github/prompts/README.md` for complete usage recommendations
 - **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
 - **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
 
