@@ -27,8 +27,9 @@ jobs:
     - name: Build MinSizeRel
       run: cmake --build build --config MinSizeRel
       
-    - name: Install cloc
-      run: choco install cloc -y
+    - name: Download cloc
+      run: Invoke-WebRequest -Uri "https://github.com/AlDanial/cloc/releases/download/v1.98/cloc-1.98.exe" -OutFile cloc.exe
+      shell: pwsh
       
     - name: Collect metrics and update highlights
       run: |
@@ -40,7 +41,7 @@ jobs:
         $binarySizeFormatted = "{0:N0}" -f $binarySize
         
         # Get source line count
-        $clocOutput = cloc src --json | Out-String
+        $clocOutput = ./cloc.exe src --json | Out-String
         $clocJson = $clocOutput | ConvertFrom-Json
         $sourceLines = $clocJson.SUM.code
         
@@ -119,8 +120,28 @@ jobs:
         Write-Output "Highlights page updated successfully"
       shell: pwsh
       
-    - name: Commit and push changes
+    - name: Commit and push changes to gh-pages
       run: |
+        # Get the current branch name (main or develop)
+        $sourceBranch = $env:GITHUB_REF_NAME
+        
+        # Fetch gh-pages branch if it exists remotely
+        git fetch origin gh-pages:gh-pages 2>$null
+        
+        # Switch to gh-pages branch
+        git checkout gh-pages 2>$null
+        if ($LASTEXITCODE -ne 0) {
+          # Branch doesn't exist, create it
+          Write-Output "Creating new gh-pages branch"
+          git checkout --orphan gh-pages
+          git rm -rf . 2>$null
+        } else {
+          Write-Output "Using existing gh-pages branch"
+        }
+        
+        # Copy the updated highlights file from the source branch
+        git checkout $sourceBranch -- refactor-highlights.html
+        
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add refactor-highlights.html
@@ -129,9 +150,9 @@ jobs:
         git diff --staged --quiet
         if ($LASTEXITCODE -ne 0) {
           # There are changes, commit them
-          git commit -m "Update highlights page with latest metrics"
-          git push
-          Write-Output "Changes committed and pushed"
+          git commit -m "Update highlights page with latest metrics from $sourceBranch"
+          git push origin gh-pages
+          Write-Output "Changes committed and pushed to gh-pages branch"
         } else {
           Write-Output "No changes to commit"
         }

@@ -15,7 +15,7 @@ enum class GpuAdapterType {
 
 class D3D12Device {
   public:
-	D3D12Device(GpuAdapterType adapter_type = GpuAdapterType::Hardware);
+	D3D12Device();
 	~D3D12Device();
 
 	ComPtr<IDXGIFactory7> factory;
@@ -24,6 +24,6 @@ class D3D12Device {
 	ComPtr<ID3D12CommandQueue> command_queue;
 
   private:
-	void CreateDevice(GpuAdapterType adapter_type);
+	void CreateDevice();
 	void CreateCommandQueue();
 };

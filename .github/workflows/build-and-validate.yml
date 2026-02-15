@@ -45,12 +45,13 @@ jobs:
         Write-Output "BINARY_SIZE=$size" >> $env:GITHUB_ENV
       shell: pwsh
       
-    - name: Install cloc
-      run: choco install cloc -y
+    - name: Download cloc
+      run: Invoke-WebRequest -Uri "https://github.com/AlDanial/cloc/releases/download/v1.98/cloc-1.98.exe" -OutFile cloc.exe
+      shell: pwsh
       
     - name: Count source lines
       run: |
-        $output = cloc src --json
+        $output = ./cloc.exe src --json
         $json = $output | ConvertFrom-Json
         $total = $json.SUM.code
         Write-Output "Total source lines in /src: $total"
