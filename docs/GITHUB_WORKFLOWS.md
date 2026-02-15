@@ -83,7 +83,7 @@ The repository includes GitHub Actions workflows that automate build validation:
   - Binary size
   - Source lines count
   - Build log entry with timestamp
-- Commits and pushes updated highlights page
+- Commits and pushes updated highlights page to `gh-pages` branch
 
 **Benefits**:
 - Eliminates manual updates to highlights page
@@ -91,8 +91,9 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Maintains historical build log automatically
 - Provides automated documentation of project progress
 - Runs only on main/develop to avoid noise from feature branches
+- Publishes to dedicated `gh-pages` branch, keeping main branch clean
 
-**Note**: The workflow has `contents: write` permission to commit changes back to the repository. It will only commit if there are actual changes to the highlights file.
+**Note**: The workflow has `contents: write` permission to commit changes to the `gh-pages` branch. It will only commit if there are actual changes to the highlights file. The `gh-pages` branch is automatically created if it doesn't exist.
 
 ### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
 
@@ -224,6 +225,7 @@ If the highlights page doesn't update after a push to main/develop:
 - Verify the workflow has `contents: write` permission
 - Ensure the build completed successfully (workflow builds MinSizeRel)
 - Check if there are actual changes to commit (workflow skips commit if no changes)
+- Verify the `gh-pages` branch exists and is accessible
 
 **Metric Extraction Failures:**
 If metrics are incorrect or missing:
@@ -233,10 +235,11 @@ If metrics are incorrect or missing:
 - Ensure git history is available (workflow uses `fetch-depth: 0`)
 
 **Commit/Push Failures:**
-If the workflow fails to commit changes:
+If the workflow fails to commit changes to `gh-pages`:
 - Verify git configuration is set correctly (user.name, user.email)
 - Check for permission errors in workflow logs
-- Ensure no protected branch rules prevent bot commits
+- Ensure no protected branch rules prevent bot commits to `gh-pages`
+- Confirm the `gh-pages` branch was created successfully (first run creates it)
 - Review if there are merge conflicts (shouldn't happen on main)
 
 ### Auto-Approve Bot Workflow Runs
