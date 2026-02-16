@@ -105,7 +105,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 **Actions**:
 - Detects when a workflow run is triggered by a pull request
-- Checks if the actor is a trusted bot (copilot, copilot-swe-agent[bot], github-actions[bot])
+- Checks if the actor is a trusted bot (Copilot, github-actions[bot])
 - Automatically approves the workflow run using GitHub API
 - Logs approval status for auditing
 
@@ -122,8 +122,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Gracefully handles approval errors (e.g., already approved)
 
 **Trusted Bots**:
-- `copilot` - GitHub Copilot agent
-- `copilot-swe-agent[bot]` - Copilot SWE agent
+- `Copilot` - GitHub Copilot SWE agent
 - `github-actions[bot]` - GitHub Actions bot
 
 **Maintenance**:

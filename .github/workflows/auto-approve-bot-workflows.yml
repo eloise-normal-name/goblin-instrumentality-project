@@ -23,6 +23,7 @@ jobs:
         with:
           script: |
             const trustedBots = [
+              'Copilot',
               'copilot[bot]',
               'copilot-swe-agent[bot]',
               'github-actions[bot]'
