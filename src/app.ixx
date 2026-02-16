@@ -5,6 +5,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "encoder/frame_encoder.h"
 #include "encoder/nvenc_config.h"
 #include "encoder/nvenc_d3d12.h"
 #include "encoder/nvenc_session.h"
@@ -50,6 +51,8 @@ export class App {
 	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
 	uint32_t offscreen_rtv_descriptor_size;
 	FrameResources frames{*&device.device, BUFFER_COUNT, width, height, RENDER_TARGET_FORMAT};
+	FrameEncoder frame_encoder{nvenc_session, nvenc_d3d12, *&device.device, BUFFER_COUNT,
+							   width * height * 4 * 2, "output.h264"};
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
@@ -86,17 +89,21 @@ export class App {
 				continue;
 			LogFenceStatus(frame_debug_log, completed_value, present_result);
 
+			auto signaled_value = frames_submitted + 1;
+
 			if (SUCCEEDED(present_result)) {
 				auto command_list_to_execute
 					= (ID3D12CommandList*)frames.command_lists[back_buffer_index];
 				device.command_queue->ExecuteCommandLists(1, &command_list_to_execute);
 			}
 
-			auto signaled_value = frames_submitted + 1;
-			present_result		= PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
-												   frames, back_buffer_index, signaled_value);
+			present_result = PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
+											  frames, back_buffer_index, signaled_value);
 			if (!HandlePresentResult(frame_debug_log, present_result))
 				continue;
+
+			if (SUCCEEDED(present_result))
+				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
 			LogFrameSubmitted(frame_debug_log, back_buffer_index, signaled_value,
