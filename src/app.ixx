@@ -86,7 +86,12 @@ export class App {
 				continue;
 			LogFenceStatus(frame_debug_log, completed_value, present_result);
 
-			ExecuteFrame(*&device.command_queue, frames, back_buffer_index, present_result);
+			if (SUCCEEDED(present_result)) {
+				auto command_list_to_execute
+					= (ID3D12CommandList*)*&frames.command_lists[back_buffer_index];
+				device.command_queue->ExecuteCommandLists(1, &command_list_to_execute);
+			}
+
 			auto signaled_value = frames_submitted + 1;
 			present_result		= PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 												   frames, back_buffer_index, signaled_value);
@@ -103,7 +108,8 @@ export class App {
 				break;
 		}
 
-		WaitForMultipleObjects(frames.fences.size(), frames.fence_events.data(), TRUE, INFINITE);
+		WaitForMultipleObjects((DWORD)frames.fences.size(), frames.fence_events.data(), TRUE,
+							   INFINITE);
 		return 0;
 	}
 
@@ -202,17 +208,6 @@ export class App {
 							   HRESULT present_result) {
 		frame_debug_log.Line() << "Completed Value: " << completed_value << "\n";
 		frame_debug_log.Line() << "present_result: " << present_result << "\n";
-	}
-
-	static void ExecuteFrame(ID3D12CommandQueue* command_queue, FrameResources& frame_resources,
-							 uint32_t back_buffer_index, HRESULT present_result) {
-		if (present_result != S_OK)
-			return;
-
-		ID3D12CommandList* command_list_to_execute
-			= *&frame_resources.command_lists[back_buffer_index];
-		ID3D12CommandList* lists[] = {command_list_to_execute};
-		command_queue->ExecuteCommandLists(1, lists);
 	}
 
 	static HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain,
