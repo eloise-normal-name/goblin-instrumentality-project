@@ -34,7 +34,7 @@ FLOW (1→9)
      NV_ENC_OUTPUT_RESOURCE_D3D12* in outputBuffer
 8) Retrieve output
    - NvEncLockBitstream → CPU ptr + size → copy/process → NvEncUnlockBitstream
-   - D3D12: pass same NV_ENC_OUTPUT_RESOURCE_D3D12* in NV_ENC_LOCK_BITSTREAM::outputBitstream
+   - D3D12: pass registered output pointer (from NvEncRegisterResource) in NV_ENC_LOCK_BITSTREAM::outputBitstream
 9) End
    - EOS: NvEncEncodePicture with encodePicFlags=NV_ENC_FLAGS_EOS, rest 0
    - Destroy buffers (unlock first), then NvEncDestroyEncoder
