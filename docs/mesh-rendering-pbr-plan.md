@@ -62,7 +62,7 @@ The mesh rendering and PBR pipeline requires the following high-level components
 | Component | Responsibility |
 |-----------|---------------|
 | **Mesh** | Owns vertex and index buffers on the GPU. Provides draw commands (`IASetVertexBuffers`, `IASetIndexBuffer`, `DrawIndexedInstanced`). Populated from procedural geometry initially, later from the Blender exporter binary format. |
-| **Pipeline** | Encapsulates the root signature, compiled shaders, and PSO. Compiles HLSL source at startup via `D3DCompile` and creates the graphics pipeline state. A single pipeline serves all PBR-lit meshes. |
+| **Pipeline** | Encapsulates the root signature, compiled shaders, and PSO. Loads HLSL source from `.hlsl` files at runtime, compiles via `D3DCompile`, caches compiled bytecode to disk, and creates the graphics pipeline state. A single pipeline serves all PBR-lit meshes. |
 | **Material** | Holds per-material constant buffer data (base color, metallic, roughness, emissive, occlusion, normal scale) and texture SRV bindings. Bound to the pipeline before each draw call via root CBV and descriptor table. |
 | **Depth Buffer** | Per-frame `D32_FLOAT` depth-stencil texture and DSV heap. Cleared each frame, enables correct occlusion for overlapping geometry. |
 | **Camera** | Computes view and projection matrices from position, target, FOV, and aspect ratio. Updated per-frame and written to the frame constant buffer (b0). |
@@ -81,7 +81,10 @@ Blender ──► Custom Exporter ──► Binary Mesh Data
                                         ▼
 Mesh Data ──► Upload Heap ──► Vertex/Index Buffers (DEFAULT heap)
                                         │
-HLSL Source ──► D3DCompile ──► Bytecode ──┤
+HLSL Files ──► D3DCompile ──► Bytecode ──┤
+                  ▲                     │
+                  │               Cache (disk)
+                  │                     │
                                         ▼
                             Root Signature + PSO
                                         │
@@ -183,7 +186,9 @@ A `DXGI_FORMAT_D32_FLOAT` depth-stencil texture is created per back buffer with 
 
 ### Shader Compilation
 
-HLSL shaders are compiled at runtime using `d3dcompiler_47.dll` via the `D3DCompile` function. The shader source is embedded as string literals in the C++ source files. At startup, the application calls `D3DCompile` with the appropriate target profile (`vs_5_0`, `ps_5_0`) and entry point to produce bytecode blobs, which are then passed to `CreateGraphicsPipelineState`. This avoids external build tooling and keeps shader iteration fast during development. The `d3dcompiler_47.dll` ships with Windows and is loaded via `#pragma comment(lib, "d3dcompiler.lib")`.
+HLSL shaders are loaded from `.hlsl` files at runtime and compiled using `d3dcompiler_47.dll` via the `D3DCompile` function. At startup, the pipeline reads each shader source file from disk, calls `D3DCompile` with the appropriate target profile (`vs_5_0`, `ps_5_0`) and entry point to produce bytecode blobs, and passes them to `CreateGraphicsPipelineState`. The `d3dcompiler_47.dll` ships with Windows and is loaded via `#pragma comment(lib, "d3dcompiler.lib")`.
+
+Compiled bytecode is cached to disk alongside the source files (e.g., `mesh_vs.cso`, `mesh_ps.cso`). On subsequent launches, the pipeline checks whether the cached `.cso` file exists and its timestamp is newer than the corresponding `.hlsl` source. If the cache is valid, the cached bytecode is loaded directly, skipping recompilation. If the source file has been modified, the shader is recompiled and the cache is updated. This keeps startup fast in production while allowing rapid shader iteration during development.
 
 ## Implementation Phases
 
@@ -287,7 +292,7 @@ All implementation must follow the existing project rules:
 - **Error handling**: `Try |` for D3D12 API calls returning HRESULT; null-check for HANDLE returns.
 - **No namespaces, no smart pointers, no C++ casts**.
 - **Static linking** with `/MT` runtime.
-- **Shader compilation**: Runtime via `D3DCompile` from `d3dcompiler_47.dll`; shader source embedded as string literals.
+- **Shader compilation**: Runtime via `D3DCompile` from `d3dcompiler_47.dll`; shader source loaded from `.hlsl` files; compiled bytecode cached to `.cso` files on disk.
 
 ## File Structure
 
@@ -295,10 +300,13 @@ Planned new files under `src/`:
 
 ```
 src/
+  shaders/
+    mesh_vs.hlsl              Vertex shader source (loaded at runtime)
+    mesh_ps.hlsl              Pixel shader source (loaded at runtime)
   graphics/
     d3d12_mesh.h              Mesh class (vertex/index buffers, draw)
     d3d12_mesh.cpp
-    d3d12_pipeline.h          Root signature, PSO creation, shader compilation
+    d3d12_pipeline.h          Root signature, PSO creation, shader compilation + cache
     d3d12_pipeline.cpp
     d3d12_depth_buffer.h      Depth buffer + DSV heap
     d3d12_depth_buffer.cpp
