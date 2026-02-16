@@ -23,16 +23,17 @@ jobs:
         with:
           script: |
             const trustedBots = [
-              'copilot',
-              'copilot-swe-agent',
-              'github-actions'
+              'copilot[bot]',
+              'copilot-swe-agent[bot]',
+              'github-actions[bot]'
             ];
             
             const actor = context.payload.workflow_run.actor.login;
+            const actorType = context.payload.workflow_run.actor.type;
             const headRepo = context.payload.workflow_run.head_repository;
             const isFork = headRepo && headRepo.fork;
             
-            core.info(`Workflow run actor: ${actor}`);
+            core.info(`Workflow run actor: ${actor} (type: ${actorType})`);
             core.info(`Is fork: ${isFork}`);
             
             const isTrustedBot = trustedBots.includes(actor);

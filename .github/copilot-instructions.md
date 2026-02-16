@@ -100,7 +100,7 @@
 - **Run/Debug**: F5 or Ctrl+F5
   - Debug configurations available in `.vscode/launch.json`:
     - **Debug (Normal)**: Run Debug build with window visible
-    - **Debug (Headless)**: Run Debug build with `--headless` flag (no window, exits after 300 frames)
+    - **Debug (Headless)**: Run Debug build with `--headless` flag (no window, exits after 30 frames)
     - **Release (Normal)**: Run Release build with window visible
     - **Release (Headless)**: Run Release build with `--headless` flag
 - **Format**: Ctrl+Shift+I (format document on save is automatic; CI validates on PR)

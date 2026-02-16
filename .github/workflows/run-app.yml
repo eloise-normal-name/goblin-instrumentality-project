@@ -38,7 +38,7 @@ jobs:
     - name: Run app in headless mode
       run: |
         Write-Output "Starting goblin-stream.exe in headless mode..."
-        Write-Output "App will run for 300 frames and automatically exit."
+        Write-Output "App will run for 30 frames and automatically exit."
         Write-Output ""
         
         $output = & "bin/MinSizeRel/goblin-stream.exe" --headless 2>&1
@@ -80,7 +80,7 @@ jobs:
       run: |
         Write-Output "### App Execution Summary" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "**Status**: App ran in headless mode (300 frames)" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "**Status**: App ran in headless mode (30 frames)" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
         
         if (Test-Path "debug_output.txt") {
