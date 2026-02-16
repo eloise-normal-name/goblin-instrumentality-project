@@ -167,14 +167,6 @@ export class App {
 		command_list->Close();
 	}
 
-	void MapEncodeTextureStub(uint32_t index, uint64_t fence_wait_value) {
-		nvenc_d3d12.MapInputTexture(index, fence_wait_value);
-	}
-
-	void UnmapEncodeTextureStub(uint32_t index) {
-		nvenc_d3d12.UnmapInputTexture(index);
-	}
-
 	static bool ProcessWindowMessages(MSG& msg) {
 		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 			if (msg.message == WM_QUIT)
