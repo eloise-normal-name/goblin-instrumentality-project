@@ -32,6 +32,7 @@ void D3D12SwapChain::CreateSwapChain(HWND window_handle) {
 		.BufferUsage = DXGI_USAGE_BACK_BUFFER,
 		.BufferCount = buffer_count,
 		.SwapEffect	 = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		.Flags		 = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT,
 	};
 
 	ComPtr<IDXGISwapChain1> sc1;
@@ -39,7 +40,16 @@ void D3D12SwapChain::CreateSwapChain(HWND window_handle) {
 		| factory->CreateSwapChainForHwnd(command_queue, window_handle, &sc_desc, nullptr, nullptr,
 										  &sc1)
 		| factory->MakeWindowAssociation(window_handle, DXGI_MWA_NO_ALT_ENTER)
-		| sc1->QueryInterface(IID_PPV_ARGS(&swap_chain));
+		| sc1->QueryInterface(IID_PPV_ARGS(&swap_chain))
+		| swap_chain->SetMaximumFrameLatency(buffer_count);
+
+	frame_latency_waitable = swap_chain->GetFrameLatencyWaitableObject();
+	if (!frame_latency_waitable)
+		throw;
+}
+
+D3D12SwapChain::~D3D12SwapChain() {
+	CloseHandle(frame_latency_waitable);
 }
 
 void D3D12SwapChain::AcquireBackBuffers() {

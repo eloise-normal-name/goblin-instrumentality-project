@@ -2,7 +2,6 @@ module;
 
 #include <windows.h>
 
-#include <array>
 #include <utility>
 #include <vector>
 
@@ -60,10 +59,6 @@ export class App {
 	}
 
 	int Run() && {
-		std::array<HANDLE, BUFFER_COUNT> fence_handles{};
-		for (auto i = 0u; i < BUFFER_COUNT; ++i)
-			fence_handles[i] = frames.fence_events[i];
-
 		MSG msg{};
 		bool running			   = true;
 		uint32_t frames_submitted  = 0;
@@ -72,12 +67,19 @@ export class App {
 
 		while (running) {
 			frame_debug_log.BeginFrame(frames_submitted);
-			auto wait_result = WaitForFrame(frame_debug_log, fence_handles.data(),
-											back_buffer_index, msg, headless);
-			if (wait_result == FrameWaitResult::Quit)
-				break;
-			if (wait_result == FrameWaitResult::Continue)
+			auto wait_result
+				= WaitForFrame(frame_debug_log, swap_chain.frame_latency_waitable, msg);
+			if (wait_result == FrameWaitResult::Continue) {
+				while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+					if (msg.message == WM_QUIT) {
+						running = false;
+						break;
+					}
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
+				}
 				continue;
+			}
 
 			uint64_t completed_value = 0;
 			if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
@@ -102,7 +104,7 @@ export class App {
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
-			if (headless && frames_submitted >= 300)
+			if (headless && frames_submitted >= 30)
 				break;
 		}
 
@@ -113,7 +115,6 @@ export class App {
 
   private:
 	enum class FrameWaitResult {
-		Quit,
 		Continue,
 		Proceed,
 	};
@@ -175,37 +176,25 @@ export class App {
 		command_list->Close();
 	}
 
-	static bool ProcessWindowMessages(MSG& msg) {
-		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_QUIT)
-				return false;
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		return true;
+	void MapEncodeTextureStub(uint32_t index, uint64_t fence_wait_value) {
+		nvenc_d3d12.MapInputTexture(index, fence_wait_value);
 	}
 
-	static FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log, HANDLE* fence_handles,
-										uint32_t back_buffer_index, MSG& msg, bool headless) {
-		frame_debug_log.Line() << "MsgWaitForMultipleObjects..." << "\n";
-		auto wait_handle = fence_handles[back_buffer_index];
+	void UnmapEncodeTextureStub(uint32_t index) {
+		nvenc_d3d12.UnmapInputTexture(index);
+	}
 
-		if (headless) {
-			auto wait_result = WaitForSingleObject(wait_handle, INFINITE);
-			frame_debug_log.Line() << "Wait result of fence_handles[" << back_buffer_index
-								   << "]: " << wait_result << "\n";
-			return FrameWaitResult::Proceed;
-		}
+	static FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log,
+										HANDLE frame_latency_waitable, MSG& msg) {
+		frame_debug_log.Line() << "WaitForFrame..." << "\n";
 
-		auto wait_result = MsgWaitForMultipleObjects(1, &wait_handle, FALSE, INFINITE, QS_ALLINPUT);
-		frame_debug_log.Line() << "Wait result of fence_handles[" << back_buffer_index
-							   << "]: " << wait_result << "\n";
+		auto wait_result
+			= MsgWaitForMultipleObjects(1, &frame_latency_waitable, FALSE, INFINITE, QS_ALLINPUT);
+		frame_debug_log.Line() << "Wait result: " << wait_result << "\n";
 
 		if (wait_result != WAIT_OBJECT_0 + 1)
 			return FrameWaitResult::Proceed;
-		if (!ProcessWindowMessages(msg))
-			return FrameWaitResult::Quit;
+
 		return FrameWaitResult::Continue;
 	}
 
