@@ -17,9 +17,10 @@ class D3D12SwapChain {
   public:
 	D3D12SwapChain(ID3D12Device* device, IDXGIFactory7* factory, ID3D12CommandQueue* command_queue,
 				   HWND window_handle, const SwapChainConfig& config);
-	~D3D12SwapChain() = default;
+	~D3D12SwapChain();
 
 	ComPtr<IDXGISwapChain4> swap_chain;
+	HANDLE frame_latency_waitable;
 	std::vector<ComPtr<ID3D12Resource>> render_targets;
 
   private:

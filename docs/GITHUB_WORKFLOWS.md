@@ -52,7 +52,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Configures CMake with Visual Studio 2022
 - Builds MinSizeRel configuration
 - Verifies binary exists
-- Runs application with `--headless` flag (300 frames, auto-exit)
+- Runs application with `--headless` flag (30 frames, auto-exit)
 - Captures console output and exit code
 - Collects `debug_output.txt` file if generated
 - Uploads log files as artifacts (7-day retention)
@@ -204,7 +204,7 @@ If the app fails to run in the workflow:
 
 **Missing debug_output.txt:**
 If the debug output file is not created:
-- Verify app runs long enough to generate output (should complete 300 frames)
+- Verify app runs long enough to generate output (should complete 30 frames)
 - Check console output for file I/O errors
 - Review app source code to ensure file is being written
 - Ensure working directory is correct when app executes
