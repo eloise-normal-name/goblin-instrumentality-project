@@ -12,6 +12,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 4. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
 5. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
 6. **Docs Index Check** - Ensures docs are indexed in README
+7. **Gobbo Code Review** - Automated elegant C++ code review on pull requests
 
 **Note**: This repository does not use GitHub Issues for task tracking.
 
@@ -145,6 +146,26 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Keeps documentation easy to discover
 - Flags unused or forgotten docs early in CI
 - Encourages a single, maintained index of docs
+
+### Gobbo Code Review (`.github/workflows/gobbo-review.yml`)
+
+**Triggers**: Pull requests (opened, synchronized, reopened) targeting main
+
+**Purpose**: Provides automated elegant C++ code review using the Gobbo agent philosophy.
+
+**Actions**:
+- Detects C++ source files changed in PR (`.cpp`, `.h`, `.ixx`, `.hpp`)
+- Calculates code size metrics (additions/deletions)
+- Posts welcome review comment with Gobbo's code review philosophy
+- Highlights focus on conciseness, readability, elegance, RAII, and zero waste
+
+**Benefits**:
+- Welcomes contributors with code review expectations
+- Emphasizes project values (minimal, elegant code)
+- Provides visibility into what Gobbo agent reviews for
+- Encourages self-review before submission
+
+**Agent Profile**: `.github/agents/gobbo.agent.md` - Elegant C++ code reviewer focused on concise, readable code
 
 ## CI vs Local Development
 

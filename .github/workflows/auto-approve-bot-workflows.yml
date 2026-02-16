@@ -6,6 +6,7 @@ on:
     workflows:
       - "Build and Validate"
       - "Run App and Log Output"
+      - "Gobbo Code Review"
 
 permissions:
   actions: write
