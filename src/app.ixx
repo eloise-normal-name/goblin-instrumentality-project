@@ -119,10 +119,9 @@ export class App {
 		Proceed,
 	};
 
-	static void RecordCommandList(ID3D12GraphicsCommandList* command_list,
-								  D3D12_CPU_DESCRIPTOR_HANDLE rtv,
-								  ID3D12Resource* offscreen_render_target,
-								  ID3D12Resource* swap_chain_render_target, uint32_t index) {
+	void RecordCommandList(ID3D12GraphicsCommandList* command_list, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
+						   ID3D12Resource* offscreen_render_target,
+						   ID3D12Resource* swap_chain_render_target, uint32_t index) {
 		{
 			D3D12_RESOURCE_BARRIER barrier{
 				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -176,15 +175,7 @@ export class App {
 		command_list->Close();
 	}
 
-	void MapEncodeTextureStub(uint32_t index, uint64_t fence_wait_value) {
-		nvenc_d3d12.MapInputTexture(index, fence_wait_value);
-	}
-
-	void UnmapEncodeTextureStub(uint32_t index) {
-		nvenc_d3d12.UnmapInputTexture(index);
-	}
-
-	static FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log,
+	inline FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log,
 										HANDLE frame_latency_waitable, MSG& msg) {
 		frame_debug_log.Line() << "WaitForFrame..." << "\n";
 
@@ -198,19 +189,19 @@ export class App {
 		return FrameWaitResult::Continue;
 	}
 
-	static bool IsFrameReady(const FrameResources& frames, uint32_t back_buffer_index,
+	inline bool IsFrameReady(const FrameResources& frames, uint32_t back_buffer_index,
 							 uint32_t frames_submitted, uint64_t& completed_value) {
 		completed_value = frames.fences[back_buffer_index]->GetCompletedValue();
 		return completed_value + frames.fences.size() >= frames_submitted + 1;
 	}
 
-	static void LogFenceStatus(FrameDebugLog& frame_debug_log, uint64_t completed_value,
+	inline void LogFenceStatus(FrameDebugLog& frame_debug_log, uint64_t completed_value,
 							   HRESULT present_result) {
 		frame_debug_log.Line() << "Completed Value: " << completed_value << "\n";
 		frame_debug_log.Line() << "present_result: " << present_result << "\n";
 	}
 
-	static HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain,
+	inline HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain,
 									FrameResources& frame_resources, uint32_t back_buffer_index,
 									uint64_t signaled_value) {
 		auto present_result = swap_chain->Present(1, DXGI_PRESENT_DO_NOT_WAIT);
@@ -220,7 +211,7 @@ export class App {
 		return present_result;
 	}
 
-	static bool HandlePresentResult(FrameDebugLog& frame_debug_log, HRESULT present_result) {
+	inline bool HandlePresentResult(FrameDebugLog& frame_debug_log, HRESULT present_result) {
 		if (present_result != DXGI_ERROR_WAS_STILL_DRAWING)
 			return true;
 
@@ -229,7 +220,7 @@ export class App {
 		return false;
 	}
 
-	static void LogFrameSubmitted(FrameDebugLog& frame_debug_log, uint32_t back_buffer_index,
+	inline void LogFrameSubmitted(FrameDebugLog& frame_debug_log, uint32_t back_buffer_index,
 								  uint64_t signaled_value, uint32_t new_back_buffer_index) {
 		frame_debug_log.Line() << "Frame submitted, fence[" << back_buffer_index
 							   << "] signaled with value: " << signaled_value << "\n";
