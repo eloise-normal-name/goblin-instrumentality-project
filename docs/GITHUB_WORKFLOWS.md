@@ -98,7 +98,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 ### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
 
 **Triggers**: 
-- `workflow_run` event when "Build and Validate" workflow is requested
+- `workflow_run` event when "Build and Validate", "Run App and Log Output", "Code Quality Checks", or "Docs Index Check" workflows are requested
 - Only for pull request events
 
 **Purpose**: Enables trusted bot accounts to trigger PR review workflows without manual approval.
@@ -117,6 +117,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 **Security**:
 - Only trusted bot accounts are approved (explicitly listed)
+- Uses `COPILOT_MCP_GITHUB_TOKEN` secret (PAT) to authenticate the approval API call, providing elevated permissions beyond the default `GITHUB_TOKEN`
 - Uses `actions: write` permission to approve runs
 - Logs all approval actions for audit trail
 - Gracefully handles approval errors (e.g., already approved)

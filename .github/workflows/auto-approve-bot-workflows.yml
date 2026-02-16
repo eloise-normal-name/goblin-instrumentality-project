@@ -54,6 +54,7 @@ jobs:
         if: steps.check_bot.outputs.should_approve == 'true'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
           script: |
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
