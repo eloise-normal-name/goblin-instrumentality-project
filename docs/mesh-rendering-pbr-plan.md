@@ -55,6 +55,22 @@ There is no vertex/index buffer, no root signature, no pipeline state object, an
 
 Blender is the authoring tool for mesh assets. A custom Blender exporter will be developed to emit mesh data in a project-specific binary format optimized for direct GPU upload. Until the exporter is available, early phases use procedurally generated geometry (hardcoded triangles, cubes, spheres) to validate the rendering pipeline independently of the asset toolchain.
 
+## Components Overview
+
+The mesh rendering and PBR pipeline requires the following high-level components:
+
+| Component | Responsibility |
+|-----------|---------------|
+| **Mesh** | Owns vertex and index buffers on the GPU. Provides draw commands (`IASetVertexBuffers`, `IASetIndexBuffer`, `DrawIndexedInstanced`). Populated from procedural geometry initially, later from the Blender exporter binary format. |
+| **Pipeline** | Encapsulates the root signature, compiled shaders, and PSO. Compiles HLSL source at startup via `D3DCompile` and creates the graphics pipeline state. A single pipeline serves all PBR-lit meshes. |
+| **Material** | Holds per-material constant buffer data (base color, metallic, roughness, emissive, occlusion, normal scale) and texture SRV bindings. Bound to the pipeline before each draw call via root CBV and descriptor table. |
+| **Depth Buffer** | Per-frame `D32_FLOAT` depth-stencil texture and DSV heap. Cleared each frame, enables correct occlusion for overlapping geometry. |
+| **Camera** | Computes view and projection matrices from position, target, FOV, and aspect ratio. Updated per-frame and written to the frame constant buffer (b0). |
+| **Lights** | Directional and point light parameters packed into the frame constant buffer. Consumed by the pixel shader for diffuse and specular evaluation. |
+| **Frame Constants** | Per-frame constant buffer (b0) containing MVP matrix, model/normal matrices, camera position, and light data. Mapped to an upload heap and updated each frame. |
+
+These components interact during each frame as follows: the camera and lights update the frame constant buffer, the pipeline is set on the command list, each mesh binds its material and issues draw calls, and the depth buffer resolves occlusion.
+
 ## Planned Architecture
 
 ### Pipeline Overview
@@ -65,7 +81,7 @@ Blender ──► Custom Exporter ──► Binary Mesh Data
                                         ▼
 Mesh Data ──► Upload Heap ──► Vertex/Index Buffers (DEFAULT heap)
                                         │
-HLSL Shaders ──► Compiled Bytecode ─────┤
+HLSL Source ──► D3DCompile ──► Bytecode ──┤
                                         ▼
                             Root Signature + PSO
                                         │
@@ -167,7 +183,7 @@ A `DXGI_FORMAT_D32_FLOAT` depth-stencil texture is created per back buffer with 
 
 ### Shader Compilation
 
-HLSL shaders are compiled offline using `dxc.exe` (bundled with the Windows SDK) to DXIL bytecode targeting shader model 6.0. The compiled bytecode is embedded as byte arrays in generated header files, avoiding runtime file I/O and external dependencies. A CMake build step invokes `dxc` and generates the headers. The PSO creation code references these arrays directly.
+HLSL shaders are compiled at runtime using `d3dcompiler_47.dll` via the `D3DCompile` function. The shader source is embedded as string literals in the C++ source files. At startup, the application calls `D3DCompile` with the appropriate target profile (`vs_5_0`, `ps_5_0`) and entry point to produce bytecode blobs, which are then passed to `CreateGraphicsPipelineState`. This avoids external build tooling and keeps shader iteration fast during development. The `d3dcompiler_47.dll` ships with Windows and is loaded via `#pragma comment(lib, "d3dcompiler.lib")`.
 
 ## Implementation Phases
 
@@ -271,7 +287,7 @@ All implementation must follow the existing project rules:
 - **Error handling**: `Try |` for D3D12 API calls returning HRESULT; null-check for HANDLE returns.
 - **No namespaces, no smart pointers, no C++ casts**.
 - **Static linking** with `/MT` runtime.
-- **Shader compilation**: Offline via `dxc`, bytecode embedded in headers.
+- **Shader compilation**: Runtime via `D3DCompile` from `d3dcompiler_47.dll`; shader source embedded as string literals.
 
 ## File Structure
 
@@ -279,17 +295,15 @@ Planned new files under `src/`:
 
 ```
 src/
-  shaders/
-    mesh_vs.hlsl              Vertex shader source
-    mesh_ps.hlsl              Pixel shader source
   graphics/
     d3d12_mesh.h              Mesh class (vertex/index buffers, draw)
     d3d12_mesh.cpp
-    d3d12_pipeline.h          Root signature + PSO creation
+    d3d12_pipeline.h          Root signature, PSO creation, shader compilation
     d3d12_pipeline.cpp
     d3d12_depth_buffer.h      Depth buffer + DSV heap
     d3d12_depth_buffer.cpp
-  generated/
-    mesh_vs.h                 Compiled vertex shader bytecode
-    mesh_ps.h                 Compiled pixel shader bytecode
+    d3d12_camera.h            Camera (view/projection matrices)
+    d3d12_camera.cpp
+    d3d12_material.h          Material parameters + texture bindings
+    d3d12_material.cpp
 ```
