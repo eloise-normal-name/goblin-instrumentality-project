@@ -55,7 +55,7 @@
   - Example (✓ correct): keep `NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};` in the member declaration, and keep constructor list focused on simple parameter plumbing.
   - Example (✗ wrong): moving `EncoderConfig{ .width = width, .height = height, ... }` into the constructor initializer list during unrelated refactors.
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project (**CI enforced**)
-- **Error Handling**: Use `Try |` pattern from `include/try.h` for all D3D12 and NVENC API calls (**CI warns on unchecked calls**):
+- **Error Handling**: Use `Try |` pattern from `include/try.h` for HRESULT-returning API calls (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
     ```cpp
     Try | function1()
@@ -63,6 +63,13 @@
         | function3();
     ```
   - Throws empty exception on first failure; all error codes must be checked
+  - For HANDLE-returning calls (e.g., `GetFrameLatencyWaitableObject`), use direct assignment and null check instead:
+    ```cpp
+    handle = api_call();
+    if (!handle)
+        throw;
+    ```
+  - This pattern is preferred for brevity; do not wrap HANDLE validation in Try pattern or helpers
 - **Struct Initialization**:
   - Use designated initializers (`.field = value`) at initialization time, never initialize-then-assign
   - Prefer brace initialization: `Type var{.field = val};` (no equals sign)
