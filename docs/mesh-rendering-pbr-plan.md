@@ -51,11 +51,18 @@ The project currently:
 
 There is no vertex/index buffer, no root signature, no pipeline state object, and no shader compilation. All rendering is done through `ClearRenderTargetView` and `CopyResource`.
 
+## Mesh Data Source
+
+Blender is the authoring tool for mesh assets. A custom Blender exporter will be developed to emit mesh data in a project-specific binary format optimized for direct GPU upload. Until the exporter is available, early phases use procedurally generated geometry (hardcoded triangles, cubes, spheres) to validate the rendering pipeline independently of the asset toolchain.
+
 ## Planned Architecture
 
 ### Pipeline Overview
 
 ```
+Blender ──► Custom Exporter ──► Binary Mesh Data
+                                        │
+                                        ▼
 Mesh Data ──► Upload Heap ──► Vertex/Index Buffers (DEFAULT heap)
                                         │
 HLSL Shaders ──► Compiled Bytecode ─────┤
@@ -279,6 +286,7 @@ Goal: Render an indexed mesh with depth testing.
 - Load a hardcoded mesh (e.g., a cube or sphere generated procedurally in code).
 - Add a perspective camera with a constant buffer for the MVP matrix.
 - Validate depth-correct rendering.
+- Design the binary mesh format that the future Blender exporter will target (vertex layout, index format, material references).
 
 ### Phase 3: PBR Shaders
 
@@ -313,7 +321,7 @@ Goal: Interactive camera and multiple objects.
 
 All implementation must follow the existing project rules:
 
-- **No external libraries**: Mesh data is procedural or manually parsed; textures are embedded or generated in code.
+- **No external libraries**: Mesh data is procedural initially; a custom Blender exporter (future work) will provide production assets in a project-specific binary format. Textures are embedded or generated in code.
 - **RAII**: All GPU resources (buffers, heaps, PSOs, root signatures) allocated in constructors, released in destructors.
 - **Naming**: PascalCase methods, snake_case variables, CAPS_CASE constants.
 - **Error handling**: `Try |` for D3D12 API calls returning HRESULT; null-check for HANDLE returns.
