@@ -8,14 +8,11 @@ Two well-documented renderers serve as primary inspiration for the material mode
 
 ### glTF 2.0 Default Renderer (Khronos)
 
-The glTF 2.0 specification defines a metallic-roughness PBR workflow as its default material model. Key characteristics:
+The glTF 2.0 specification defines a metallic-roughness PBR workflow as its default material model:
 
-- **Base color** (albedo) as an RGBA factor and optional sRGB texture.
-- **Metallic** scalar \[0,1\] controlling dielectric vs. conductor behavior.
-- **Roughness** scalar \[0,1\] controlling microfacet spread.
-- **Channel packing**: metallic in the blue channel, roughness in the green channel of a single linear texture.
-- Additional maps: **normal**, **occlusion**, and **emissive**.
-- Energy-conserving split between diffuse and specular contributions.
+- Base color (RGBA factor + optional sRGB texture), metallic \[0,1\], roughness \[0,1\].
+- Channel-packed metallic (blue) / roughness (green) in a single linear texture.
+- Additional maps: normal, occlusion, emissive. Energy-conserving diffuse/specular split.
 
 Reference: [glTF 2.0 Specification — Materials](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials), [Khronos PBR Overview](https://www.khronos.org/gltf/pbr).
 
@@ -37,9 +34,9 @@ f_specular = (D * G * F) / (4 * NdotL * NdotV)
 
 The diffuse term uses a Lambertian model: `f_diffuse = base_color / pi`.
 
-Filament also defines extended material models (clear coat, anisotropy, subsurface, cloth) that can serve as future stretch goals.
+Filament also defines extended material models (clear coat, anisotropy, subsurface, cloth) as potential future stretch goals.
 
-Reference: [Filament PBR Documentation](https://google.github.io/filament/main/filament.html), [Filament Materials Guide](https://google.github.io/filament/main/materials.html), [Filament Source](https://github.com/google/filament).
+Reference: [Filament PBR Documentation](https://google.github.io/filament/main/filament.html), [Filament Source](https://github.com/google/filament).
 
 ## Current State
 
@@ -61,8 +58,8 @@ The mesh rendering and PBR pipeline requires the following high-level components
 
 | Component | Responsibility |
 |-----------|---------------|
-| **Mesh** | Owns vertex and index buffers on the GPU. Provides draw commands (`IASetVertexBuffers`, `IASetIndexBuffer`, `DrawIndexedInstanced`). Populated from procedural geometry initially, later from the Blender exporter binary format. |
-| **Pipeline** | Encapsulates the root signature, compiled shaders, and PSO. Loads HLSL source from `.hlsl` files at runtime, compiles via `D3DCompile`, caches compiled bytecode to disk, and creates the graphics pipeline state. A single pipeline serves all PBR-lit meshes. |
+| **Mesh** | Owns vertex and index buffers on the GPU. Provides draw commands (`IASetVertexBuffers`, `IASetIndexBuffer`, `DrawIndexedInstanced`). |
+| **Pipeline** | Encapsulates root signature, compiled shaders, and PSO. Loads `.hlsl` files at runtime, compiles via `D3DCompile`, caches bytecode to disk, creates the pipeline state. |
 | **Material** | Holds per-material constant buffer data (base color, metallic, roughness, emissive, occlusion, normal scale) and texture SRV bindings. Bound to the pipeline before each draw call via root CBV and descriptor table. |
 | **Depth Buffer** | Per-frame `D32_FLOAT` depth-stencil texture and DSV heap. Cleared each frame, enables correct occlusion for overlapping geometry. |
 | **Camera** | Computes view and projection matrices from position, target, FOV, and aspect ratio. Updated per-frame and written to the frame constant buffer (b0). |
@@ -188,105 +185,85 @@ A `DXGI_FORMAT_D32_FLOAT` depth-stencil texture is created per back buffer with 
 
 HLSL shaders are loaded from `.hlsl` files at runtime and compiled using `d3dcompiler_47.dll` via the `D3DCompile` function. At startup, the pipeline reads each shader source file from disk, calls `D3DCompile` with the appropriate target profile (`vs_5_0`, `ps_5_0`) and entry point to produce bytecode blobs, and passes them to `CreateGraphicsPipelineState`. The `d3dcompiler_47.dll` ships with Windows and is loaded via `#pragma comment(lib, "d3dcompiler.lib")`.
 
-Compiled bytecode is cached to disk alongside the source files (e.g., `mesh_vs.cso`, `mesh_ps.cso`). On subsequent launches, the pipeline checks whether the cached `.cso` file exists and its timestamp is newer than the corresponding `.hlsl` source. If the cache is valid, the cached bytecode is loaded directly, skipping recompilation. If the source file has been modified, the shader is recompiled and the cache is updated. This keeps startup fast in production while allowing rapid shader iteration during development.
+Compiled bytecode is cached to disk (e.g., `mesh_vs.cso`, `mesh_ps.cso`). On launch, the pipeline checks the `.cso` timestamp against the `.hlsl` source: if valid, load cached bytecode; if stale, recompile and update. Fast startup in production, rapid iteration in development.
 
 ## Implementation Phases
 
 ### Phase 1: Hardcoded Triangle
 
-Goal: Render a single colored triangle using the D3D12 graphics pipeline.
-
-- Define a minimal vertex struct (position + color, no PBR yet).
-- Create a root signature with a single root CBV for the MVP matrix.
-- Create a PSO with a simple pass-through vertex shader and flat-color pixel shader.
-- Allocate a vertex buffer on the upload heap (3 vertices).
-- Replace `ClearRenderTargetView` draw path with `IASetVertexBuffers` and `DrawInstanced`.
-- Validate output on screen and through NVENC encode path.
+**Goal**: Render a single colored triangle using the D3D12 graphics pipeline.
+- Minimal vertex struct (position + color, no PBR yet), root signature with one root CBV (MVP).
+- PSO with pass-through VS and flat-color PS; vertex buffer on upload heap (3 vertices).
+- Replace `ClearRenderTargetView` path with `IASetVertexBuffers` + `DrawInstanced`.
+- **Validate**: Output on screen and through NVENC encode path.
 
 ### Phase 2: Mesh Loading and Depth
 
-Goal: Render an indexed mesh with depth testing.
-
-- Define the full `Vertex` struct (position, normal, texcoord, tangent).
-- Create vertex and index buffers on DEFAULT heap with upload-heap staging.
-- Add a depth buffer and DSV descriptor heap.
-- Load a hardcoded mesh (e.g., a cube or sphere generated procedurally in code).
-- Add a perspective camera with a constant buffer for the MVP matrix.
-- Validate depth-correct rendering.
-- Design the binary mesh format that the future Blender exporter will target (vertex layout, index format, material references).
+**Goal**: Render an indexed mesh with depth testing.
+- Full `Vertex` struct (position, normal, texcoord, tangent); DEFAULT heap buffers with upload staging.
+- Depth buffer + DSV descriptor heap; perspective camera with MVP constant buffer.
+- Hardcoded procedural mesh (cube or sphere); design binary mesh format for the Blender exporter.
+- **Validate**: Depth-correct rendering.
 
 ### Phase 3: Diffuse Lighting
 
-Goal: Add basic Lambertian diffuse shading with a single directional light.
-
-- Write the vertex shader with world-space position and normal output.
-- Write a pixel shader that evaluates `max(NdotL, 0) * base_color / pi` for a single directional light.
-- Pass base color and light direction/color as scalar constants in the frame constant buffer (no textures).
-- Validate lit shading on the procedural mesh (light vs. shadow side visible).
+**Goal**: Lambertian diffuse with one directional light.
+- VS: world-space position + normal output.
+- PS: `max(NdotL, 0) * base_color / pi` for a single directional light.
+- Frame CBV: base color, light direction/color (no textures yet).
+- **Validate**: Light/shadow side visible on procedural mesh.
 
 ### Phase 4: Specular BRDF (Cook-Torrance)
 
-Goal: Add specular reflection using the Cook-Torrance microfacet model.
-
-- Implement `D_GGX` (normal distribution function) in the pixel shader.
-- Implement `V_SmithGGX` (height-correlated visibility) in the pixel shader.
-- Implement `F_Schlick` (Fresnel approximation) in the pixel shader.
-- Combine diffuse + specular: `f = f_diffuse * (1 - F) * (1 - metallic) + f_specular`.
-- Add metallic and roughness scalar factors to the constant buffer.
-- Validate specular highlights and metallic vs. dielectric appearance on the procedural mesh.
+**Goal**: Add specular reflection using the Cook-Torrance microfacet model.
+- PS: implement `D_GGX`, `V_SmithGGX`, `F_Schlick` individually.
+- Combine: `f = f_diffuse * (1 - F) * (1 - metallic) + f_specular`.
+- Add metallic/roughness scalars to the constant buffer.
+- **Validate**: Specular highlights, metallic vs. dielectric appearance.
 
 ### Phase 5: Material Constant Buffer
 
-Goal: Consolidate material parameters into a dedicated constant buffer.
-
-- Define `MaterialParams` struct (base_color_factor, metallic_factor, roughness_factor, emissive_factor, occlusion_strength, normal_scale, texture_flags).
-- Add a per-material root CBV (b1) alongside the per-frame CBV (b0).
-- Update the pixel shader to read material factors from the material constant buffer.
-- Validate that material parameters can be varied per-object.
+**Goal**: Consolidate material parameters into a dedicated constant buffer.
+- `MaterialParams` struct: base_color_factor, metallic, roughness, emissive, occlusion_strength, normal_scale, texture_flags.
+- Per-material root CBV (b1) alongside per-frame CBV (b0).
+- **Validate**: Per-object material variation.
 
 ### Phase 6: Base Color Texture
 
-Goal: Bind a base color texture to the pixel shader.
-
-- Create a shader-visible CBV/SRV/UAV descriptor heap.
-- Load a base color texture from raw pixel data embedded in code (procedurally generated or manually parsed).
-- Add a descriptor table (t0) and static sampler (s0) to the root signature.
-- Sample and multiply with `base_color_factor` in the pixel shader.
-- Validate textured diffuse output.
+**Goal**: Bind a base color texture to the pixel shader.
+- CBV/SRV/UAV descriptor heap; base color texture from embedded pixel data.
+- Descriptor table (t0) + static sampler (s0) in root signature.
+- PS: sample and multiply with `base_color_factor`.
+- **Validate**: Textured diffuse output.
 
 ### Phase 7: Metallic-Roughness Texture
 
-Goal: Add the packed metallic-roughness map.
-
-- Load a metallic-roughness texture (green = roughness, blue = metallic).
-- Bind to register t1 in the existing descriptor table.
-- Sample and multiply with scalar metallic/roughness factors in the pixel shader.
-- Validate per-texel roughness and metallic variation on the procedural mesh.
+**Goal**: Add the packed metallic-roughness map.
+- Load metallic-roughness texture (green = roughness, blue = metallic) at t1.
+- PS: sample and multiply with scalar factors.
+- **Validate**: Per-texel roughness/metallic variation.
 
 ### Phase 8: Normal, Occlusion, and Emissive Maps
 
-Goal: Complete the PBR texture set.
-
-- Add normal map (t2): construct the TBN matrix from interpolated tangent frame, perturb shading normal, scale by `normal_scale`.
-- Add occlusion map (t3): modulate ambient/indirect term by `occlusion_strength`.
-- Add emissive map (t4): add `emissive_factor * emissive_map` to final color.
-- Use `texture_flags` bitmask to fall back to scalar factors when a map is not bound.
-- Validate full PBR texture pipeline.
+**Goal**: Complete the PBR texture set.
+- Normal map (t2): TBN matrix from tangent frame, perturb normal, scale by `normal_scale`.
+- Occlusion map (t3): modulate ambient term by `occlusion_strength`.
+- Emissive map (t4): add `emissive_factor * emissive_map` to final color.
+- `texture_flags` bitmask for fallback to scalar factors when maps are unbound.
+- **Validate**: Full PBR texture pipeline.
 
 ### Phase 9: Scene and Camera
 
-Goal: Interactive camera and multiple objects.
-
-- Add a perspective projection with configurable FOV and aspect ratio.
-- Add an orbit camera controlled by window messages (mouse drag).
-- Support multiple meshes with per-object model matrices (instanced constant buffer).
-- Add multiple lights (point and directional) packed into the frame constant buffer.
+**Goal**: Interactive camera and multiple objects.
+- Perspective projection with configurable FOV/aspect ratio; orbit camera via window messages.
+- Multiple meshes with per-object model matrices (instanced constant buffer).
+- Multiple lights (point + directional) packed into the frame constant buffer.
 
 ## Constraints
 
 All implementation must follow the existing project rules:
 
-- **No external libraries**: Mesh data is procedural initially; a custom Blender exporter (future work) will provide production assets in a project-specific binary format. Textures are embedded or generated in code.
+- **No external libraries**: Mesh data is procedural initially; the Blender exporter (see Mesh Data Source) will provide production assets. Textures are embedded or generated in code.
 - **RAII**: All GPU resources (buffers, heaps, PSOs, root signatures) allocated in constructors, released in destructors.
 - **Naming**: PascalCase methods, snake_case variables, CAPS_CASE constants.
 - **Error handling**: `Try |` for D3D12 API calls returning HRESULT; null-check for HANDLE returns.
