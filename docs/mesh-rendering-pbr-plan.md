@@ -198,6 +198,8 @@ VSOutput main(VSInput input) {
 Implements the PBR lighting model following glTF metallic-roughness and Filament's BRDF choices:
 
 ```hlsl
+static const float PI = 3.14159265359;
+
 Texture2D base_color_map         : register(t0);
 Texture2D metallic_roughness_map : register(t1);
 Texture2D normal_map             : register(t2);
@@ -236,15 +238,17 @@ Following the glTF metallic-roughness model, a material is defined by:
 
 ```
 struct MaterialParams {
-    float4 base_color_factor;      // multiplied with base_color_map
-    float  metallic_factor;        // multiplied with metallic channel
-    float  roughness_factor;       // multiplied with roughness channel
-    float3 emissive_factor;        // multiplied with emissive_map
-    float  occlusion_strength;     // scales occlusion_map contribution
-    float  normal_scale;           // scales normal_map perturbation
-    uint   texture_flags;          // bitmask indicating which textures are bound
+    float4 base_color_factor;      // multiplied with base_color_map       (16 bytes, offset 0)
+    float3 emissive_factor;        // multiplied with emissive_map         (12 bytes, offset 16)
+    float  metallic_factor;        // multiplied with metallic channel     ( 4 bytes, offset 28)
+    float  roughness_factor;       // multiplied with roughness channel    ( 4 bytes, offset 32)
+    float  occlusion_strength;     // scales occlusion_map contribution    ( 4 bytes, offset 36)
+    float  normal_scale;           // scales normal_map perturbation       ( 4 bytes, offset 40)
+    uint   texture_flags;          // bitmask indicating which textures    ( 4 bytes, offset 44)
 };
 ```
+
+The struct is ordered for HLSL constant buffer packing: `float4` first, then `float3` packed with a trailing `float` to fill the 16-byte row, followed by remaining scalars.
 
 When a texture is not present, the shader falls back to the scalar factors alone (e.g., `base_color_factor` as a flat color). This mirrors the glTF specification behavior.
 
