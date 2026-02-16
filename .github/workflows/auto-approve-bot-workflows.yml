@@ -59,6 +59,8 @@ jobs:
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
             
+            core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN`);
+            
             try {
               await github.rest.actions.approveWorkflowRun({
                 owner: context.repo.owner,
@@ -66,7 +68,7 @@ jobs:
                 run_id: runId
               });
               
-              core.info(`Successfully approved workflow run ${runId} from ${actor}`);
+              core.info(`✓ Successfully approved workflow run ${runId} from ${actor}`);
             } catch (error) {
               // If approval fails (e.g., already approved or not needed), log but don't fail
               core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
