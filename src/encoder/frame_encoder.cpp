@@ -8,6 +8,7 @@ FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* 
 
 	output_d3d12_buffers.resize(count);
 	output_registered_ptrs.resize(count);
+	output_fences.resize(count);
 
 	void* encoder = session.encoder;
 
@@ -27,6 +28,8 @@ FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* 
 	};
 
 	for (auto i = 0u; i < count; ++i) {
+		Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&output_fences[i]));
+
 		Try | device->CreateCommittedResource(&readback_heap, D3D12_HEAP_FLAG_NONE, &buffer_desc,
 											  D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
 											  IID_PPV_ARGS(&output_d3d12_buffers[i]));
@@ -60,6 +63,12 @@ FrameEncoder::~FrameEncoder() {
 			buffer->Release();
 	}
 	output_d3d12_buffers.clear();
+
+	for (auto fence : output_fences) {
+		if (fence)
+			fence->Release();
+	}
+	output_fences.clear();
 }
 
 void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value,
@@ -88,7 +97,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 
 	NV_ENC_FENCE_POINT_D3D12 output_fence_point{
 		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
-		.pFence	   = nullptr,
+		.pFence	   = output_fences[texture_index],
 		.waitValue = 0,
 		.bWait	   = 0,
 	};

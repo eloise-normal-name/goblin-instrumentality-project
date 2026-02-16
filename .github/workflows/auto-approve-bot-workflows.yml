@@ -6,6 +6,8 @@ on:
     workflows:
       - "Build and Validate"
       - "Run App and Log Output"
+      - "Code Quality Checks"
+      - "Docs Index Check"
 
 permissions:
   actions: write
