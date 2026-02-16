@@ -288,27 +288,65 @@ Goal: Render an indexed mesh with depth testing.
 - Validate depth-correct rendering.
 - Design the binary mesh format that the future Blender exporter will target (vertex layout, index format, material references).
 
-### Phase 3: PBR Shaders
+### Phase 3: Diffuse Lighting
 
-Goal: Implement the full PBR pixel shader.
+Goal: Add basic Lambertian diffuse shading with a single directional light.
 
-- Write the vertex shader with world-space output for lighting.
-- Write the pixel shader with Cook-Torrance specular (GGX D, Smith G, Schlick F) and Lambertian diffuse.
-- Add a directional light via the constant buffer.
-- Use scalar material factors only (no textures yet): base color, metallic, roughness.
-- Validate physically plausible shading on the procedural mesh.
+- Write the vertex shader with world-space position and normal output.
+- Write a pixel shader that evaluates `max(NdotL, 0) * base_color / pi` for a single directional light.
+- Pass base color and light direction/color as scalar constants in the frame constant buffer (no textures).
+- Validate lit shading on the procedural mesh (light vs. shadow side visible).
 
-### Phase 4: Texture Support
+### Phase 4: Specular BRDF (Cook-Torrance)
 
-Goal: Bind PBR textures to the pixel shader.
+Goal: Add specular reflection using the Cook-Torrance microfacet model.
+
+- Implement `D_GGX` (normal distribution function) in the pixel shader.
+- Implement `V_SmithGGX` (height-correlated visibility) in the pixel shader.
+- Implement `F_Schlick` (Fresnel approximation) in the pixel shader.
+- Combine diffuse + specular: `f = f_diffuse * (1 - F) * (1 - metallic) + f_specular`.
+- Add metallic and roughness scalar factors to the constant buffer.
+- Validate specular highlights and metallic vs. dielectric appearance on the procedural mesh.
+
+### Phase 5: Material Constant Buffer
+
+Goal: Consolidate material parameters into a dedicated constant buffer.
+
+- Define `MaterialParams` struct (base_color_factor, metallic_factor, roughness_factor, emissive_factor, occlusion_strength, normal_scale, texture_flags).
+- Add a per-material root CBV (b1) alongside the per-frame CBV (b0).
+- Update the pixel shader to read material factors from the material constant buffer.
+- Validate that material parameters can be varied per-object.
+
+### Phase 6: Base Color Texture
+
+Goal: Bind a base color texture to the pixel shader.
 
 - Create a shader-visible CBV/SRV/UAV descriptor heap.
-- Load textures from raw pixel data embedded in code (DDS or BMP parsed manually, or procedurally generated).
-- Bind base color, metallic-roughness, normal, occlusion, and emissive maps.
-- Update the root signature with a descriptor table for SRVs and a static sampler.
-- Validate texture-mapped PBR output.
+- Load a base color texture from raw pixel data embedded in code (procedurally generated or manually parsed).
+- Add a descriptor table (t0) and static sampler (s0) to the root signature.
+- Sample and multiply with `base_color_factor` in the pixel shader.
+- Validate textured diffuse output.
 
-### Phase 5: Scene and Camera
+### Phase 7: Metallic-Roughness Texture
+
+Goal: Add the packed metallic-roughness map.
+
+- Load a metallic-roughness texture (green = roughness, blue = metallic).
+- Bind to register t1 in the existing descriptor table.
+- Sample and multiply with scalar metallic/roughness factors in the pixel shader.
+- Validate per-texel roughness and metallic variation on the procedural mesh.
+
+### Phase 8: Normal, Occlusion, and Emissive Maps
+
+Goal: Complete the PBR texture set.
+
+- Add normal map (t2): construct the TBN matrix from interpolated tangent frame, perturb shading normal, scale by `normal_scale`.
+- Add occlusion map (t3): modulate ambient/indirect term by `occlusion_strength`.
+- Add emissive map (t4): add `emissive_factor * emissive_map` to final color.
+- Use `texture_flags` bitmask to fall back to scalar factors when a map is not bound.
+- Validate full PBR texture pipeline.
+
+### Phase 9: Scene and Camera
 
 Goal: Interactive camera and multiple objects.
 
