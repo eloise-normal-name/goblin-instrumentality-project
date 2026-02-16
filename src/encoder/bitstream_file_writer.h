@@ -7,7 +7,7 @@
 class BitstreamFileWriter {
   public:
 	BitstreamFileWriter(const char* path);
-	~BitstreamFileWriter();
+	~BitstreamFileWriter() = default;
 
 	void WriteFrame(const void* data, uint32_t size);
 

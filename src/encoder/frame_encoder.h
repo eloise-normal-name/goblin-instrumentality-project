@@ -22,6 +22,7 @@ class FrameEncoder {
 	NvencSession& session;
 	NvencD3D12& nvenc_d3d12;
 	BitstreamFileWriter file_writer;
-	std::vector<NV_ENC_OUTPUT_PTR> output_buffers;
+	std::vector<ID3D12Resource*> output_d3d12_buffers;
+	std::vector<NV_ENC_REGISTERED_PTR> output_registered_ptrs;
 	uint32_t buffer_count;
 };

@@ -6,11 +6,6 @@ BitstreamFileWriter::BitstreamFileWriter(const char* path)
 		throw;
 }
 
-BitstreamFileWriter::~BitstreamFileWriter() {
-	if (file.is_open())
-		file.close();
-}
-
 void BitstreamFileWriter::WriteFrame(const void* data, uint32_t size) {
 	if (!file || !data || size == 0)
 		return;
