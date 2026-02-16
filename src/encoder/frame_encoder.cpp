@@ -30,9 +30,7 @@ FrameEncoder::~FrameEncoder() {
 
 void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value,
 							   uint32_t frame_index) {
-	if (texture_index >= nvenc_d3d12.textures.size())
-		return;
-	if (texture_index >= output_buffers.size())
+	if (texture_index >= buffer_count)
 		return;
 
 	void* encoder = session.encoder;
