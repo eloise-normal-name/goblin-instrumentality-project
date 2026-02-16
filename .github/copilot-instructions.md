@@ -55,7 +55,7 @@
   - Example (✓ correct): keep `NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};` in the member declaration, and keep constructor list focused on simple parameter plumbing.
   - Example (✗ wrong): moving `EncoderConfig{ .width = width, .height = height, ... }` into the constructor initializer list during unrelated refactors.
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project (**CI enforced**)
-- **Error Handling**: Use `Try |` pattern from `include/try.h` for HRESULT-returning API calls (**CI warns on unchecked calls**):
+- **Error Handling**: Use `Try |` pattern from `include/try.h` for D3D12 and NVENC API calls that return error statuses (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
     ```cpp
     Try | function1()
