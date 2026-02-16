@@ -41,13 +41,39 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 
 	RegisteredTexture& texture = nvenc_d3d12.textures[texture_index];
 
+	NV_ENC_FENCE_POINT_D3D12 input_fence_point{
+		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence	   = texture.fence,
+		.waitValue = fence_wait_value,
+		.bWait	   = 1,
+	};
+
+	NV_ENC_INPUT_RESOURCE_D3D12 input_resource{
+		.version		  = NV_ENC_INPUT_RESOURCE_D3D12_VER,
+		.pInputBuffer	  = texture.mapped_ptr,
+		.inputFencePoint  = input_fence_point,
+	};
+
+	NV_ENC_FENCE_POINT_D3D12 output_fence_point{
+		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence	   = nullptr,
+		.waitValue = 0,
+		.bWait	   = 0,
+	};
+
+	NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource{
+		.version		   = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
+		.pOutputBuffer	   = output_buffers[texture_index],
+		.outputFencePoint  = output_fence_point,
+	};
+
 	NV_ENC_PIC_PARAMS pic_params{
 		.version		 = NV_ENC_PIC_PARAMS_VER,
 		.inputWidth		 = texture.width,
 		.inputHeight	 = texture.height,
 		.inputPitch		 = texture.width * 4,
-		.inputBuffer	 = texture.mapped_ptr,
-		.outputBitstream = output_buffers[texture_index],
+		.inputBuffer	 = &input_resource,
+		.outputBitstream = &output_resource,
 		.bufferFmt		 = texture.buffer_format,
 		.pictureStruct	 = NV_ENC_PIC_STRUCT_FRAME,
 		.inputTimeStamp	 = frame_index,
@@ -57,7 +83,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 
 	NV_ENC_LOCK_BITSTREAM lock_params{
 		.version		   = NV_ENC_LOCK_BITSTREAM_VER,
-		.outputBitstream   = output_buffers[texture_index],
+		.outputBitstream   = &output_resource,
 		.doNotWait		   = false,
 	};
 
