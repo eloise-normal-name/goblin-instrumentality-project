@@ -26,10 +26,10 @@ export class App {
 					   DXGI_FORMAT format);
 		~FrameResources();
 
-		std::vector<ComPtr<ID3D12GraphicsCommandList>> command_lists;
-		std::vector<ComPtr<ID3D12Fence>> fences;
+		std::vector<ID3D12GraphicsCommandList*> command_lists;
+		std::vector<ID3D12Fence*> fences;
 		std::vector<HANDLE> fence_events;
-		std::vector<ComPtr<ID3D12Resource>> offscreen_render_targets;
+		std::vector<ID3D12Resource*> offscreen_render_targets;
 	};
 	HWND hwnd;
 	bool headless;
@@ -86,7 +86,7 @@ export class App {
 
 			if (SUCCEEDED(present_result)) {
 				auto command_list_to_execute
-					= (ID3D12CommandList*)*&frames.command_lists[back_buffer_index];
+					= (ID3D12CommandList*)frames.command_lists[back_buffer_index];
 				device.command_queue->ExecuteCommandLists(1, &command_list_to_execute);
 			}
 
@@ -225,7 +225,7 @@ export class App {
 									FrameResources& frame_resources, uint32_t back_buffer_index,
 									uint64_t signaled_value) {
 		auto present_result = swap_chain->Present(1, DXGI_PRESENT_DO_NOT_WAIT);
-		command_queue->Signal(*&frame_resources.fences[back_buffer_index], signaled_value);
+		command_queue->Signal(frame_resources.fences[back_buffer_index], signaled_value);
 		frame_resources.fences[back_buffer_index]->SetEventOnCompletion(
 			signaled_value, frame_resources.fence_events[back_buffer_index]);
 		return present_result;
@@ -257,7 +257,7 @@ App::FrameResources::FrameResources(ID3D12Device* device, uint32_t count, uint32
 	fence_events.resize(count);
 	offscreen_render_targets.resize(count);
 
-	ComPtr<ID3D12Device4> device4;
+	ID3D12Device4* device4 = nullptr;
 	Try | device->QueryInterface(IID_PPV_ARGS(&device4));
 
 	D3D12_HEAP_PROPERTIES default_heap_props{
@@ -286,7 +286,7 @@ App::FrameResources::FrameResources(ID3D12Device* device, uint32_t count, uint32
 		if (!fence_events[i])
 			throw;
 
-		ComPtr<ID3D12GraphicsCommandList1> command_list1;
+		ID3D12GraphicsCommandList1* command_list1 = nullptr;
 		Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fences[i]))
 			| device4->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
 										  D3D12_COMMAND_LIST_FLAG_NONE,
@@ -295,11 +295,25 @@ App::FrameResources::FrameResources(ID3D12Device* device, uint32_t count, uint32
 											  &texture_desc, D3D12_RESOURCE_STATE_COMMON,
 											  &clear_value,
 											  IID_PPV_ARGS(&offscreen_render_targets[i]));
-		command_lists[i].Attach(command_list1.Detach());
+		command_lists[i] = (ID3D12GraphicsCommandList*)command_list1;
 	}
+
+	device4->Release();
 }
 
 App::FrameResources::~FrameResources() {
+	for (auto command_list : command_lists)
+		if (command_list)
+			command_list->Release();
+
+	for (auto fence : fences)
+		if (fence)
+			fence->Release();
+
+	for (auto offscreen_render_target : offscreen_render_targets)
+		if (offscreen_render_target)
+			offscreen_render_target->Release();
+
 	for (auto fence_event : fence_events)
 		CloseHandle(fence_event);
 }
@@ -322,14 +336,14 @@ void App::InitializeGraphics() {
 		D3D12_CPU_DESCRIPTOR_HANDLE offscreen_rtv
 			= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		offscreen_rtv.ptr += i * offscreen_rtv_descriptor_size;
-		device.device->CreateRenderTargetView(*&frames.offscreen_render_targets[i], nullptr,
+		device.device->CreateRenderTargetView(frames.offscreen_render_targets[i], nullptr,
 											  offscreen_rtv);
 	}
 
 	for (auto j = 0u; j < BUFFER_COUNT; ++j) {
-		nvenc_d3d12.RegisterTexture(*&frames.offscreen_render_targets[j], width, height,
+		nvenc_d3d12.RegisterTexture(frames.offscreen_render_targets[j], width, height,
 									DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
-									*&frames.fences[j]);
+									frames.fences[j]);
 	}
 
 	for (auto k = 0u; k < BUFFER_COUNT; ++k) {
@@ -338,7 +352,7 @@ void App::InitializeGraphics() {
 		cmd_rtv.ptr += k * offscreen_rtv_descriptor_size;
 
 		frames.command_lists[k]->Reset(*&allocator, nullptr);
-		RecordCommandList(*&frames.command_lists[k], cmd_rtv, *&frames.offscreen_render_targets[k],
+		RecordCommandList(frames.command_lists[k], cmd_rtv, frames.offscreen_render_targets[k],
 						  *&swap_chain.render_targets[k], k);
 	}
 }
