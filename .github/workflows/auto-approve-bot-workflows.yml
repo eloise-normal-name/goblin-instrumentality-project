@@ -23,9 +23,8 @@ jobs:
         with:
           script: |
             const trustedBots = [
-              'copilot',
-              'copilot-swe-agent',
-              'github-actions'
+              'Copilot',
+              'github-actions[bot]'
             ];
             
             const actor = context.payload.workflow_run.actor.login;
