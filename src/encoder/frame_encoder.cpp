@@ -104,19 +104,19 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 		.inputWidth		 = texture.width,
 		.inputHeight	 = texture.height,
 		.inputPitch		 = texture.width * 4,
+		.inputTimeStamp	 = frame_index,
 		.inputBuffer	 = &input_resource,
 		.outputBitstream = &output_resource,
 		.bufferFmt		 = texture.buffer_format,
 		.pictureStruct	 = NV_ENC_PIC_STRUCT_FRAME,
-		.inputTimeStamp	 = frame_index,
 	};
 
 	Try | session.nvEncEncodePicture(encoder, &pic_params);
 
 	NV_ENC_LOCK_BITSTREAM lock_params{
 		.version		   = NV_ENC_LOCK_BITSTREAM_VER,
-		.outputBitstream   = &output_resource,
 		.doNotWait		   = false,
+		.outputBitstream   = &output_resource,
 	};
 
 	Try | session.nvEncLockBitstream(encoder, &lock_params);
