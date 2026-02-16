@@ -8,9 +8,12 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 
 - `src/` - Application sources
   - `app.ixx`, `main.cpp` - App entry points and orchestration
+  - `try.h` - Error handling via `Try |` pattern
+  - `frame_debug_log.*` - Per-frame timing and debug log output
   - `graphics/` - D3D12 device, swap chain, command allocators, command lists, and resource management
   - `encoder/` - NVENC configuration, D3D12 interop, and session management
-- `include/` - Shared headers (including `try.h` for error handling)
+- `include/` - Vendor headers and shared utilities (`nvenc/nvEncodeAPI.h`, `try.h`)
+- `scripts/` - CI helper scripts (docs index validation)
 - `docs/` - Project documentation and workflow notes
 - `.github/` - Copilot instructions, workflow configuration, and custom agent prompts
 

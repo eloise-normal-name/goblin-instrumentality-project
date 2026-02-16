@@ -8,15 +8,10 @@
 
 using Microsoft::WRL::ComPtr;
 
-enum class GpuAdapterType {
-	Hardware,
-	WARP,
-};
-
 class D3D12Device {
   public:
 	D3D12Device();
-	~D3D12Device();
+	~D3D12Device() = default;
 
 	ComPtr<IDXGIFactory7> factory;
 	ComPtr<IDXGIAdapter4> adapter;
