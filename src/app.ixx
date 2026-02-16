@@ -257,7 +257,7 @@ App::FrameResources::FrameResources(ID3D12Device* device, uint32_t count, uint32
 	fence_events.resize(count);
 	offscreen_render_targets.resize(count);
 
-	ID3D12Device4* device4 = nullptr;
+	ComPtr<ID3D12Device4> device4;
 	Try | device->QueryInterface(IID_PPV_ARGS(&device4));
 
 	D3D12_HEAP_PROPERTIES default_heap_props{
@@ -297,25 +297,28 @@ App::FrameResources::FrameResources(ID3D12Device* device, uint32_t count, uint32
 											  IID_PPV_ARGS(&offscreen_render_targets[i]));
 		command_lists[i] = (ID3D12GraphicsCommandList*)command_list1;
 	}
-
-	device4->Release();
 }
 
 App::FrameResources::~FrameResources() {
 	for (auto command_list : command_lists)
 		if (command_list)
 			command_list->Release();
+	command_lists.clear();
 
 	for (auto fence : fences)
 		if (fence)
 			fence->Release();
+	fences.clear();
 
 	for (auto offscreen_render_target : offscreen_render_targets)
 		if (offscreen_render_target)
 			offscreen_render_target->Release();
+	offscreen_render_targets.clear();
 
 	for (auto fence_event : fence_events)
-		CloseHandle(fence_event);
+		if (fence_event)
+			CloseHandle(fence_event);
+	fence_events.clear();
 }
 
 void App::InitializeGraphics() {
