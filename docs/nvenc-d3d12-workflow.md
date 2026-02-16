@@ -113,7 +113,7 @@ Lock the bitstream to access encoded data:
 ```cpp
 NV_ENC_LOCK_BITSTREAM lock_params{
     .version         = NV_ENC_LOCK_BITSTREAM_VER,
-    .outputBitstream = &output_resource,  // Same D3D12 structure
+    .outputBitstream = registered_output_ptr,  // Registered pointer, not D3D12 structure
     .doNotWait       = false,
 };
 

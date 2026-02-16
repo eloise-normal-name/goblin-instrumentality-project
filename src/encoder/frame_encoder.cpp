@@ -125,7 +125,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	NV_ENC_LOCK_BITSTREAM lock_params{
 		.version		   = NV_ENC_LOCK_BITSTREAM_VER,
 		.doNotWait		   = false,
-		.outputBitstream   = &output_resource,
+		.outputBitstream   = output_registered_ptrs[texture_index],
 	};
 
 	Try | session.nvEncLockBitstream(encoder, &lock_params);
