@@ -149,108 +149,17 @@ Upload heaps are used as staging; vertex and index data are copied to DEFAULT he
 
 #### Vertex Shader (`mesh_vs.hlsl`)
 
-Transforms vertices from object space to clip space and passes interpolated attributes to the pixel shader:
-
-```hlsl
-cbuffer FrameConstants : register(b0) {
-    float4x4 model_view_projection;
-    float4x4 model;
-    float4x4 normal_matrix;
-    float3   camera_position;
-    float    pad0;
-    float3   light_direction;
-    float    pad1;
-    float3   light_color;
-    float    light_intensity;
-};
-
-struct VSInput {
-    float3 position : POSITION;
-    float3 normal   : NORMAL;
-    float2 texcoord : TEXCOORD0;
-    float4 tangent  : TANGENT;
-};
-
-struct VSOutput {
-    float4 position      : SV_POSITION;
-    float3 world_pos     : WORLD_POSITION;
-    float3 world_normal  : WORLD_NORMAL;
-    float2 texcoord      : TEXCOORD0;
-    float3 world_tangent : WORLD_TANGENT;
-    float  tangent_sign  : TANGENT_SIGN;
-};
-
-VSOutput main(VSInput input) {
-    VSOutput output;
-    float4 world = mul(model, float4(input.position, 1.0));
-    output.position      = mul(model_view_projection, float4(input.position, 1.0));
-    output.world_pos     = world.xyz;
-    output.world_normal  = mul((float3x3)normal_matrix, input.normal);
-    output.texcoord      = input.texcoord;
-    output.world_tangent = mul((float3x3)model, input.tangent.xyz);
-    output.tangent_sign  = input.tangent.w;
-    return output;
-}
-```
+Transforms vertices from object space to clip space and passes world-space position, normal, texcoord, and tangent frame to the pixel shader. Reads a per-frame constant buffer (b0) containing the MVP matrix, model matrix, normal matrix, camera position, and light parameters.
 
 #### Pixel Shader (`mesh_ps.hlsl`)
 
-Implements the PBR lighting model following glTF metallic-roughness and Filament's BRDF choices:
-
-```hlsl
-static const float PI = 3.14159265359;
-
-Texture2D base_color_map         : register(t0);
-Texture2D metallic_roughness_map : register(t1);
-Texture2D normal_map             : register(t2);
-Texture2D occlusion_map          : register(t3);
-Texture2D emissive_map           : register(t4);
-SamplerState linear_sampler      : register(s0);
-
-// GGX normal distribution (Filament)
-float D_GGX(float NdotH, float roughness) {
-    float a  = roughness * roughness;
-    float a2 = a * a;
-    float d  = (NdotH * NdotH) * (a2 - 1.0) + 1.0;
-    return a2 / (PI * d * d);
-}
-
-// Smith GGX height-correlated visibility (Filament)
-float V_SmithGGX(float NdotV, float NdotL, float roughness) {
-    float a  = roughness * roughness;
-    float a2 = a * a;
-    float v  = NdotL * sqrt(NdotV * NdotV * (1.0 - a2) + a2);
-    float l  = NdotV * sqrt(NdotL * NdotL * (1.0 - a2) + a2);
-    return 0.5 / max(v + l, 1e-5);
-}
-
-// Schlick Fresnel approximation (Filament / glTF)
-float3 F_Schlick(float3 f0, float VdotH) {
-    return f0 + (1.0 - f0) * pow(1.0 - VdotH, 5.0);
-}
-```
-
-The pixel shader samples all PBR textures, constructs the TBN matrix from the interpolated tangent frame, perturbs the normal using the normal map, and evaluates the Cook-Torrance specular BRDF plus Lambertian diffuse for each light.
+Implements the Cook-Torrance specular BRDF (GGX normal distribution, Smith height-correlated visibility, Schlick Fresnel) plus Lambertian diffuse, following [Filament's PBR equations](https://google.github.io/filament/main/filament.html) and the [glTF 2.0 metallic-roughness model](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials). Samples up to five PBR textures (base color, metallic-roughness, normal, occlusion, emissive) and falls back to scalar material factors when textures are not bound.
 
 ### Material Data
 
-Following the glTF metallic-roughness model, a material is defined by:
+Following the glTF metallic-roughness model, a material is defined by a constant buffer containing: base color factor (float4), emissive factor (float3), metallic factor, roughness factor, occlusion strength, normal scale, and a texture presence bitmask. The struct is ordered for HLSL constant buffer packing alignment (float4 first, float3 packed with a trailing float, then remaining scalars).
 
-```
-struct MaterialParams {
-    float4 base_color_factor;      // multiplied with base_color_map       (16 bytes, offset 0)
-    float3 emissive_factor;        // multiplied with emissive_map         (12 bytes, offset 16)
-    float  metallic_factor;        // multiplied with metallic channel     ( 4 bytes, offset 28)
-    float  roughness_factor;       // multiplied with roughness channel    ( 4 bytes, offset 32)
-    float  occlusion_strength;     // scales occlusion_map contribution    ( 4 bytes, offset 36)
-    float  normal_scale;           // scales normal_map perturbation       ( 4 bytes, offset 40)
-    uint   texture_flags;          // bitmask indicating which textures    ( 4 bytes, offset 44)
-};
-```
-
-The struct is ordered for HLSL constant buffer packing: `float4` first, then `float3` packed with a trailing `float` to fill the 16-byte row, followed by remaining scalars.
-
-When a texture is not present, the shader falls back to the scalar factors alone (e.g., `base_color_factor` as a flat color). This mirrors the glTF specification behavior.
+When a texture is not present, the shader falls back to the scalar factors alone (e.g., `base_color_factor` as a flat color). This mirrors the [glTF specification behavior](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials).
 
 ### Depth Buffer
 
@@ -258,14 +167,7 @@ A `DXGI_FORMAT_D32_FLOAT` depth-stencil texture is created per back buffer with 
 
 ### Shader Compilation
 
-HLSL shaders are compiled offline using `dxc.exe` (bundled with the Windows SDK) to DXIL bytecode. The compiled `.cso` files are embedded as byte arrays in header files, avoiding runtime file I/O and external dependencies:
-
-```
-dxc /T vs_6_0 /E main /Fo mesh_vs.cso mesh_vs.hlsl
-dxc /T ps_6_0 /E main /Fo mesh_ps.cso mesh_ps.hlsl
-```
-
-A build step in CMake invokes `dxc` and generates headers containing the bytecode arrays. The PSO creation code references these arrays directly.
+HLSL shaders are compiled offline using `dxc.exe` (bundled with the Windows SDK) to DXIL bytecode targeting shader model 6.0. The compiled bytecode is embedded as byte arrays in generated header files, avoiding runtime file I/O and external dependencies. A CMake build step invokes `dxc` and generates the headers. The PSO creation code references these arrays directly.
 
 ## Implementation Phases
 
