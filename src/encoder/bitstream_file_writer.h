@@ -15,5 +15,4 @@ class BitstreamFileWriter {
 
   private:
 	std::ofstream file;
-	uint64_t frames_written = 0;
 };

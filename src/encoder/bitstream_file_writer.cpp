@@ -17,5 +17,4 @@ void BitstreamFileWriter::WriteFrame(const void* data, uint32_t size) {
 
 	file.write((const char*)data, size);
 	file.flush();
-	++frames_written;
 }
