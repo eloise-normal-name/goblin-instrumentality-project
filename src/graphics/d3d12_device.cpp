@@ -7,6 +7,9 @@ D3D12Device::D3D12Device() {
 	CreateCommandQueue();
 }
 
+D3D12Device::~D3D12Device() {
+}
+
 void D3D12Device::CreateDevice() {
 	auto dxgi_factory_flags = 0u;
 
