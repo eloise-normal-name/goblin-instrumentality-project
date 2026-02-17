@@ -39,6 +39,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 - Bug triage system: [.github/BUG_TRIAGE_SYSTEM.md](.github/BUG_TRIAGE_SYSTEM.md) (automated crash detection & agent routing)
 - CI workflows & troubleshooting: [docs/GITHUB_WORKFLOWS.md](docs/GITHUB_WORKFLOWS.md)
 - Known errors & fixes: [docs/copilot-known-errors.md](docs/copilot-known-errors.md)
+- NVENC crash fix summary: [docs/nvenc-crash-fix-summary.md](docs/nvenc-crash-fix-summary.md)
 - Mesh rendering & PBR plan: [docs/mesh-rendering-pbr-plan.md](docs/mesh-rendering-pbr-plan.md)
 - NVENC D3D12 workflow: [docs/nvenc-d3d12-workflow.md](docs/nvenc-d3d12-workflow.md)
 - Custom agent guide: `.github/prompts/README.md`
