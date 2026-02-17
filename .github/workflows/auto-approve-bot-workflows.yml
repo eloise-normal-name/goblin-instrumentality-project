@@ -76,14 +76,15 @@ jobs:
               const { Octokit } = require('@octokit/rest');
               const octokit = new Octokit({ auth: token });
               
-              // Check if we can list workflow runs (requires Actions read permission)
+              // Test basic Actions read permission (write permission for approval cannot be tested without attempting approval)
               await octokit.rest.actions.listWorkflowRunsForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: 1
               });
               
-              core.info('✓ Token has valid Actions permissions');
+              core.info('✓ Token has valid Actions read permissions');
+              core.info('Note: Write permissions for approval will be verified during actual approval attempt');
               core.setOutput('has_token', 'true');
             } catch (error) {
               core.warning(`⚠️ Token validation failed: ${error.message}`);

@@ -136,7 +136,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 - **Classic PAT**: Requires `repo` scope (full control of private repositories)
 - **Fine-grained PAT**: Requires Actions `write` permission level
 - If the token is not configured or lacks permissions, the workflow will log warnings but will not fail
-- Token validation occurs before approval attempts to provide clear diagnostics
+- Token validation checks basic Actions read access; write permissions for approval are verified during the actual approval attempt
 
 **Maintenance**:
 - When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
