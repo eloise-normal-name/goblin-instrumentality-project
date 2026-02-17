@@ -89,43 +89,13 @@ jobs:
             }
 
       - name: Approve workflow run
-        if: |
-          steps.check_bot.outputs.is_trusted == 'true' &&
-          steps.check_token.outputs.token_exists == 'true' &&
-          steps.validate_token.outputs.token_valid == 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
-          script: |
-            const runId = context.payload.workflow_run.id;
-            const workflow = context.payload.workflow_run.name;
-            const actor = context.payload.workflow_run.actor.login;
-            
-            core.info(`Attempting to approve workflow run #${runId} ('${workflow}') for bot '${actor}'`);
-            
-            try {
-              await github.rest.actions.approveWorkflowRun({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: runId
-              });
-              
-              core.info(`✓ Successfully approved workflow run #${runId}`);
-              core.notice(`Auto-approved workflow '${workflow}' (run #${runId}) for trusted bot '${actor}'`);
-            } catch (error) {
-              if (error.status === 403) {
-                core.error('❌ Approval failed: Insufficient permissions');
-                core.error('The COPILOT_MCP_GITHUB_TOKEN may lack Actions write permissions.');
-                core.error('Required: Classic PAT with "repo" scope OR Fine-grained PAT with Actions "write" permission');
-              } else if (error.status === 422) {
-                core.info(`Workflow run #${runId} is already approved or cannot be approved. Nothing to do.`);
-              } else {
-                core.error(`Approval failed: ${error.message}`);
-              }
-              
-              // Don't fail the workflow - log the error and continue
-              core.warning(`Could not approve workflow run #${runId}. Manual approval may be required.`);
-            }
+        if: steps.check_bot.outputs.is_trusted == 'true'
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/approve \
+            || echo "⚠️  Workflow approval failed. Check COPILOT_MCP_GITHUB_TOKEN permissions."
 
       - name: Summary
         if: always()
