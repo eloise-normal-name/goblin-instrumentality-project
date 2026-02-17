@@ -5,6 +5,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "encoder/bitstream_file_writer.h"
 #include "encoder/frame_encoder.h"
 #include "encoder/nvenc_config.h"
 #include "encoder/nvenc_d3d12.h"
@@ -51,8 +52,9 @@ export class App {
 	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
 	uint32_t offscreen_rtv_descriptor_size;
 	FrameResources frames{*&device.device, BUFFER_COUNT, width, height, RENDER_TARGET_FORMAT};
+	BitstreamFileWriter bitstream_writer{"output.h264"};
 	FrameEncoder frame_encoder{nvenc_session, nvenc_d3d12, *&device.device, BUFFER_COUNT,
-							   width * height * 4 * 2, "output.h264"};
+							   width * height * 4 * 2};
 	FrameDebugLog frame_debug_log{"debug_output.txt"};
 
   public:
@@ -70,6 +72,14 @@ export class App {
 
 		while (running) {
 			frame_debug_log.BeginFrame(frames_submitted);
+			frame_encoder.ProcessCompletedFrames(bitstream_writer);
+			{
+				auto stats = frame_encoder.GetStats();
+				frame_debug_log.Line()
+					<< "encoder_stats submitted=" << stats.submitted_frames
+					<< " completed=" << stats.completed_frames
+					<< " pending=" << stats.pending_frames << " waits=" << stats.wait_count << "\n";
+			}
 			auto wait_result
 				= WaitForFrame(frame_debug_log, swap_chain.frame_latency_waitable, msg);
 			if (wait_result == FrameWaitResult::Continue) {
@@ -104,6 +114,7 @@ export class App {
 
 			if (SUCCEEDED(present_result))
 				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
+			frame_encoder.ProcessCompletedFrames(bitstream_writer);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
 			LogFrameSubmitted(frame_debug_log, back_buffer_index, signaled_value,
@@ -115,8 +126,17 @@ export class App {
 				break;
 		}
 
+		frame_encoder.ProcessCompletedFrames(bitstream_writer, true);
 		WaitForMultipleObjects((DWORD)frames.fences.size(), frames.fence_events.data(), TRUE,
 							   INFINITE);
+		frame_encoder.ProcessCompletedFrames(bitstream_writer, true);
+		{
+			auto stats = frame_encoder.GetStats();
+			frame_debug_log.Line()
+				<< "encoder_drain submitted=" << stats.submitted_frames
+				<< " completed=" << stats.completed_frames << " pending=" << stats.pending_frames
+				<< " waits=" << stats.wait_count << "\n";
+		}
 		return 0;
 	}
 
@@ -126,8 +146,7 @@ export class App {
 		Proceed,
 	};
 
-	void RecordCommandList(ID3D12GraphicsCommandList* command_list,
-						   D3D12_CPU_DESCRIPTOR_HANDLE rtv,
+	void RecordCommandList(ID3D12GraphicsCommandList* command_list, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
 						   ID3D12Resource* offscreen_render_target,
 						   ID3D12Resource* swap_chain_render_target, uint32_t index) {
 		{
@@ -139,7 +158,8 @@ export class App {
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		float clear_color[]{(float)(index / 4 % 2), (float)(index / 2 % 2), (float)(index % 2), 1.0f};
+		float clear_color[]{(float)(index / 4 % 2), (float)(index / 2 % 2), (float)(index % 2),
+							1.0f};
 		command_list->ClearRenderTargetView(rtv, clear_color, 0, nullptr);
 
 		{
@@ -183,8 +203,8 @@ export class App {
 		command_list->Close();
 	}
 
-	FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log,
-								 HANDLE frame_latency_waitable, MSG&) {
+	FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log, HANDLE frame_latency_waitable,
+								 MSG&) {
 		frame_debug_log.Line() << "WaitForFrame..." << "\n";
 
 		auto wait_result

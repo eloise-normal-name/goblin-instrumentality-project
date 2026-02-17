@@ -3,11 +3,15 @@
 #include "try.h"
 
 FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* device,
-						   uint32_t count, uint32_t output_buffer_size, const char* output_path)
-	: session(sess), nvenc_d3d12(nvenc), file_writer(output_path), buffer_count(count) {
+						   uint32_t count, uint32_t output_buffer_size)
+	: session(sess), nvenc_d3d12(nvenc), buffer_count(count) {
 	output_d3d12_buffers.resize(count);
 	output_registered_ptrs.resize(count);
 	output_fences.resize(count);
+
+	output_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (!output_event)
+		throw;
 
 	void* encoder = session.encoder;
 
@@ -69,6 +73,9 @@ FrameEncoder::~FrameEncoder() {
 			fence->Release();
 	}
 	output_fences.clear();
+
+	if (output_event)
+		CloseHandle(output_event);
 }
 
 void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value,
@@ -122,29 +129,53 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 
 	Try | session.nvEncEncodePicture(encoder, &pic_params);
 
-	// TODO: Use a more efficient synchronization method than waiting on the CPU for the GPU to
-	// finish encoding. This function shouldn't block or create new fences and probably shouldn't
-	// dispatch to the file_writer which is a tremendously bad conflation of responsibilities. make
-	// a note in documentation to not do this anti pattern.
-	HANDLE temp_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	output_fences[texture_index]->SetEventOnCompletion(frame_index + 1, temp_event);
-	auto x = output_fences[texture_index]->GetCompletedValue();
-	if (x < frame_index + 1)
-		WaitForSingleObject(temp_event, INFINITE);
-	CloseHandle(temp_event);
-
-	NV_ENC_LOCK_BITSTREAM lock_params{
-		.version		 = NV_ENC_LOCK_BITSTREAM_VER,
-		.doNotWait		 = false,
-		.outputBitstream = &output_resource,
-	};
-
-	Try | session.nvEncLockBitstream(encoder, &lock_params);
-
-	if (lock_params.bitstreamBufferPtr && lock_params.bitstreamSizeInBytes > 0)
-		file_writer.WriteFrame(lock_params.bitstreamBufferPtr, lock_params.bitstreamSizeInBytes);
-
-	Try | session.nvEncUnlockBitstream(encoder, &output_resource);
+	pending_outputs.push_back(
+		PendingOutput{.output_resource = output_resource, .fence_value = frame_index + 1});
+	++submitted_frames;
 
 	nvenc_d3d12.UnmapInputTexture(texture_index);
+}
+
+void FrameEncoder::ProcessCompletedFrames(BitstreamFileWriter& writer, bool wait_for_all) {
+	void* encoder = session.encoder;
+
+	while (!pending_outputs.empty()) {
+		auto& pending = pending_outputs.front();
+		auto fence	  = (ID3D12Fence*)pending.output_resource.outputFencePoint.pFence;
+		if (!fence)
+			throw;
+
+		auto completed_value = fence->GetCompletedValue();
+		if (completed_value < pending.fence_value) {
+			if (!wait_for_all)
+				break;
+			fence->SetEventOnCompletion(pending.fence_value, output_event);
+			WaitForSingleObject(output_event, INFINITE);
+			++wait_count;
+		}
+
+		NV_ENC_LOCK_BITSTREAM lock_params{
+			.version		 = NV_ENC_LOCK_BITSTREAM_VER,
+			.doNotWait		 = false,
+			.outputBitstream = &pending.output_resource,
+		};
+
+		Try | session.nvEncLockBitstream(encoder, &lock_params);
+
+		if (lock_params.bitstreamBufferPtr && lock_params.bitstreamSizeInBytes > 0)
+			writer.WriteFrame(lock_params.bitstreamBufferPtr, lock_params.bitstreamSizeInBytes);
+
+		Try | session.nvEncUnlockBitstream(encoder, &pending.output_resource);
+		pending_outputs.pop_front();
+		++completed_frames;
+	}
+}
+
+FrameEncoder::Stats FrameEncoder::GetStats() const {
+	return Stats{
+		.submitted_frames = submitted_frames,
+		.completed_frames = completed_frames,
+		.pending_frames	  = pending_outputs.size(),
+		.wait_count		  = wait_count,
+	};
 }

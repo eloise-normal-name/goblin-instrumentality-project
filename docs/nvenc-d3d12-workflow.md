@@ -113,7 +113,7 @@ Lock the bitstream to access encoded data:
 ```cpp
 NV_ENC_LOCK_BITSTREAM lock_params{
     .version         = NV_ENC_LOCK_BITSTREAM_VER,
-    .outputBitstream = registered_output_ptr,  // Registered pointer, not D3D12 structure
+    .outputBitstream = &output_resource,  // Pointer to D3D12 output structure
     .doNotWait       = false,
 };
 
@@ -125,7 +125,7 @@ uint32_t bitstream_size = lock_params.bitstreamSizeInBytes;
 
 // Process/write data...
 
-session.nvEncUnlockBitstream(encoder, registered_output_ptr);
+session.nvEncUnlockBitstream(encoder, &output_resource);
 ```
 
 ### 5. Cleanup
@@ -164,6 +164,10 @@ This ensures the encoder waits for rendering to complete before encoding the fra
 3. **Wrong buffer type**: Output buffers must be `HEAP_TYPE_READBACK`, not `DEFAULT`.
 
 4. **Insufficient buffer size**: Use at least `2 * uncompressed_frame_size` for output buffers.
+
+5. **Blocking in the encode path**: Do not wait on the CPU for output fences inside the encode
+    submission path. Queue the output and drain completed bitstreams separately to avoid stalling
+    rendering.
 
 ## Implementation Reference
 
