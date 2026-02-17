@@ -7,6 +7,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Quick Links
 
 - **[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
+- **[Automated Crash Detection](/.github/workflows/create-crash-issue.yml)** - CI automatically creates issues for crashes with logs and agent assignment
 
 ## Repository Structure
 
@@ -35,6 +36,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Documentation Index
 
 - Project instructions: `.github/copilot-instructions.md`
+- Bug triage system: [.github/BUG_TRIAGE_SYSTEM.md](.github/BUG_TRIAGE_SYSTEM.md) (automated crash detection & agent routing)
 - CI workflows & troubleshooting: [docs/GITHUB_WORKFLOWS.md](docs/GITHUB_WORKFLOWS.md)
 - Known errors & fixes: [docs/copilot-known-errors.md](docs/copilot-known-errors.md)
 - Mesh rendering & PBR plan: [docs/mesh-rendering-pbr-plan.md](docs/mesh-rendering-pbr-plan.md)
