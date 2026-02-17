@@ -4,6 +4,8 @@
 
 A complete automated bug triage system that **monitors bugs, routes them intelligently, and keeps your project organized**.
 
+**[📋 View All Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See all issues currently being analyzed by copilot agents
+
 ## 📁 Files Created
 
 ### Agents

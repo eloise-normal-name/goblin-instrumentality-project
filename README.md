@@ -4,6 +4,10 @@
 
 The Goblin Instrumentality Project is a Windows x64 C++23 application that uses Direct3D 12 for graphics and NVIDIA NVENC for GPU video encoding. It targets the Windows subsystem (no console window) and is built with CMake + MSVC.
 
+## Quick Links
+
+- **[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
+
 ## Repository Structure
 
 - `src/` - Application sources

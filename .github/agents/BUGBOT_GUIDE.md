@@ -4,6 +4,8 @@
 
 **BugBot** is an automated bug triage specialist agent that automatically monitors issues, categorizes them by component and severity, and routes them to appropriate specialist agents for detailed analysis.
 
+**[📋 View All Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See issues currently assigned to copilot agents
+
 ## Key Features
 
 ✅ **Automated Monitoring** - Runs daily (9 AM UTC) or triggered by issue events  

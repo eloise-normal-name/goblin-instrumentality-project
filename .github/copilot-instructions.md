@@ -3,6 +3,7 @@
 ## Quick Links (Table of Contents)
 
 - Project overview: `README.md`
+- **[Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
 - CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
 - Known errors & fixes: `docs/copilot-known-errors.md`
 - Bug triage system: `.github/BUG_TRIAGE_SYSTEM.md` (BugBot automated issue routing)
