@@ -83,17 +83,10 @@ jobs:
               core.setOutput('token_valid', 'true');
               
               // Note: Write permissions cannot be fully validated until approval is attempted
-              const usingFallback = !context.payload.inputs || '${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}' === '';
-              if (usingFallback) {
-                core.warning('Using fallback GITHUB_TOKEN. It may lack workflow approval permissions.');
-                core.warning('Configure COPILOT_MCP_GITHUB_TOKEN secret for proper approval permissions.');
-              }
             } catch (error) {
               core.error(`Token validation failed: ${error.message}`);
               core.setOutput('token_valid', 'false');
             }
-        env:
-          COPILOT_MCP_GITHUB_TOKEN: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
 
       - name: Approve workflow run
         if: |
