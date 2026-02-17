@@ -56,74 +56,33 @@ Once you have an open pull request, **@copilot mentions in PR comments are safe 
 
 **Note:** This creates a separate PR so your original work stays intact. This is the official GitHub Copilot feature and does not have the security concerns of issue comments.
 
-## 🤖 Using Custom Agents in Comments
+## 📋 Comparison: Issue Assignment vs PR Comments
 
-For specialized tasks, use the `@clp /agent` pattern in **both issues and PRs**:
+| Feature | Issue Assignment | PR Comment Mention |
+|---------|------------------|--------------------|
+| **Syntax** | Assignees dropdown → @copilot | `@copilot` in PR comment |
+| **Security** | ✅ Safe (official feature) | ✅ Safe in PRs (official) |
+| **Context** | Issues only | Pull requests only |
+| **Result** | Creates new PR | Creates new PR on branch |
+| **Best For** | Full task/feature | Scoped change on existing PR |
 
-### Available Agents
-
-| Agent | Usage | Purpose |
-|-------|-------|---------|
-| **bugbot** | `@clp /agent bugbot` | Automated bug triage and routing |
-| **check-raii** | `@clp /agent check-raii` | Verify RAII patterns and resource management |
-| **review-error-handling** | `@clp /agent review-error-handling` | Check error handling with Try | pattern |
-| **review-frame-logic** | `@clp /agent review-frame-logic` | Review D3D12 frame submission logic |
-| **debug-resources** | `@clp /agent debug-resources` | Diagnose D3D12 resource issues |
-| **explain-nvenc** | `@clp /agent explain-nvenc` | Explain NVENC API usage |
-| **refactor-extract** | `@clp /agent refactor-extract` | Help extract cohesive functionality |
-| **stage-changelist** | `@clp /agent stage-changelist` | Review changes and prepare commits |
-
-### Example Usage
-
-**In an issue:**
-```
-I'm seeing a crash when submitting command lists to the queue.
-The error is STATUS_INVALID_PARAMETER.
-
-@clp /agent review-error-handling Please analyze this crash
-```
-
-**In a pull request:**
-```
-@clp /agent check-raii Can you verify that all resources in this
-changelist follow proper RAII patterns?
-```
-
-**For automated bug triage:**
-```
-@clp /agent bugbot Analyze all open bugs and assign to specialists
-```
-
-## 📋 Comparison: Issue Assignment vs Comment Mentions
-
-| Feature | Issue Assignment | PR Comment Mention | Custom Agents |
-|---------|-----------------|-----------------|---------------|
-| **Syntax** | Assignees dropdown → @copilot | `@copilot` in PR comment | `@clp /agent <name>` |
-| **Security** | ✅ Safe (official feature) | ✅ Safe in PRs (official) | ✅ Safe (workspace pattern) |
-| **Context** | Issues only | Pull requests only | Issues + PRs |
-| **Result** | Creates new PR | Creates new PR on branch | Responds in thread |
-| **Best For** | Full task/feature | Scoped change on existing PR | Analysis, review, routing |
-
-**⚠️ Note:** `@copilot` mentions in **issue comments** are unsafe (reference user account). Only use in PRs or via assignment.
+**⚠️ Security Warning:** `@copilot` mentions in **issue comments** are unsafe (reference user account, not the AI). Only use @copilot via assignment in issues or in PR comments.
 
 ## 🎯 Best Practices
 
 ### For Bug Reports
 1. Create issue with clear title and description
-2. Add `bug` label (triggers BugBot automation)
-3. OR assign to @copilot via Assignees dropdown
-4. OR use `@clp /agent bugbot` in a comment for manual triage
+2. Add `bug` label (triggers BugBot automation — see below)
+3. OR assign to @copilot via Assignees dropdown for automated fix
 
-### For Code Reviews
-1. Use custom agents for specialized review:
-   - `@clp /agent check-raii` - Resource management
-   - `@clp /agent review-error-handling` - Error handling
-   - `@clp /agent review-frame-logic` - D3D12 frame logic
+### For Feature Requests
+1. Create issue describing the feature
+2. Assign to @copilot via Assignees dropdown
+3. Copilot will create a PR implementing the feature
 
-### For Refactoring
-1. Open PR with initial changes
-2. Use `@clp /agent refactor-extract` for suggestions
-3. OR assign issue to @copilot for automated refactoring
+### For Code Review on PRs
+1. Use @copilot mentions in PR comments for scoped changes
+2. Example: `@copilot Please refactor this to use RAII patterns`
 
 ## 🔧 Automated Bug Triage
 
@@ -146,31 +105,24 @@ This repository has **BugBot** configured to automatically triage bugs:
 4. Adds labels: component, severity, `agent:<name>`, `triage:in-progress`
 5. Posts assignment comment requesting analysis
 
-### Manual Trigger
-```
-@clp /agent bugbot Analyze and triage all open bugs
-```
-
 ### View All Triaged Issues
 **[Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)**
 
 ## 📚 Additional Resources
 
 - **Bug Triage System**: `.github/BUG_TRIAGE_SYSTEM.md` - Complete setup and usage
-- **BugBot Guide**: `.github/agents/BUGBOT_GUIDE.md` - Quick reference
-- **Custom Agents**: `.github/prompts/README.md` - All available agents
+- **Custom Agents**: `.github/prompts/README.md` - Workspace agents for development
 - **Repository Instructions**: `.github/copilot-instructions.md` - Coding standards
 
 ## 🚫 What NOT to Do
 
 ❌ **Don't type @copilot in issue comments** - References user account, not AI agent (security risk)
-❌ **Don't @ mention other bot names** - Could reference unrelated users
+❌ **Don't type @<anything> in issue comments** - Mentions users, not AI agents
 ✅ **@copilot in PR comments is SAFE** - Official GitHub feature
 
 ✅ **Do assign issues via Assignees dropdown**
 ✅ **Do use @copilot in pull request comments**
-✅ **Do use @clp /agent pattern for custom agents**
-✅ **Do use BugBot automation for bug triage**
+✅ **Do use BugBot automation for bug triage** (automatic)
 
 ## ❓ FAQ
 
@@ -180,21 +132,21 @@ A: In issue comments, @copilot references a GitHub user account named "copilot" 
 **Q: How do I get Copilot to work on an issue?**
 A: Assign the issue to @copilot via the Assignees dropdown in the right sidebar. Do not type @copilot in issue comments.
 
-**Q: What's the difference between @copilot and @clp /agent?**
-A: @copilot (via assignment or PR comments) is GitHub's official coding agent that creates PRs. @clp /agent runs custom workspace agents with specialized knowledge that respond in threads.
+**Q: What about @clp /agent or other @ mentions in issues?**
+A: Any @ mention in GitHub comments references a GitHub user, not an AI agent. This is a security risk. The custom agents (check-raii, review-error-handling, etc.) are internal VS Code/Copilot workspace tools, not meant to be invoked via GitHub comments.
 
 **Q: Can I use @copilot in pull requests?**
 A: Yes! @copilot mentions in **pull request comments** are safe and officially supported. They create a new PR based on the current branch.
 
-**Q: Can custom agents create pull requests?**
-A: No, custom agents respond in comment threads with analysis and recommendations. Use issue assignment or PR comments for automated PRs.
+**Q: How do I use the custom agents (check-raii, debug-resources, etc.)?**
+A: These are internal Copilot workspace agents available in VS Code. They are not invoked via GitHub comments. They assist developers working in their local environment.
 
 **Q: Do I need special permissions?**
-A: Basic features work with default `GITHUB_TOKEN`. Enhanced functionality requires `COPILOT_MCP_GITHUB_TOKEN` secret (see `.github/BUG_TRIAGE_SYSTEM.md`).
+A: Basic features work with default `GITHUB_TOKEN`. Enhanced BugBot functionality requires `COPILOT_MCP_GITHUB_TOKEN` secret (see `.github/BUG_TRIAGE_SYSTEM.md`).
 
 **Q: How often does BugBot run?**
 A: Daily at 9 AM UTC, plus automatically when issues are created/labeled with `bug`.
 
 ---
 
-**Need Help?** See `.github/BUG_TRIAGE_SYSTEM.md` for comprehensive documentation or `.github/agents/BUGBOT_GUIDE.md` for quick examples.
+**Need Help?** See `.github/BUG_TRIAGE_SYSTEM.md` for comprehensive documentation.

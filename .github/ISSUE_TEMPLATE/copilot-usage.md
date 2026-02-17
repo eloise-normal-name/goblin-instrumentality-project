@@ -1,6 +1,6 @@
 ---
 name: 💡 How to Use GitHub Copilot
-about: Quick reference for interacting with GitHub Copilot and custom agents
+about: Quick reference for interacting with GitHub Copilot
 title: '[INFO] How to Use GitHub Copilot in This Repository'
 labels: documentation
 ---
@@ -9,7 +9,7 @@ labels: documentation
 
 ## ⚠️ Security Warning
 
-**DO NOT type `@copilot` in issue comments!** This references a GitHub user account (not the AI), which is a security risk.
+**DO NOT type @mentions in issue comments!** Any @mention (like @copilot, @clp, etc.) references a GitHub user account, NOT an AI agent. This is a security risk.
 
 **Note:** @copilot mentions work correctly in **pull request comments** (official GitHub feature).
 
@@ -24,24 +24,20 @@ labels: documentation
    - Create a branch with changes
    - Open a pull request for review
 
-### Option 2: Use Custom Agents (Analysis & Review)
+### Option 2: Use @copilot in PR Comments
 
-Comment with `@clp /agent <agent-name>` pattern:
+Once you have a pull request open, you can comment with:
+```
+@copilot Please refactor this method to use RAII patterns
+```
 
-| Agent | When to Use |
-|-------|-------------|
-| `@clp /agent bugbot` | Automated bug triage and routing |
-| `@clp /agent check-raii` | Verify resource management patterns |
-| `@clp /agent review-error-handling` | Check error handling |
-| `@clp /agent review-frame-logic` | Review D3D12 frame logic |
-| `@clp /agent debug-resources` | Diagnose GPU resource issues |
-| `@clp /agent explain-nvenc` | Explain NVENC API usage |
+Copilot will create a new PR based on the current branch with the requested changes.
 
 ### Option 3: Use BugBot Automation (For Bugs)
 
 1. Add `bug` label to your issue
 2. BugBot automatically runs daily at 9 AM UTC
-3. Routes bug to appropriate specialist agent
+3. Routes bug to appropriate specialist  
 4. Adds component labels and triage status
 
 ## 📚 Full Documentation

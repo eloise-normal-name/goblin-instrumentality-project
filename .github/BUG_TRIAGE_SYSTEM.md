@@ -18,9 +18,9 @@ The Goblin Instrumentality Project now includes **BugBot**, an automated bug tri
 ### For Developers Triaging Bugs
 1. **[View all copilot-assigned issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See all issues currently being analyzed
 2. Let BugBot run automatically (daily at 9 AM UTC)
-3. Or manually trigger with: `@clp /agent bugbot`
-4. Review issue assignments in comments
-5. Wait for specialized agent analysis
+3. Review issue assignments in comments
+4. Wait for specialized agent analysis
+5. Implement fixes based on agent recommendations
 6. Implement fixes based on agent recommendations
 
 ## System Architecture
@@ -140,7 +140,7 @@ When BugBot assigns a bug, it posts a comment like:
 ```markdown
 ## Triage Assignment
 
-**Assigned to**: @clp /agent review-error-handling
+**Assigned to**: Specialist Agent (via automated workflow)
 
 **Analysis Context**: Critical crash or exception detected
 
@@ -162,15 +162,12 @@ The specialist agent will respond to this comment with their analysis.
 
 ## Manual Bug Triaging
 
-If you want to manually route a specific issue:
+BugBot runs automatically. If you need to manually trigger it, use the GitHub Actions workflow:
 
-```bash
-# Trigger BugBot to analyze all open bugs
-@clp /agent bugbot
-
-# Ask BugBot to specifically analyze one issue
-@clp /agent bugbot Analyze issue #42 and suggest which agent should investigate
-```
+1. Go to the **Actions** tab in the repository
+2. Select **Bug Triage & Assignment** workflow
+3. Click **Run workflow**
+4. Select the branch and click **Run workflow**
 
 ## Best Practices
 
@@ -234,17 +231,17 @@ Stack: ...
 **Solutions:**
 - Configure `COPILOT_MCP_GITHUB_TOKEN` for full permissions (see Configuration section)
 - Check workflow run logs for permission errors
-- Manually add labels if needed: `agent:<name>`, `triage:in-progress`
+- Check workflow logs for errors
 
 ### Agent Not Responding to Assignment Comment
 **Possible causes:**
-- Agent not available or mentioned incorrectly
+- Agents are internal workspace tools, not GitHub comment responders
 - Issue doesn't have enough context
 
 **Solutions:**
-- Check agent spelling: `check-raii`, `review-error-handling`, `review-frame-logic`, `debug-resources`, `explain-nvenc`
-- Reply with more context: error messages, code snippets, reproduction steps
-- Manually invoke agent: `@clp /agent <name> <your question>`
+- Wait for BugBot's automatic analysis
+- Add more context to the issue (error messages, code snippets, reproduction steps)
+- Assign issue to @copilot via Assignees dropdown for direct fix
 
 ## Integration with Your Workflow
 
@@ -275,7 +272,7 @@ Closes #<original_bug_number>
 ## FAQ
 
 **Q: Why can't I use @copilot in issue comments?**
-A: Typing @copilot in **issue comments** references a GitHub user account named "copilot" (not the AI agent), which is a security risk. Instead, assign issues to @copilot via the Assignees dropdown, or use `@clp /agent` pattern for custom agents. Note: @copilot mentions work correctly in **pull request comments** (official feature). See `.github/COPILOT_INTERACTION_GUIDE.md` for details.
+A: Typing @copilot in **issue comments** references a GitHub user account named "copilot" (not the AI agent), which is a security risk. Instead, assign issues to @copilot via the Assignees dropdown. Note: @copilot mentions work correctly in **pull request comments** (official feature). See `.github/COPILOT_INTERACTION_GUIDE.md` for details.
 
 **Q: Does this replace code review?**
 A: No. BugBot performs initial triage and routing. Developer review and code review processes are unchanged.
@@ -284,7 +281,7 @@ A: No. BugBot performs initial triage and routing. Developer review and code rev
 A: Yes. Disable the workflow in GitHub Actions settings, or remove the `bug` label from issues.
 
 **Q: What if BugBot routes to the wrong agent?**
-A: Reply in the issue mentioning the correct agent: `@clp /agent <correct-agent-name>`
+A: BugBot's routing is automatic based on keywords. If needed, manually assign the issue to @copilot via the Assignees dropdown, or wait for the automated workflow to complete and review the analysis.
 
 **Q: How often does BugBot run?**
 A: Daily at 9 AM UTC, plus whenever an issue is opened or labeled with `bug`.
