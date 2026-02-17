@@ -135,7 +135,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 - The `COPILOT_MCP_GITHUB_TOKEN` secret must be configured as a GitHub Personal Access Token (PAT)
 - **Classic PAT**: Requires `repo` scope (full control of private repositories)
 - **Fine-grained PAT**: Requires Actions `write` permission level
-- If the token is not configured or lacks permissions, the workflow will log warnings but will not fail
+- If the token is not configured or lacks permissions, the auto-approve workflow logs warnings but does not fail; however, the target workflow runs will not be approved and will remain pending
 - Token validation checks basic Actions read access; write permissions cannot be pre-validated and will only be tested when approval is attempted
 
 **Maintenance**:
