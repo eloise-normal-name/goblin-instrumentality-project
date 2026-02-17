@@ -10,8 +10,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 2. **Run App and Log Output** - Executes the app in headless mode and captures output logs
 3. **Fix App Failure** - Automatically triggers when Run App workflow fails to notify and provide analysis
 4. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
-5. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-6. **Docs Index Check** - Ensures docs are indexed in README
+5. **Docs Index Check** - Ensures docs are indexed in README
 
 **Note**: This repository does not use GitHub Issues for task tracking.
 
