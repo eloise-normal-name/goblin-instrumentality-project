@@ -2,12 +2,13 @@ name: Auto-Approve Bot Workflow Runs
 
 on:
   workflow_run:
-    workflows: 
+    workflows:
       - "Build and Validate"
       - "Run App and Log Output"
       - "Code Quality Checks"
       - "Docs Index Check"
-    types: [requested]
+    types:
+      - requested
 
 permissions:
   actions: write
@@ -16,122 +17,142 @@ permissions:
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
-    # Only approve if this is from a pull_request or push event (not workflow_dispatch)
+    # Only run for pull_request or push events from bot PRs
     if: |
       github.event.workflow_run.event == 'pull_request' ||
       github.event.workflow_run.event == 'push'
     
     steps:
-    - name: Check if actor is a trusted bot
-      id: check_bot
-      run: |
-        ACTOR="${{ github.event.workflow_run.actor.login }}"
-        echo "Actor: $ACTOR"
-        
-        # List of trusted bot accounts
-        TRUSTED_BOTS="Copilot copilot[bot] copilot-swe-agent[bot] github-actions[bot]"
-        
-        IS_TRUSTED=false
-        for bot in $TRUSTED_BOTS; do
-          if [ "$ACTOR" = "$bot" ]; then
-            IS_TRUSTED=true
-            break
-          fi
-        done
-        
-        if [ "$IS_TRUSTED" = "true" ]; then
-          echo "trusted=true" >> $GITHUB_OUTPUT
-          echo "✓ Actor is a trusted bot: $ACTOR"
-        else
-          echo "trusted=false" >> $GITHUB_OUTPUT
-          echo "✗ Actor is not a trusted bot: $ACTOR"
-        fi
-    
-    - name: Check token configuration
-      id: check_token
-      if: steps.check_bot.outputs.trusted == 'true'
-      env:
-        TOKEN_SECRET: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
-      run: |
-        if [ -z "$TOKEN_SECRET" ]; then
-          echo "has_token=false" >> $GITHUB_OUTPUT
-          echo "⚠️  COPILOT_MCP_GITHUB_TOKEN not configured. Using default GITHUB_TOKEN."
-          echo "   Default token may lack permissions to approve workflow runs."
-        else
-          echo "has_token=true" >> $GITHUB_OUTPUT
-          echo "✓ COPILOT_MCP_GITHUB_TOKEN configured"
-        fi
-    
-    - name: Validate token permissions
-      id: validate_token
-      if: steps.check_bot.outputs.trusted == 'true' && steps.check_token.outputs.has_token == 'true'
-      uses: actions/github-script@v7
-      continue-on-error: true
-      with:
-        github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
-        script: |
-          try {
-            // Test token permissions with a simple read operation
-            await github.rest.actions.listRepoWorkflows({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            core.info('✓ Token has valid Actions read permissions');
-            core.setOutput('valid', 'true');
-          } catch (error) {
-            core.warning(`⚠️  Token validation failed: ${error.message}`);
-            core.setOutput('valid', 'false');
-          }
-    
-    - name: Approve workflow run
-      if: steps.check_bot.outputs.trusted == 'true'
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
-        script: |
-          const runId = context.payload.workflow_run.id;
-          const workflowName = context.payload.workflow_run.name;
-          const actor = context.payload.workflow_run.actor.login;
+      - name: Check if actor is trusted bot
+        id: check_bot
+        run: |
+          ACTOR="${{ github.event.workflow_run.actor.login }}"
+          echo "Actor: $ACTOR"
           
-          core.info(`Attempting to approve workflow run #${runId} (${workflowName}) from ${actor}`);
+          # Define trusted bots
+          TRUSTED_BOTS=("Copilot" "copilot[bot]" "copilot-swe-agent[bot]" "github-actions[bot]")
           
-          try {
-            await github.rest.actions.approveWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: runId
-            });
-            core.info(`✓ Successfully approved workflow run #${runId}`);
-          } catch (error) {
-            if (error.status === 403) {
-              core.warning('⚠️  Insufficient permissions to approve workflow run');
-              core.warning('   Ensure COPILOT_MCP_GITHUB_TOKEN has Actions write permissions');
-            } else if (error.message.includes('already been approved')) {
-              core.info('ℹ️  Workflow run already approved');
-            } else {
-              core.warning(`⚠️  Failed to approve workflow run: ${error.message}`);
-            }
-          }
-    
-    - name: Summary
-      if: always()
-      run: |
-        echo "## Auto-Approve Workflow Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [ "${{ steps.check_bot.outputs.trusted }}" = "true" ]; then
-          echo "✓ Actor is trusted: ${{ github.event.workflow_run.actor.login }}" >> $GITHUB_STEP_SUMMARY
+          IS_TRUSTED=false
+          for bot in "${TRUSTED_BOTS[@]}"; do
+            if [ "$ACTOR" == "$bot" ]; then
+              IS_TRUSTED=true
+              break
+            fi
+          done
           
-          if [ "${{ steps.check_token.outputs.has_token }}" = "true" ]; then
-            echo "✓ COPILOT_MCP_GITHUB_TOKEN configured" >> $GITHUB_STEP_SUMMARY
+          if [ "$IS_TRUSTED" = true ]; then
+            echo "✓ Actor is a trusted bot"
+            echo "is_trusted=true" >> $GITHUB_OUTPUT
           else
-            echo "⚠️  Using default GITHUB_TOKEN (may lack approval permissions)" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️  Actor '$ACTOR' is not a trusted bot. Skipping auto-approval."
+            echo "is_trusted=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Check token configuration
+        id: check_token
+        if: steps.check_bot.outputs.is_trusted == 'true'
+        env:
+          TOKEN_CHECK: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$TOKEN_CHECK" ]; then
+            echo "⚠️  COPILOT_MCP_GITHUB_TOKEN not configured"
+            echo "token_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "✓ COPILOT_MCP_GITHUB_TOKEN configured"
+            echo "token_exists=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate token permissions
+        id: validate_token
+        if: |
+          steps.check_bot.outputs.is_trusted == 'true' &&
+          steps.check_token.outputs.token_exists == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
+          script: |
+            try {
+              // Test token with a simple API call to check Actions read access
+              const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 1
+              });
+              
+              core.info('✓ Token has basic Actions API access');
+              core.setOutput('token_valid', 'true');
+              
+              // Note: Write permissions cannot be fully validated until approval is attempted
+            } catch (error) {
+              core.error(`Token validation failed: ${error.message}`);
+              core.setOutput('token_valid', 'false');
+            }
+
+      - name: Approve workflow run
+        if: |
+          steps.check_bot.outputs.is_trusted == 'true' &&
+          steps.check_token.outputs.token_exists == 'true' &&
+          steps.validate_token.outputs.token_valid == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
+          script: |
+            const runId = context.payload.workflow_run.id;
+            const workflow = context.payload.workflow_run.name;
+            const actor = context.payload.workflow_run.actor.login;
+            
+            core.info(`Attempting to approve workflow run #${runId} ('${workflow}') for bot '${actor}'`);
+            
+            try {
+              await github.rest.actions.approveWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: runId
+              });
+              
+              core.info(`✓ Successfully approved workflow run #${runId}`);
+              core.notice(`Auto-approved workflow '${workflow}' (run #${runId}) for trusted bot '${actor}'`);
+            } catch (error) {
+              if (error.status === 403) {
+                core.error('❌ Approval failed: Insufficient permissions');
+                core.error('The COPILOT_MCP_GITHUB_TOKEN may lack Actions write permissions.');
+                core.error('Required: Classic PAT with "repo" scope OR Fine-grained PAT with Actions "write" permission');
+              } else if (error.status === 422) {
+                core.info(`Workflow run #${runId} is already approved or cannot be approved. Nothing to do.`);
+              } else {
+                core.error(`Approval failed: ${error.message}`);
+              }
+              
+              // Don't fail the workflow - log the error and continue
+              core.warning(`Could not approve workflow run #${runId}. Manual approval may be required.`);
+            }
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Auto-Approve Workflow Summary"
+          echo ""
+          echo "**Workflow Run**: ${{ github.event.workflow_run.name }} (#${{ github.event.workflow_run.id }})"
+          echo "**Actor**: ${{ github.event.workflow_run.actor.login }}"
+          echo "**Event Type**: ${{ github.event.workflow_run.event }}"
+          echo "**Trusted Bot**: ${{ steps.check_bot.outputs.is_trusted }}"
+          echo "**Token Configured**: ${{ steps.check_token.outputs.token_exists }}"
+          echo "**Token Valid**: ${{ steps.validate_token.outputs.token_valid }}"
+          echo ""
           
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Attempted to approve workflow run #${{ github.event.workflow_run.id }}" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "✗ Actor not trusted: ${{ github.event.workflow_run.actor.login }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Auto-approval skipped for non-trusted actor" >> $GITHUB_STEP_SUMMARY
-        fi
+          if [ "${{ steps.check_bot.outputs.is_trusted }}" != "true" ]; then
+            echo "⚠️  Actor is not a trusted bot. Auto-approval skipped."
+          elif [ "${{ steps.check_token.outputs.token_exists }}" != "true" ]; then
+            echo "⚠️  COPILOT_MCP_GITHUB_TOKEN not configured. Cannot approve workflow."
+            echo ""
+            echo "**Action Required**: Configure COPILOT_MCP_GITHUB_TOKEN as a repository secret:"
+            echo "1. Create a GitHub Personal Access Token (PAT)"
+            echo "   - Classic PAT: Enable 'repo' scope"
+            echo "   - Fine-grained PAT: Grant Actions 'write' permission"
+            echo "2. Add as repository secret: Settings → Secrets → Actions → New repository secret"
+            echo "3. Name: COPILOT_MCP_GITHUB_TOKEN"
+          elif [ "${{ steps.validate_token.outputs.token_valid }}" != "true" ]; then
+            echo "⚠️  Token validation failed. Check token permissions."
+          else
+            echo "✓ Workflow approval completed successfully"
+          fi

@@ -130,7 +130,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 **Triggers**: 
 - `workflow_run` event when "Build and Validate", "Run App and Log Output", "Code Quality Checks", or "Docs Index Check" workflows are requested
-- Only for pull request events
+- Accepts both `pull_request` and `push` events (bot PRs may trigger workflows as either event type)
 
 **Purpose**: Enables trusted bot accounts to trigger PR review workflows without manual approval.
 
@@ -189,6 +189,11 @@ The repository includes GitHub Actions workflows that automate build validation:
 - When adding trusted bot accounts, update the `trustedBots` array in the workflow script
 - Review workflow logs periodically to ensure approvals are working as expected
 - If approvals fail with permission errors, verify `COPILOT_MCP_GITHUB_TOKEN` is configured correctly
+
+**Alternative: MCP Configuration**:
+- For direct GitHub API integration using the Model Context Protocol, see `.github/MCP_README.md`
+- MCP configuration file available at `.github/mcp-config.json`
+- Provides an alternative to the GitHub Actions workflow for programmatic workflow approval
 
 ### Docs Index Check (`.github/workflows/docs-index-check.yml`)
 

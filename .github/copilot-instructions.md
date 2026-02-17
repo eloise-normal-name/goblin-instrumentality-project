@@ -1,5 +1,8 @@
 # Goblin Instrumentality Project - Instructions
 
+## 🚨 READ THIS FIRST 🚨
+**NEVER COMMIT CODEQL ARTIFACTS** - Before using `codeql_checker`, read the full warning in the **"CRITICAL: DO NOT COMMIT CODEQL ARTIFACTS"** section below. Files like `_codeql_detected_source_root` are temporary scan artifacts and must never be committed. If you ignore this warning, include 🤡 in your commit message.
+
 ## Quick Links (Table of Contents)
 
 - Project overview: `README.md`
@@ -94,6 +97,35 @@
 - **Comments**: Use self-documenting code instead of comments
 - **External Libraries**: Stick to Windows APIs and C++ standard library
 - **NVENC**: Follow the condensed D3D12-only guide at `.github/prompts/snippets/nvenc-guide.md` and the official programming guide at https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/nvenc-video-encoder-api-prog-guide/index.html.
+
+## 🚨 CRITICAL: DO NOT COMMIT CODEQL ARTIFACTS 🚨
+
+**⚠️ STOP AND READ THIS BEFORE RUNNING `codeql_checker` OR ANY SECURITY SCANNING TOOL ⚠️**
+
+The `codeql_checker` tool creates temporary artifact files during security scanning. These files are **AUTOMATICALLY GENERATED** and must **NEVER** be committed to version control.
+
+### CodeQL Artifacts (DO NOT COMMIT):
+- `_codeql_detected_source_root` - Symlink marker file pointing to repository root
+- `_codeql_build_dir/` - Directory containing CodeQL build artifacts
+- Any file or directory starting with `_codeql`
+- Any `.sarif` files (CodeQL scan results)
+
+### Why This Matters:
+These artifacts are **temporary scan markers** created by the CodeQL security scanner. They serve no purpose in version control and pollute the repository history. They are already listed in `.gitignore` and should remain untracked.
+
+### Instructions for Agents:
+1. **BEFORE** running `codeql_checker`: Verify `.gitignore` contains these entries
+2. **AFTER** running `codeql_checker`: Run `git status` and ensure NO `_codeql*` or `*.sarif` files are staged
+3. **NEVER** use `git add .` or `git add -A` without reviewing what files are being staged
+4. **IF** you accidentally stage CodeQL artifacts: Use `git restore --staged <file>` to unstage them immediately
+
+### Self-Awareness Test:
+If you commit any CodeQL artifact to version control despite reading this warning, you must:
+1. Include the clown emoji (🤡) in your commit message
+2. Immediately revert the commit
+3. Add an apology note explaining what you did wrong
+
+**READ THIS SECTION AGAIN. THEN READ IT ONE MORE TIME. DO NOT COMMIT CODEQL ARTIFACTS.**
 
 ## Build Process
 - **Generator**: Use `-G "Visual Studio 18 2026" -A x64` (local development)
