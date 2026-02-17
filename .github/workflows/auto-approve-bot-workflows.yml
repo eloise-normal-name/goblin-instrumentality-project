@@ -84,29 +84,33 @@ jobs:
               });
               
               core.setOutput('has_valid_token', 'true');
+              core.setOutput('using_pat', 'true');
               core.info('✓ Token has valid Actions read permissions');
               core.info('Note: Write permissions for approval will be verified during actual approval attempt');
             } catch (error) {
               core.setOutput('has_valid_token', 'false');
+              core.setOutput('using_pat', 'false');
               core.warning(`⚠️ Token validation failed: ${error.message}`);
               core.warning('Token may lack required permissions (needs Actions write for approval)');
             }
           result-encoding: string
       
       - name: Approve workflow run
-        if: steps.check_bot.outputs.should_approve == 'true' && steps.check_token_exists.outputs.token_configured == 'true' && steps.check_token.outputs.has_valid_token == 'true'
+        if: steps.check_bot.outputs.should_approve == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
           script: |
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
-            const usingPAT = '${{ steps.check_token.outputs.using_pat }}' === 'true';
+            const tokenConfigured = '${{ steps.check_token_exists.outputs.token_configured }}' === 'true';
+            const hasValidToken = '${{ steps.check_token.outputs.has_valid_token }}' === 'true';
+            const usingPAT = tokenConfigured && hasValidToken;
             
             if (usingPAT) {
               core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN (PAT)`);
             } else {
-              core.warning(`COPILOT_MCP_GITHUB_TOKEN secret not configured - using default GITHUB_TOKEN`);
+              core.warning(`COPILOT_MCP_GITHUB_TOKEN secret not configured or invalid - using default GITHUB_TOKEN`);
               core.warning(`Default token may have insufficient permissions to approve workflow runs`);
               core.warning(`To fix: Add COPILOT_MCP_GITHUB_TOKEN secret with 'repo' scope (classic PAT) or Actions 'write' permission (fine-grained PAT)`);
               core.info(`Attempting to approve workflow run ${runId} from ${actor} using GITHUB_TOKEN`);
