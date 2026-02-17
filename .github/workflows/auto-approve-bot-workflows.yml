@@ -57,15 +57,15 @@ jobs:
           MCP_TOKEN: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
           script: |
             const token = process.env.MCP_TOKEN;
             
             if (!token) {
+              core.setOutput('has_token', 'false');
               core.warning('⚠️ COPILOT_MCP_GITHUB_TOKEN secret is not configured');
               core.warning('The workflow will not be able to approve runs from bot PRs');
               core.warning('To fix: Configure a GitHub PAT with Actions write permission as COPILOT_MCP_GITHUB_TOKEN secret');
-              core.setOutput('has_token', 'false');
               return;
             }
             
@@ -85,9 +85,9 @@ jobs:
               core.info('Note: Write permissions for approval will be verified during actual approval attempt');
               core.setOutput('has_token', 'true');
             } catch (error) {
+              core.setOutput('has_token', 'false');
               core.warning(`⚠️ Token validation failed: ${error.message}`);
               core.warning('Token may lack required permissions (needs Actions write for approval)');
-              core.setOutput('has_token', 'false');
             }
           result-encoding: string
       
