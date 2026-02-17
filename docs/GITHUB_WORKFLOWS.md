@@ -118,18 +118,31 @@ The repository includes GitHub Actions workflows that automate build validation:
 **Security**:
 - Only trusted bot accounts are approved (explicitly listed)
 - Uses `COPILOT_MCP_GITHUB_TOKEN` secret (PAT) to authenticate the approval API call, providing elevated permissions beyond the default `GITHUB_TOKEN`
+- Falls back to default `GITHUB_TOKEN` if PAT is not configured (may have insufficient permissions)
 - Uses `actions: write` permission to approve runs
 - Logs all approval actions for audit trail
-- Gracefully handles approval errors (e.g., already approved)
+- Gracefully handles approval errors (e.g., already approved, insufficient permissions)
+
+**Token Configuration**:
+- **Recommended**: Configure `COPILOT_MCP_GITHUB_TOKEN` as a repository secret
+  - Create a Personal Access Token (PAT) with `actions: write` scope
+  - Add as repository secret: Settings → Secrets and variables → Actions → New repository secret
+  - Name: `COPILOT_MCP_GITHUB_TOKEN`
+- **Fallback**: Workflow uses default `GITHUB_TOKEN` when PAT is not configured
+  - Default token may lack permissions to approve workflow runs from bot PRs
+  - Workflow logs will show warnings when using fallback token
 
 **Trusted Bots**:
 - `Copilot` - GitHub Copilot SWE agent
+- `copilot[bot]` - GitHub Copilot bot
+- `copilot-swe-agent[bot]` - GitHub Copilot SWE agent bot
 - `github-actions[bot]` - GitHub Actions bot
 
 **Maintenance**:
 - When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
 - When adding trusted bot accounts, update the `trustedBots` array in the workflow script
 - Review workflow logs periodically to ensure approvals are working as expected
+- If approvals fail with permission errors, verify `COPILOT_MCP_GITHUB_TOKEN` is configured correctly
 
 ### Docs Index Check (`.github/workflows/docs-index-check.yml`)
 

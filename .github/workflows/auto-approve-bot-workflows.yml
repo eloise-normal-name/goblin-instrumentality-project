@@ -54,12 +54,20 @@ jobs:
         if: steps.check_bot.outputs.should_approve == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
           script: |
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
+            const usingPAT = '${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}' !== '';
             
-            core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN`);
+            if (usingPAT) {
+              core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN (PAT)`);
+            } else {
+              core.warning(`COPILOT_MCP_GITHUB_TOKEN secret not configured - using default GITHUB_TOKEN`);
+              core.warning(`Default token may have insufficient permissions to approve workflow runs`);
+              core.warning(`To fix: Add COPILOT_MCP_GITHUB_TOKEN secret with 'actions: write' permission`);
+              core.info(`Attempting to approve workflow run ${runId} from ${actor} using GITHUB_TOKEN`);
+            }
             
             try {
               await github.rest.actions.approveWorkflowRun({
@@ -70,6 +78,11 @@ jobs:
               
               core.info(`✓ Successfully approved workflow run ${runId} from ${actor}`);
             } catch (error) {
-              // If approval fails (e.g., already approved or not needed), log but don't fail
-              core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
+              // If approval fails (e.g., already approved, not needed, or insufficient permissions)
+              if (error.status === 403) {
+                core.error(`Permission denied - COPILOT_MCP_GITHUB_TOKEN secret required for approval`);
+                core.error(`Configure a Personal Access Token with 'actions: write' scope as COPILOT_MCP_GITHUB_TOKEN secret`);
+              } else {
+                core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
+              }
             }
