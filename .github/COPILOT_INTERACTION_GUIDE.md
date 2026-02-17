@@ -2,9 +2,11 @@
 
 This guide explains how to properly interact with GitHub Copilot coding agent in issues and pull requests.
 
-## ⚠️ Security Note: Don't Use @copilot Mentions in Comments
+## ⚠️ Security Note: Don't Use @copilot Mentions in Issue Comments
 
-**DO NOT type `@copilot` in issue or PR comments.** This references a GitHub user account named "copilot" (not the AI agent), which is a significant security concern as it allows impersonation and could lead to malicious actors monitoring your repository activity.
+**DO NOT type `@copilot` in issue comments.** In most repositories, this references a GitHub user account named "copilot" (not the AI agent), which is a significant security concern as it allows impersonation and could lead to malicious actors monitoring your repository activity.
+
+**Note:** @copilot mentions work correctly in pull request comments (official GitHub feature), but should be avoided in issue comments for security reasons. Instead, use issue assignment (see below).
 
 ## ✅ Correct Way to Use GitHub Copilot
 
@@ -23,9 +25,13 @@ Issue Title: Fix memory leak in frame loop
 
 Description:
 The application leaks GPU memory on every frame submission.
+Please investigate the resource cleanup in the frame loop and ensure
+proper RAII patterns are followed.
 
-@copilot Please investigate the resource cleanup in the frame loop
-and ensure proper RAII patterns are followed.
+Steps to reproduce:
+1. Run the app for 100 frames
+2. Check GPU memory usage with Task Manager
+3. Memory steadily increases without cleanup
 ```
 
 **What happens:**
@@ -35,9 +41,9 @@ and ensure proper RAII patterns are followed.
 - Opens a pull request with the fix
 - You review and provide feedback as needed
 
-### In Pull Requests: Use @copilot in Comments
+### In Pull Requests: Use @copilot in Comments (Safe)
 
-Once you have an open pull request, you can:
+Once you have an open pull request, **@copilot mentions in PR comments are safe and officially supported**:
 
 1. **Comment on the PR** with `@copilot <task>`
 2. Copilot will create a **new PR** based on the current PR's branch
@@ -48,7 +54,7 @@ Once you have an open pull request, you can:
 @copilot Please refactor this method to use RAII patterns
 ```
 
-**Note:** This creates a separate PR so your original work stays intact.
+**Note:** This creates a separate PR so your original work stays intact. This is the official GitHub Copilot feature and does not have the security concerns of issue comments.
 
 ## 🤖 Using Custom Agents in Comments
 
@@ -60,7 +66,7 @@ For specialized tasks, use the `@clp /agent` pattern in **both issues and PRs**:
 |-------|-------|---------|
 | **bugbot** | `@clp /agent bugbot` | Automated bug triage and routing |
 | **check-raii** | `@clp /agent check-raii` | Verify RAII patterns and resource management |
-| **review-error-handling** | `@clp /agent review-error-handling` | Check error handling with Try \| pattern |
+| **review-error-handling** | `@clp /agent review-error-handling` | Check error handling with Try | pattern |
 | **review-frame-logic** | `@clp /agent review-frame-logic` | Review D3D12 frame submission logic |
 | **debug-resources** | `@clp /agent debug-resources` | Diagnose D3D12 resource issues |
 | **explain-nvenc** | `@clp /agent explain-nvenc` | Explain NVENC API usage |
@@ -90,13 +96,15 @@ changelist follow proper RAII patterns?
 
 ## 📋 Comparison: Issue Assignment vs Comment Mentions
 
-| Feature | Issue Assignment | Comment Mention | Custom Agents |
+| Feature | Issue Assignment | PR Comment Mention | Custom Agents |
 |---------|-----------------|-----------------|---------------|
-| **Syntax** | Assignees dropdown → @copilot | `@copilot` in comment | `@clp /agent <name>` |
-| **Security** | ✅ Safe (official feature) | ⚠️ **UNSAFE** (references user) | ✅ Safe (workspace pattern) |
-| **Context** | Full issue + repo | Current thread + repo | Specialized knowledge |
+| **Syntax** | Assignees dropdown → @copilot | `@copilot` in PR comment | `@clp /agent <name>` |
+| **Security** | ✅ Safe (official feature) | ✅ Safe in PRs (official) | ✅ Safe (workspace pattern) |
+| **Context** | Issues only | Pull requests only | Issues + PRs |
 | **Result** | Creates new PR | Creates new PR on branch | Responds in thread |
 | **Best For** | Full task/feature | Scoped change on existing PR | Analysis, review, routing |
+
+**⚠️ Note:** `@copilot` mentions in **issue comments** are unsafe (reference user account). Only use in PRs or via assignment.
 
 ## 🎯 Best Practices
 
@@ -155,27 +163,31 @@ This repository has **BugBot** configured to automatically triage bugs:
 
 ## 🚫 What NOT to Do
 
-❌ **Don't type @copilot in comments** - References user account, not AI agent
+❌ **Don't type @copilot in issue comments** - References user account, not AI agent (security risk)
 ❌ **Don't @ mention other bot names** - Could reference unrelated users
-❌ **Don't expect @copilot comments to work** - Use assignment or @clp /agent instead
+✅ **@copilot in PR comments is SAFE** - Official GitHub feature
 
 ✅ **Do assign issues via Assignees dropdown**
+✅ **Do use @copilot in pull request comments**
 ✅ **Do use @clp /agent pattern for custom agents**
 ✅ **Do use BugBot automation for bug triage**
 
 ## ❓ FAQ
 
-**Q: Why can't I use @copilot in comments?**
-A: It references a GitHub user named "copilot", not the AI agent. This is a security risk.
+**Q: Why can't I use @copilot in issue comments?**
+A: In issue comments, @copilot references a GitHub user account named "copilot" (not the AI), which is a security risk. However, @copilot mentions work correctly in **pull request comments** (official feature). For issues, use the Assignees dropdown instead.
 
 **Q: How do I get Copilot to work on an issue?**
-A: Assign the issue to @copilot via the Assignees dropdown in the right sidebar.
+A: Assign the issue to @copilot via the Assignees dropdown in the right sidebar. Do not type @copilot in issue comments.
 
 **Q: What's the difference between @copilot and @clp /agent?**
-A: @copilot (via assignment) is GitHub's official coding agent. @clp /agent runs custom workspace agents with specialized knowledge.
+A: @copilot (via assignment or PR comments) is GitHub's official coding agent that creates PRs. @clp /agent runs custom workspace agents with specialized knowledge that respond in threads.
+
+**Q: Can I use @copilot in pull requests?**
+A: Yes! @copilot mentions in **pull request comments** are safe and officially supported. They create a new PR based on the current branch.
 
 **Q: Can custom agents create pull requests?**
-A: No, custom agents respond in comment threads with analysis and recommendations. Use issue assignment for automated PRs.
+A: No, custom agents respond in comment threads with analysis and recommendations. Use issue assignment or PR comments for automated PRs.
 
 **Q: Do I need special permissions?**
 A: Basic features work with default `GITHUB_TOKEN`. Enhanced functionality requires `COPILOT_MCP_GITHUB_TOKEN` secret (see `.github/BUG_TRIAGE_SYSTEM.md`).

@@ -275,7 +275,7 @@ Closes #<original_bug_number>
 ## FAQ
 
 **Q: Why can't I use @copilot in issue comments?**
-A: Typing @copilot in comments references a GitHub user account named "copilot" (not the AI agent), which is a security risk. Instead, assign issues to @copilot via the Assignees dropdown, or use `@clp /agent` pattern for custom agents. See `.github/COPILOT_INTERACTION_GUIDE.md` for details.
+A: Typing @copilot in **issue comments** references a GitHub user account named "copilot" (not the AI agent), which is a security risk. Instead, assign issues to @copilot via the Assignees dropdown, or use `@clp /agent` pattern for custom agents. Note: @copilot mentions work correctly in **pull request comments** (official feature). See `.github/COPILOT_INTERACTION_GUIDE.md` for details.
 
 **Q: Does this replace code review?**
 A: No. BugBot performs initial triage and routing. Developer review and code review processes are unchanged.

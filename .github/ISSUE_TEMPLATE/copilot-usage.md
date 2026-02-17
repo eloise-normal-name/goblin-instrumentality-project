@@ -9,7 +9,9 @@ labels: documentation
 
 ## ⚠️ Security Warning
 
-**DO NOT type `@copilot` in comments!** This references a GitHub user account (not the AI), which is a security risk.
+**DO NOT type `@copilot` in issue comments!** This references a GitHub user account (not the AI), which is a security risk.
+
+**Note:** @copilot mentions work correctly in **pull request comments** (official GitHub feature).
 
 ## ✅ Correct Ways to Use Copilot
 
