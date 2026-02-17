@@ -16,6 +16,7 @@ Project Rules:
 - HANDLEs, COM objects, DLL modules need proper cleanup
 - Use ComPtr for COM object lifetime management
 - Pass raw COM pointers to functions, not ComPtr by value
+- Do not use defaulted constructors (`= default`) on resource-owning types
 
 When checking RAII compliance:
 1. Verify all resources allocated in constructor are cleaned in destructor

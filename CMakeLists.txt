@@ -21,6 +21,8 @@ set(SOURCES
     src/graphics/d3d12_command_allocators.cpp
     src/graphics/d3d12_commands.cpp
     src/graphics/d3d12_device.cpp
+    src/graphics/d3d12_mesh.cpp
+    src/graphics/d3d12_pipeline.cpp
     src/graphics/d3d12_resources.cpp
     src/graphics/d3d12_swap_chain.cpp
 )
@@ -48,4 +50,4 @@ set_target_properties(goblin-stream PROPERTIES
 )
 
 # 9. Link Dependencies
-target_link_libraries(goblin-stream PRIVATE d3d12 dxgi dxguid)
+target_link_libraries(goblin-stream PRIVATE d3d12 dxgi dxguid d3dcompiler)

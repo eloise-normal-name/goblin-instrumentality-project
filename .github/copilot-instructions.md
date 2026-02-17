@@ -1,9 +1,13 @@
 # Goblin Instrumentality Project - Instructions
 
 ## 🚨 READ THIS FIRST 🚨
+**[QUICK REFERENCE GUIDE](QUICK_REFERENCE.md)** - Scan this < 50 line guide before writing any code. Critical rules, examples, and CI enforcement status.
+
 **NEVER COMMIT CODEQL ARTIFACTS** - Before using `codeql_checker`, read the full warning in the **"CRITICAL: DO NOT COMMIT CODEQL ARTIFACTS"** section below. Files like `_codeql_detected_source_root` are temporary scan artifacts and must never be committed. If you ignore this warning, include 🤡 in your commit message.
 
 ## Quick Links (Table of Contents)
+
+- **[Quick Reference Guide](QUICK_REFERENCE.md)** - Critical coding rules (< 50 lines, scan first)
 
 - Project overview: `README.md`
 - **[Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
@@ -35,13 +39,16 @@
   - Methods and public APIs use PascalCase (e.g., `WaitForGpu`, `BeginFrame`)
   - Local and member variables use snake_case without trailing underscores (e.g., `create_device`, `fence_event`)
   - Constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
-- **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods; **CI enforced**):
-  - All resource allocation in constructors (called once at object creation)
-  - All resource cleanup in destructors (called at object destruction)
-  - No two-phase initialization; construction must either fully succeed or throw
-  - For GPU resources receiving parameters, constructors accept all necessary config/device pointers
-  - HANDLEs, COM objects, and DLL modules wrapped with proper cleanup in destructors
-  - **Prefer passing raw COM pointers (e.g., `ID3D12Device*`, `ID3D12Resource*`) to functions rather than `ComPtr` by value.** Use `ComPtr` for RAII ownership inside types, but avoid copying or passing `ComPtr` unless a function needs ownership or lifetime management; passing the contained raw pointer avoids unintended reference count changes and clarifies intent.
+- **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods; **✅ CI enforced**):
+  - All resource allocation in constructors; all cleanup in destructors
+  - No two-phase initialization; construction must fully succeed or throw
+  - GPU resources receive config/device pointers in constructor parameters
+  - HANDLEs, COM objects, DLL modules wrapped with proper RAII cleanup
+  - **Do not use defaulted constructors (`= default`) on resource-owning types** unless the default state is valid
+- **ComPtr Usage** (**❌ NOT CI-enforced**):
+  - Use `ComPtr` for RAII ownership in members: `ComPtr<ID3D12Device> device;`
+  - Pass raw pointers to functions: `void CreateBuffer(ID3D12Device* device)`
+  - Avoids unnecessary AddRef/Release cycles and clarifies ownership intent
 - **Command Lists**: Command lists and allocators must be generated once and reused efficiently (via Reset); do not recreate them every frame
 - **Style**: All code must conform to `.clang-format` configuration (Tabs, 4-wide, 100-column limit)
   - When providing code in chat, format it as if `.clang-format` has been applied to avoid bad formatting being written
@@ -52,13 +59,12 @@
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
-- **Member Initialization**: Keep member initialization logic as inline member declarations (e.g., `Member member{...};` in the class body), **not** in the constructor initializer list. This keeps initialization close to the data and maintains readability.
-  - **Do not refactor inline member initializers into constructor initializer lists** unless the user explicitly requests that exact change.
-  - Constructor initializer lists may only wire constructor parameters to simple scalar/data members (e.g., `width(width)`, `headless(headless)`) and perform straightforward constructor calls.
-  - If a member currently has a meaningful inline initializer, keep it inline during refactors; changing location of initialization logic is considered a behavior/style regression.
-  - Avoid embedding large designated-initializer objects or multi-line config construction in constructor initializer lists.
-  - Example (✓ correct): keep `NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};` in the member declaration, and keep constructor list focused on simple parameter plumbing.
-  - Example (✗ wrong): moving `EncoderConfig{ .width = width, .height = height, ... }` into the constructor initializer list during unrelated refactors.
+- **Member Initialization** (**❌ NOT CI-enforced**):
+  - Initialize members inline in class body: `Member member{...};` (keeps data and initialization together)
+  - Constructor initializer list: Only for parameter wiring (`width(width)`) and simple constructor calls
+  - **Do not refactor inline initializers into constructor lists** during unrelated changes
+  - Example (✓): `NvencConfig nvenc_config{&nvenc_session, ENCODER_CONFIG};` in member declaration
+  - Example (✗): Moving complex designated-initializer objects into constructor initializer list
 - **Casts**: Use C-style casts `(Type)value` instead of C++ casts (`static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast`); should rarely be necessary in this project (**CI enforced**)
 - **Error Handling**: Use `Try |` pattern from `include/try.h` for D3D12 and NVENC API calls that return error statuses (**CI warns on unchecked calls**):
   - Chain consecutive error-checked operations with single `Try` and multiple `|` operators:
@@ -75,12 +81,16 @@
         throw;
     ```
   - This pattern is preferred for brevity; do not wrap HANDLE validation in Try pattern or helpers
-- **Struct Initialization**:
-  - Use designated initializers (`.field = value`) at initialization time, never initialize-then-assign
-  - Prefer brace initialization: `Type var{.field = val};` (no equals sign)
-  - Example (✓ correct): `WNDCLASSEXW wc{.cbSize = sizeof(WNDCLASSEXW), .style = CS_HREDRAW};`
-  - Example (✗ wrong): `WNDCLASSEXW wc{}; wc.cbSize = ...; wc.style = ...;`
-  - Avoid re-assigning default values (0, nullptr, false) unless critical for clarity
+- **Struct Initialization** (**❌ NOT CI-enforced - CRITICAL**):
+  - Use designated initializers (`.field = value`) at initialization time, **never initialize-then-assign**
+  - ✓ Good: `Type var{.field = val, .other = val2};`
+  - ✗ Bad: `Type var{}; var.field = val; var.other = val2;`
+  - **Why**: Init-then-assign pattern caused NVENC crash (wrong pointer type assigned to struct field)
+  - Set only required non-default fields; avoid verbose restatements of defaults
+- **Style Discipline**:
+  - Do not submit messy or verbose code; keep changes concise, follow repo conventions, and run clang-format before finalizing edits
+- **Process Discipline**:
+  - Before editing, re-check these instructions and ensure struct initialization and RAII rules are followed
 - **Code Simplification**: Remove trivial wrapper functions and stubs when making changes
   - If a function becomes a simple pass-through or constant return after refactoring, inline it directly at call sites
   - Example: Remove `static Type Select(bool) { return Type::Value; }` and use `Type::Value` directly

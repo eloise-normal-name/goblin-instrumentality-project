@@ -9,6 +9,7 @@ tools:
 	- vscode
 	- github/sub_issue_write
 	- github/update_pull_request
+	- todo
 ---
 
 # Gobbo - Elegant C++ Code Artist
