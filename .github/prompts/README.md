@@ -2,6 +2,8 @@
 
 This directory contains specialized custom agents designed for the Goblin Instrumentality Project. These agents are experts in specific aspects of the codebase and can help with various development tasks.
 
+**[📋 View All Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See issues currently assigned to copilot agents by BugBot
+
 ## Available Agents
 
 ### Bug Triage & Orchestration

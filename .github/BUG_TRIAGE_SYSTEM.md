@@ -2,6 +2,8 @@
 
 The Goblin Instrumentality Project now includes **BugBot**, an automated bug triage and assignment agent that monitors issues, routes them to specialized agents, and keeps your project board updated.
 
+**[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - All issues currently assigned to copilot agents
+
 ## Quick Start
 
 ### For Users Reporting Bugs
@@ -14,11 +16,12 @@ The Goblin Instrumentality Project now includes **BugBot**, an automated bug tri
    - Post a comment requesting detailed analysis
 
 ### For Developers Triaging Bugs
-1. Let BugBot run automatically (daily at 9 AM UTC)
-2. Or manually trigger with: `@clp /agent bugbot`
-3. Review issue assignments in comments
-4. Wait for specialized agent analysis
-5. Implement fixes based on agent recommendations
+1. **[View all copilot-assigned issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See all issues currently being analyzed
+2. Let BugBot run automatically (daily at 9 AM UTC)
+3. Or manually trigger with: `@clp /agent bugbot`
+4. Review issue assignments in comments
+5. Wait for specialized agent analysis
+6. Implement fixes based on agent recommendations
 
 ## System Architecture
 
