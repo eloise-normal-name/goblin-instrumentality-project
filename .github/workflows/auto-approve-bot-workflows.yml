@@ -91,8 +91,13 @@ jobs:
             } catch (error) {
               // If approval fails (e.g., already approved, not needed, or insufficient permissions)
               if (error.status === 403) {
-                core.error(`Permission denied - COPILOT_MCP_GITHUB_TOKEN secret required for approval`);
-                core.error(`Configure a Personal Access Token with 'repo' scope (classic) or Actions 'write' permission (fine-grained) as COPILOT_MCP_GITHUB_TOKEN secret`);
+                if (usingPAT) {
+                  core.error(`Permission denied - COPILOT_MCP_GITHUB_TOKEN may have insufficient permissions`);
+                  core.error(`Verify the PAT has 'repo' scope (classic) or Actions 'write' permission (fine-grained)`);
+                } else {
+                  core.error(`Permission denied - default GITHUB_TOKEN has insufficient permissions`);
+                  core.error(`Configure a Personal Access Token with 'repo' scope (classic) or Actions 'write' permission (fine-grained) as COPILOT_MCP_GITHUB_TOKEN secret`);
+                }
               } else {
                 core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
               }
