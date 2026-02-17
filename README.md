@@ -33,6 +33,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 - Project instructions: `.github/copilot-instructions.md`
 - CI workflows & troubleshooting: [docs/GITHUB_WORKFLOWS.md](docs/GITHUB_WORKFLOWS.md)
 - Known errors & fixes: [docs/copilot-known-errors.md](docs/copilot-known-errors.md)
+- Mesh rendering & PBR plan: [docs/mesh-rendering-pbr-plan.md](docs/mesh-rendering-pbr-plan.md)
 - NVENC D3D12 workflow: [docs/nvenc-d3d12-workflow.md](docs/nvenc-d3d12-workflow.md)
 - Custom agent guide: `.github/prompts/README.md`
 - Refactor highlights: `refactor-highlights.html` (published to `gh-pages` branch)
