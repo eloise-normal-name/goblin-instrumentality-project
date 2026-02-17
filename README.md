@@ -7,7 +7,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Quick Links
 
 - **[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
-- **GitHub Copilot Interaction**: `.github/COPILOT_INTERACTION_GUIDE.md` - How to properly use @copilot and custom agents
+- **[GitHub Copilot Interaction Guide](.github/COPILOT_INTERACTION_GUIDE.md)** - How to properly use @copilot and custom agents
 
 ## Repository Structure
 
