@@ -10,11 +10,55 @@ The repository includes GitHub Actions workflows that automate build validation:
 2. **Run App and Log Output** - Executes the app in headless mode and captures output logs
 3. **Fix App Failure** - Automatically triggers when Run App workflow fails to notify and provide analysis
 4. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
-5. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-6. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
-7. **Docs Index Check** - Ensures docs are indexed in README
+5. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+6. **Docs Index Check** - Ensures docs are indexed in README
+7. **Report Workflow Failures to PR** - Automatically comments on PRs when workflows fail with error details and links
 
 **Note**: This repository does not use GitHub Issues for task tracking.
+
+## Observing Workflow Errors
+
+### Automatic PR Comments on Failure
+
+When any workflow fails on a PR, the **Report Workflow Failures to PR** workflow automatically:
+1. Detects the failure
+2. Identifies which PR the failure is associated with
+3. Posts a comment to the PR with:
+   - Link to the failed workflow run
+   - List of failed jobs with direct links to their logs
+   - Instructions on how to fix
+   - @mention to @copilot to review and fix the issue
+
+This eliminates the need to manually check workflow status or repeatedly ask about errors.
+
+### Manual Workflow Observation
+
+To manually check workflow status:
+1. Go to the **Actions** tab in the repository
+2. Find your PR's workflow runs (filter by branch name)
+3. Click on a workflow run to see job details
+4. Click on a failed job to see detailed logs
+5. Expand log sections to see specific error messages
+
+### Common Workflow Failures
+
+**Build and Validate**: Compilation errors, missing files, CMake configuration issues
+- Check the "Build Debug/Release/MinSizeRel" step logs for compiler errors
+- Look for missing source files in CMakeLists.txt
+
+**Code Quality Checks**: Style violations, prohibited patterns
+- snake_case method names (should be PascalCase)
+- C++ casts (should use C-style casts)
+- Namespaces (prohibited in this project)
+- Initialize/Shutdown methods (violates RAII)
+
+**Docs Index Check**: Documentation files not listed in README
+- Run `python scripts/check-docs-index.py` locally to see missing docs
+- Add markdown links to README for all files in `docs/`
+
+**Run App**: Application crashes or hangs
+- Check execution logs for crash dumps or error messages
+- Review exit code (null = crash, non-zero = error)
 
 ## Workflow
 
@@ -194,6 +238,61 @@ The repository includes GitHub Actions workflows that automate build validation:
 - For direct GitHub API integration using the Model Context Protocol, see `.github/MCP_README.md`
 - MCP configuration file available at `.github/mcp-config.json`
 - Provides an alternative to the GitHub Actions workflow for programmatic workflow approval
+
+### Report Workflow Failures to PR (`.github/workflows/report-workflow-failures.yml`)
+
+**Triggers**: When "Build and Validate", "Run App and Log Output", "Code Quality Checks", or "Docs Index Check" workflows complete with failure status
+
+**Purpose**: Automatically notifies PR authors and reviewers about workflow failures with detailed error information, eliminating the need to manually check the Actions tab.
+
+**Actions**:
+- Detects when a workflow fails on a PR
+- Identifies the associated PR number
+- Fetches failed job details and log URLs
+- Posts a comment to the PR with:
+  - Failed workflow name
+  - Commit SHA
+  - Direct link to the workflow run
+  - List of failed jobs with links to their logs
+  - Instructions on how to fix
+  - @mention to @copilot for automated review
+
+**Benefits**:
+- **Immediate notification** - No need to check Actions tab manually
+- **Direct links** - Click straight to the failed job logs
+- **Automated agent engagement** - @mentions @copilot to review and fix issues automatically
+- **Clear instructions** - Tells developers exactly what to do next
+- **Reduced communication overhead** - No need to repeatedly ask about errors
+
+**Comment Format**:
+```markdown
+## ❌ Workflow Failure: [Workflow Name]
+
+**Commit**: `abc1234`
+**Workflow Run**: [link]
+
+### Failed Jobs
+- **Job Name**: [View logs](link)
+
+### What to do:
+1. Click the workflow run link above to see detailed logs
+2. Review the failed job logs to identify the error
+3. Fix the issue and push a new commit
+4. The workflows will automatically re-run on the new commit
+
+@copilot - Please review the workflow failure logs and fix any issues.
+```
+
+**Configuration**:
+- Uses `COPILOT_MCP_GITHUB_TOKEN` if available for enhanced permissions
+- Falls back to `GITHUB_TOKEN` if PAT not configured
+- Requires `pull-requests: write` permission to post comments
+
+**Monitored Workflows**:
+- Build and Validate
+- Run App and Log Output
+- Code Quality Checks
+- Docs Index Check
 
 ### Docs Index Check (`.github/workflows/docs-index-check.yml`)
 

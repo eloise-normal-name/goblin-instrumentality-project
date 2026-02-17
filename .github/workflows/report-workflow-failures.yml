@@ -1,0 +1,133 @@
+name: Report Workflow Failures to PR
+
+on:
+  workflow_run:
+    workflows:
+      - "Build and Validate"
+      - "Run App and Log Output"
+      - "Code Quality Checks"
+      - "Docs Index Check"
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  report-failure:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request'
+    
+    steps:
+    - name: Get PR number
+      id: get-pr
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: prs } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            head: `${context.repo.owner}:${context.payload.workflow_run.head_branch}`
+          });
+          
+          if (prs.length === 0) {
+            core.info('No open PR found for this branch');
+            return null;
+          }
+          
+          const pr = prs[0];
+          core.setOutput('pr_number', pr.number);
+          core.setOutput('pr_url', pr.html_url);
+          return pr.number;
+    
+    - name: Get workflow run logs URL
+      id: get-logs
+      if: steps.get-pr.outputs.pr_number
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runId = context.payload.workflow_run.id;
+          const workflowName = context.payload.workflow_run.name;
+          const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+          const commit = context.payload.workflow_run.head_sha.substring(0, 7);
+          
+          core.setOutput('run_url', runUrl);
+          core.setOutput('workflow_name', workflowName);
+          core.setOutput('commit', commit);
+          
+          // Try to get job details for more specific error info
+          try {
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+            
+            const failedJobs = jobs.jobs.filter(job => job.conclusion === 'failure');
+            const jobDetails = failedJobs.map(job => {
+              return `- **${job.name}**: [View logs](${job.html_url})`;
+            }).join('\n');
+            
+            core.setOutput('failed_jobs', jobDetails || 'No specific job failure details available');
+          } catch (error) {
+            core.warning(`Could not fetch job details: ${error.message}`);
+            core.setOutput('failed_jobs', 'Job details unavailable');
+          }
+    
+    - name: Comment on PR
+      if: steps.get-pr.outputs.pr_number
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
+        script: |
+          const prNumber = ${{ steps.get-pr.outputs.pr_number }};
+          const workflowName = '${{ steps.get-logs.outputs.workflow_name }}';
+          const runUrl = '${{ steps.get-logs.outputs.run_url }}';
+          const commit = '${{ steps.get-logs.outputs.commit }}';
+          const failedJobs = `${{ steps.get-logs.outputs.failed_jobs }}`;
+          
+          const body = `## ❌ Workflow Failure: ${workflowName}
+
+**Commit**: \`${commit}\`
+**Workflow Run**: ${runUrl}
+
+### Failed Jobs
+${failedJobs}
+
+### What to do:
+1. Click the workflow run link above to see detailed logs
+2. Review the failed job logs to identify the error
+3. Fix the issue and push a new commit
+4. The workflows will automatically re-run on the new commit
+
+@copilot - Please review the workflow failure logs and fix any issues.
+
+---
+*This comment was automatically posted by the workflow failure reporter. See \`.github/workflows/report-workflow-failures.yml\`*`;
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: prNumber,
+            body: body
+          });
+          
+          core.info(`Posted failure report to PR #${prNumber}`);
+    
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Workflow Failure Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "${{ steps.get-pr.outputs.pr_number }}" ]; then
+          echo "✓ Posted failure report to PR #${{ steps.get-pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Workflow: ${{ steps.get-logs.outputs.workflow_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Run: ${{ steps.get-logs.outputs.run_url }}" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "ℹ️  No open PR found for this branch" >> $GITHUB_STEP_SUMMARY
+        fi
