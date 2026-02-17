@@ -5,7 +5,6 @@
 FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* device,
 						   uint32_t count, uint32_t output_buffer_size, const char* output_path)
 	: session(sess), nvenc_d3d12(nvenc), file_writer(output_path), buffer_count(count) {
-
 	output_d3d12_buffers.resize(count);
 	output_registered_ptrs.resize(count);
 	output_fences.resize(count);
@@ -30,7 +29,8 @@ FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* 
 	for (auto i = 0u; i < count; ++i) {
 		Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&output_fences[i]));
 
-		Try | device->CreateCommittedResource(&readback_heap, D3D12_HEAP_FLAG_NONE, &buffer_desc,
+		Try
+			| device->CreateCommittedResource(&readback_heap, D3D12_HEAP_FLAG_NONE, &buffer_desc,
 											  D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
 											  IID_PPV_ARGS(&output_d3d12_buffers[i]));
 
@@ -90,22 +90,22 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	};
 
 	NV_ENC_INPUT_RESOURCE_D3D12 input_resource{
-		.version		  = NV_ENC_INPUT_RESOURCE_D3D12_VER,
-		.pInputBuffer	  = texture.mapped_ptr,
-		.inputFencePoint  = input_fence_point,
+		.version		 = NV_ENC_INPUT_RESOURCE_D3D12_VER,
+		.pInputBuffer	 = texture.mapped_ptr,
+		.inputFencePoint = input_fence_point,
 	};
 
 	NV_ENC_FENCE_POINT_D3D12 output_fence_point{
-		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
-		.pFence	   = output_fences[texture_index],
-		.waitValue = 0,
-		.bWait	   = 0,
+		.version	 = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence		 = output_fences[texture_index],
+		.signalValue = frame_index,
+		.bSignal	 = 1,
 	};
 
 	NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource{
-		.version		   = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
-		.pOutputBuffer	   = output_registered_ptrs[texture_index],
-		.outputFencePoint  = output_fence_point,
+		.version		  = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
+		.pOutputBuffer	  = output_registered_ptrs[texture_index],
+		.outputFencePoint = output_fence_point,
 	};
 
 	NV_ENC_PIC_PARAMS pic_params{
@@ -123,9 +123,9 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	Try | session.nvEncEncodePicture(encoder, &pic_params);
 
 	NV_ENC_LOCK_BITSTREAM lock_params{
-		.version		   = NV_ENC_LOCK_BITSTREAM_VER,
-		.doNotWait		   = false,
-		.outputBitstream   = &output_resource,
+		.version		 = NV_ENC_LOCK_BITSTREAM_VER,
+		.doNotWait		 = false,
+		.outputBitstream = &output_resource,
 	};
 
 	Try | session.nvEncLockBitstream(encoder, &lock_params);
