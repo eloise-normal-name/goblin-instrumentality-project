@@ -125,7 +125,8 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 **Token Configuration**:
 - **Recommended**: Configure `COPILOT_MCP_GITHUB_TOKEN` as a repository secret
-  - Create a Personal Access Token (PAT) with `actions: write` scope
+  - Create a Personal Access Token (classic) with `repo` scope (includes actions permissions)
+  - Or create a fine-grained PAT with `actions:write` permission
   - Add as repository secret: Settings → Secrets and variables → Actions → New repository secret
   - Name: `COPILOT_MCP_GITHUB_TOKEN`
 - **Fallback**: Workflow uses default `GITHUB_TOKEN` when PAT is not configured

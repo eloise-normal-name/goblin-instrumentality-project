@@ -50,6 +50,15 @@ jobs:
             }
           result-encoding: string
       
+      - name: Check if PAT is configured
+        id: check_token
+        run: |
+          if [ -n "${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}" ]; then
+            echo "using_pat=true" >> $GITHUB_OUTPUT
+          else
+            echo "using_pat=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Approve workflow run
         if: steps.check_bot.outputs.should_approve == 'true'
         uses: actions/github-script@v7
@@ -58,14 +67,14 @@ jobs:
           script: |
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
-            const usingPAT = '${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}' !== '';
+            const usingPAT = '${{ steps.check_token.outputs.using_pat }}' === 'true';
             
             if (usingPAT) {
               core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN (PAT)`);
             } else {
               core.warning(`COPILOT_MCP_GITHUB_TOKEN secret not configured - using default GITHUB_TOKEN`);
               core.warning(`Default token may have insufficient permissions to approve workflow runs`);
-              core.warning(`To fix: Add COPILOT_MCP_GITHUB_TOKEN secret with 'actions: write' permission`);
+              core.warning(`To fix: Add COPILOT_MCP_GITHUB_TOKEN secret with 'repo' or 'actions:write' scope`);
               core.info(`Attempting to approve workflow run ${runId} from ${actor} using GITHUB_TOKEN`);
             }
             
@@ -81,7 +90,7 @@ jobs:
               // If approval fails (e.g., already approved, not needed, or insufficient permissions)
               if (error.status === 403) {
                 core.error(`Permission denied - COPILOT_MCP_GITHUB_TOKEN secret required for approval`);
-                core.error(`Configure a Personal Access Token with 'actions: write' scope as COPILOT_MCP_GITHUB_TOKEN secret`);
+                core.error(`Configure a Personal Access Token with 'repo' or 'actions:write' scope as COPILOT_MCP_GITHUB_TOKEN secret`);
               } else {
                 core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
               }
