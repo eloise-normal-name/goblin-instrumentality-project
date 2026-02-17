@@ -98,7 +98,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	NV_ENC_FENCE_POINT_D3D12 output_fence_point{
 		.version	 = NV_ENC_FENCE_POINT_D3D12_VER,
 		.pFence		 = output_fences[texture_index],
-		.signalValue = frame_index,
+		.signalValue = frame_index + 1,
 		.bSignal	 = 1,
 	};
 
@@ -121,6 +121,17 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	};
 
 	Try | session.nvEncEncodePicture(encoder, &pic_params);
+
+	// TODO: Use a more efficient synchronization method than waiting on the CPU for the GPU to
+	// finish encoding. This function shouldn't block or create new fences and probably shouldn't
+	// dispatch to the file_writer which is a tremendously bad conflation of responsibilities. make
+	// a note in documentation to not do this anti pattern.
+	HANDLE temp_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	output_fences[texture_index]->SetEventOnCompletion(frame_index + 1, temp_event);
+	auto x = output_fences[texture_index]->GetCompletedValue();
+	if (x < frame_index + 1)
+		WaitForSingleObject(temp_event, INFINITE);
+	CloseHandle(temp_event);
 
 	NV_ENC_LOCK_BITSTREAM lock_params{
 		.version		 = NV_ENC_LOCK_BITSTREAM_VER,
