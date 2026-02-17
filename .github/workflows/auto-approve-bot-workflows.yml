@@ -53,10 +53,11 @@ jobs:
       - name: Check MCP token permissions
         id: check_token
         if: steps.check_bot.outputs.should_approve == 'true'
-        uses: actions/github-script@v7
         env:
           MCP_TOKEN: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
           script: |
             const token = process.env.MCP_TOKEN;
             
@@ -71,13 +72,10 @@ jobs:
             core.info('✓ COPILOT_MCP_GITHUB_TOKEN secret is configured');
             
             // Try to validate token permissions by making a test API call
+            // The github object is authenticated with the MCP token via github-token parameter
             try {
-              // Create an Octokit instance with the MCP token to test it
-              const { Octokit } = require('@octokit/rest');
-              const octokit = new Octokit({ auth: token });
-              
               // Test basic Actions read permission (write permission for approval cannot be tested without attempting approval)
-              await octokit.rest.actions.listWorkflowRunsForRepo({
+              await github.rest.actions.listWorkflowRunsForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: 1
