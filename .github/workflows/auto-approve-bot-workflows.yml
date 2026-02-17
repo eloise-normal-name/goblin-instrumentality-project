@@ -97,12 +97,20 @@ jobs:
         if: steps.check_bot.outputs.should_approve == 'true' && steps.check_token_exists.outputs.token_configured == 'true' && steps.check_token.outputs.has_valid_token == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
           script: |
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
+            const usingPAT = '${{ steps.check_token.outputs.using_pat }}' === 'true';
             
-            core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN`);
+            if (usingPAT) {
+              core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN (PAT)`);
+            } else {
+              core.warning(`COPILOT_MCP_GITHUB_TOKEN secret not configured - using default GITHUB_TOKEN`);
+              core.warning(`Default token may have insufficient permissions to approve workflow runs`);
+              core.warning(`To fix: Add COPILOT_MCP_GITHUB_TOKEN secret with 'repo' scope (classic PAT) or Actions 'write' permission (fine-grained PAT)`);
+              core.info(`Attempting to approve workflow run ${runId} from ${actor} using GITHUB_TOKEN`);
+            }
             
             try {
               await github.rest.actions.approveWorkflowRun({
@@ -113,6 +121,16 @@ jobs:
               
               core.info(`✓ Successfully approved workflow run ${runId} from ${actor}`);
             } catch (error) {
-              // If approval fails (e.g., already approved or not needed), log but don't fail
-              core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
+              // If approval fails (e.g., already approved, not needed, or insufficient permissions)
+              if (error.status === 403) {
+                if (usingPAT) {
+                  core.error(`Permission denied - COPILOT_MCP_GITHUB_TOKEN may have insufficient permissions`);
+                  core.error(`Verify the PAT has 'repo' scope (classic) or Actions 'write' permission (fine-grained)`);
+                } else {
+                  core.error(`Permission denied - default GITHUB_TOKEN has insufficient permissions`);
+                  core.error(`Configure a Personal Access Token with 'repo' scope (classic) or Actions 'write' permission (fine-grained) as COPILOT_MCP_GITHUB_TOKEN secret`);
+                }
+              } else {
+                core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
+              }
             }
