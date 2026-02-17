@@ -48,11 +48,18 @@ jobs:
         Write-Output ""
         Write-Output "Exit code: $exitCode"
         
-        if ($exitCode -ne 0) {
-          Write-Warning "App exited with non-zero code: $exitCode"
+        if ($null -eq $exitCode) {
+          Write-Error "App did not set exit code (crashed or failed to start)"
+          exit 1
         }
+        
+        if ($exitCode -ne 0) {
+          Write-Error "App exited with non-zero code: $exitCode"
+          exit 1
+        }
+        
+        Write-Output "✅ App completed successfully"
       shell: pwsh
-      continue-on-error: true
       
     - name: Capture debug output
       run: |

@@ -8,10 +8,11 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 1. **Build and Validate** - Automated build verification and metrics tracking
 2. **Run App and Log Output** - Executes the app in headless mode and captures output logs
-3. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
-4. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-5. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
-6. **Docs Index Check** - Ensures docs are indexed in README
+3. **Fix App Failure** - Automatically triggers when Run App workflow fails to notify and provide analysis
+4. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
+5. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
+6. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
+7. **Docs Index Check** - Ensures docs are indexed in README
 
 **Note**: This repository does not use GitHub Issues for task tracking.
 
@@ -54,6 +55,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Verifies binary exists
 - Runs application with `--headless` flag (30 frames, auto-exit)
 - Captures console output and exit code
+- **Fails the workflow if app exits with non-zero code or crashes**
 - Collects `debug_output.txt` file if generated
 - Uploads log files as artifacts (7-day retention)
 - Creates execution summary with debug output preview
@@ -62,9 +64,38 @@ The repository includes GitHub Actions workflows that automate build validation:
 - Validates app runs without crashes on Windows
 - Captures runtime output for debugging
 - Detects initialization or encoding errors early
+- **Ensures workflow fails if app crashes or exits with errors**
 - Provides downloadable logs for detailed analysis
 - Uses hardware GPU adapter (not WARP) to test with actual NVENC encoder
-- Continues on error to ensure logs are always captured
+- Log capture steps always run (`if: always()`) even if app fails
+
+### Fix App Failure (`.github/workflows/fix-app-failure.yml`)
+
+**Triggers**: 
+- `workflow_run` event when "Run App and Log Output" workflow completes with failure
+- Manual dispatch with workflow run ID
+
+**Purpose**: Automatically detects app execution failures and provides analysis to help diagnose and fix issues.
+
+**Actions**:
+- Triggers automatically when Run App workflow fails
+- Downloads execution logs if available
+- Analyzes failure and creates detailed summary
+- Provides step-by-step instructions for investigation
+- Can be manually triggered for any failed run
+
+**Benefits**:
+- Immediate notification when app fails in CI
+- Centralizes failure information for easy access
+- Provides structured guidance for debugging
+- Enables quick response to runtime failures
+- Supports manual triggering for historical failures
+
+**Usage**:
+- Automatically runs when Run App workflow fails on main/develop
+- Manually trigger from Actions tab with run ID of failed workflow
+- Review the workflow summary for failure analysis
+- Download logs and follow investigation steps
 
 ### Update Highlights Page (`.github/workflows/update-highlights.yml`)
 
