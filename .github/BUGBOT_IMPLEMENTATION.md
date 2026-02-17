@@ -118,10 +118,7 @@ Successfully implemented **BugBot**, a comprehensive automated bug triage and as
 ```
 
 ### For Developers
-```
-@clp /agent bugbot                  # Trigger manual triage
-@clp /agent bugbot Analyze issue #5 # Ask about specific issue
-```
+Trigger manual triage via GitHub **Actions** tab → **Bug Triage & Assignment** → **Run workflow**
 
 ### Issue Labels
 ```
@@ -159,7 +156,7 @@ else
 ```markdown
 ## Triage Assignment
 
-**Assigned to**: @clp /agent <agent-name>
+**Assigned to**: Specialist Agent (automated)
 
 **Analysis Context**: <categorization reason>
 
@@ -220,7 +217,7 @@ Set repository secret: `COPILOT_MCP_GITHUB_TOKEN`
 - ✅ Issue gets assignment comment mentioning specialist agent
 - ✅ Issue gets labeled with `agent:<name>` and `triage:in-progress`
 - ✅ Relevant component label added if identified
-- ✅ Agent is mentioned via `@clp /agent <name>` in comment
+- ✅ Assignment comment created with analysis context
 
 ## Integration Points
 

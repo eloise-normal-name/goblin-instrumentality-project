@@ -46,10 +46,7 @@ BugBot runs automatically:
 Just label your issue with `bug` and BugBot will handle the triage!
 
 ### Manual Invocation
-```bash
-@clp /agent bugbot Analyze and triage all open bugs
-@clp /agent bugbot Determine routing for issue #42
-```
+Go to **Actions** tab → **Bug Triage & Assignment** workflow → **Run workflow**
 
 ### Expected Output
 BugBot posts a comment like:
@@ -57,7 +54,7 @@ BugBot posts a comment like:
 ```markdown
 ## Triage Assignment
 
-**Assigned to**: @clp /agent check-raii
+**Assigned to**: Specialist Agent (automated)
 
 **Analysis Context**: Resource leak suspected - GPU memory not freed properly
 
@@ -66,7 +63,7 @@ BugBot posts a comment like:
 - Reporter: @developer
 - Created: 2/16/2026
 
-**Please analyze**:
+**Recommended Actions**:
 1. Reproduce the issue using the steps provided
 2. Identify the root cause
 3. Propose a fix with specific file and line references  
@@ -75,7 +72,7 @@ BugBot posts a comment like:
 *Auto-triaged by BugBot. See `.github/agents/bugbot.agent.md` for triage criteria.*
 ```
 
-The assigned specialist agent responds to this comment with their analysis.
+BugBot's automated workflow handles the analysis.
 
 ## Configuration
 
@@ -151,8 +148,9 @@ Labels: bug, graphics
 - Check workflow logs
 
 **Wrong agent assigned?**
-- Reply in issue: `@clp /agent <correct-name>`
-- Add comment with additional context
+- BugBot's routing is automatic based on keywords
+- Wait for the automated workflow to complete
+- Or assign issue to @copilot via Assignees dropdown
 
 **Labels not updating?**
 - Configure `COPILOT_MCP_GITHUB_TOKEN` secret (see BUG_TRIAGE_SYSTEM.md)
@@ -174,25 +172,25 @@ BugBot Detects Label: bug
          ↓
 BugBot Analyzes: Title mentions "memory leak"
          ↓
-BugBot Routes: → @clp /agent check-raii
+BugBot Routes: → check-raii specialist
          ↓
 BugBot Updates Labels: graphics, memory, agent:check-raii, triage:in-progress
          ↓
-BugBot Creates Assignment Comment
+BugBot Creates Assignment Comment with analysis request
          ↓
-check-raii Agent Responds: "Found destructor missing COM release in frame loop"
+Developer Reviews Context & Implements Fix
          ↓
-Developer Fixes & Creates PR #123
+Developer Creates PR #123: "Fix memory leak in encoder"
          ↓
 PR Merged: "Fixes #42"
          ↓
-Closer Updates Status: Issue resolved ✓
+Issue Closed: Issue resolved ✓
 ```
 
 ## Quick Links
 
 - **Report a Bug**: Create issue, add `bug` label
-- **Manual Triage**: `@clp /agent bugbot`
+- **Manual Triage**: Actions tab → Bug Triage & Assignment → Run workflow
 - **Full Guide**: [BUG_TRIAGE_SYSTEM.md](../BUG_TRIAGE_SYSTEM.md)
 - **Agent Guide**: [prompts/README.md](../prompts/README.md)
 - **Setup Help**: [copilot-instructions.md](../copilot-instructions.md)

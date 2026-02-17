@@ -11,7 +11,7 @@ This directory contains specialized custom agents designed for the Goblin Instru
 #### BugBot (`bugbot.agent.md`)
 **When to use:**
 - System monitors new issues automatically (daily via GitHub Actions)
-- Manually trigger with `@clp /agent bugbot Analyze and triage new bugs`
+- Manually trigger via GitHub Actions: Actions tab → Bug Triage & Assignment → Run workflow
 - When you need intelligent routing of complex issues
 
 **What it does:**
@@ -32,11 +32,8 @@ This directory contains specialized custom agents designed for the Goblin Instru
 - Uses `COPILOT_MCP_GITHUB_TOKEN` for enhanced GitHub permissions
 - Fallback to default `GITHUB_TOKEN` if secret not configured
 
-**Manual Usage:**
-```
-@clp /agent bugbot Analyze issue #42 and determine which agent should investigate
-@clp /agent bugbot Create triage assignments for all open bugs in the graphics component
-```
+**Manual Trigger:**
+Go to GitHub **Actions** tab → **Bug Triage & Assignment** workflow → **Run workflow**
 
 ---
 
@@ -190,10 +187,8 @@ BugBot runs automatically:
 - Note the affected component (graphics, encoder, nvenc, app)
 - BugBot will automatically route to the right agent
 
-**To manually triage a complex issue:**
-```
-@clp /agent bugbot Analyze and categorize issue #42 for routing
-```
+**To manually triage issues:**
+Go to GitHub **Actions** tab → **Bug Triage & Assignment** → **Run workflow**
 
 ### New Feature Development
 1. Start: Use `explain-nvenc` or similar to understand existing patterns

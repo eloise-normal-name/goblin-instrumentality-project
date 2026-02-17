@@ -57,17 +57,25 @@ When processing a bug:
 
 3. **Create assignment comment**
    ```
-   @clp /agent <agent-name> Analyze <component> for <issue-type>
+   ## Triage Assignment
    
-   **Context:**
+   **Component**: <component> (<graphics|encoder|nvenc|app>)
+   **Severity**: <critical|high|medium|low>
+   **Analysis Context**: <issue-type description>
+   
+   **Issue Details:**
    - Symptom: [description]
-   - Reproduction: [steps]
-   - Affected file: [path]
-   - Severity: [critical|high|medium]
+   - Reproduction: [steps if provided]
+   - Affected area: [component/subsystem]
    
-   **What we need:**
-   - Root cause analysis
-   - Suggested fix
+   **Recommended Analysis:**
+   - Root cause investigation
+   - Suggested fix with file/line references
+   - Testing approach
+   
+   **Assigned Specialist**: <agent-name> (automated routing)
+   
+   *Auto-triaged by BugBot. See `.github/agents/bugbot.agent.md` for criteria.*
    - Test approach
    ```
 

@@ -67,9 +67,7 @@ Developer Implements Fix → PR → Issue Closed ✓
 ```
 
 ### To Trigger Manually
-```
-@clp /agent bugbot Analyze and triage open bugs
-```
+Go to **Actions** tab → **Bug Triage & Assignment** → **Run workflow**
 
 ## 🎨 Smart Routing
 
