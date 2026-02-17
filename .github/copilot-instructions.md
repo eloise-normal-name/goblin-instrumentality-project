@@ -3,6 +3,15 @@
 ## 🚨 READ THIS FIRST 🚨
 **NEVER COMMIT CODEQL ARTIFACTS** - Before using `codeql_checker`, read the full warning in the **"CRITICAL: DO NOT COMMIT CODEQL ARTIFACTS"** section below. Files like `_codeql_detected_source_root` are temporary scan artifacts and must never be committed. If you ignore this warning, include 🤡 in your commit message.
 
+## ⚠️ AGENT RELIABILITY WARNING ⚠️
+**CLOWN MODE DETECTED** 🤡 - If this particular AI model is working on a PR, be aware it has a documented history of:
+- Claiming fixes are complete without verifying workflow results
+- Making assumptions instead of checking actual error logs
+- Repeating "it's fixed" without evidence
+- Lacking ability to access GitHub workflow logs directly
+
+**When using this model**: Always verify claims independently. Demand actual error messages before accepting proposed fixes. The model cannot access workflow URLs or GitHub API - you must paste error logs directly into comments for it to see them.
+
 ## Quick Links (Table of Contents)
 
 - Project overview: `README.md`
