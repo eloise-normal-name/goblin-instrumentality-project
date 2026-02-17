@@ -111,7 +111,7 @@ void NvencD3D12::UnregisterAllBitstreamBuffers() {
 	bitstream_buffers.clear();
 }
 
-void NvencD3D12::MapInputTexture(uint32_t index, uint64_t fence_wait_value) {
+void NvencD3D12::MapInputTexture(uint32_t index, uint64_t) {
 	if (index >= textures.size())
 		throw;
 
