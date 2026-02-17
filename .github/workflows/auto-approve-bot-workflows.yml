@@ -16,7 +16,9 @@ permissions:
 jobs:
   auto_approve:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.event == 'pull_request'
+    if: >-
+      github.event.workflow_run.event == 'pull_request' ||
+      github.event.workflow_run.event == 'push'
     
     steps:
       - name: Check if run is from trusted bot
@@ -84,12 +86,10 @@ jobs:
               });
               
               core.setOutput('has_valid_token', 'true');
-              core.setOutput('using_pat', 'true');
               core.info('✓ Token has valid Actions read permissions');
               core.info('Note: Write permissions for approval will be verified during actual approval attempt');
             } catch (error) {
               core.setOutput('has_valid_token', 'false');
-              core.setOutput('using_pat', 'false');
               core.warning(`⚠️ Token validation failed: ${error.message}`);
               core.warning('Token may lack required permissions (needs Actions write for approval)');
             }
