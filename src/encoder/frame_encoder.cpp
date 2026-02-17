@@ -125,7 +125,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	NV_ENC_LOCK_BITSTREAM lock_params{
 		.version		   = NV_ENC_LOCK_BITSTREAM_VER,
 		.doNotWait		   = false,
-		.outputBitstream   = output_registered_ptrs[texture_index],
+		.outputBitstream   = &output_resource,
 	};
 
 	Try | session.nvEncLockBitstream(encoder, &lock_params);
@@ -133,7 +133,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 	if (lock_params.bitstreamBufferPtr && lock_params.bitstreamSizeInBytes > 0)
 		file_writer.WriteFrame(lock_params.bitstreamBufferPtr, lock_params.bitstreamSizeInBytes);
 
-	Try | session.nvEncUnlockBitstream(encoder, output_registered_ptrs[texture_index]);
+	Try | session.nvEncUnlockBitstream(encoder, &output_resource);
 
 	nvenc_d3d12.UnmapInputTexture(texture_index);
 }
