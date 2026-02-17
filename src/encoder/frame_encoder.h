@@ -24,5 +24,6 @@ class FrameEncoder {
 	BitstreamFileWriter file_writer;
 	std::vector<ID3D12Resource*> output_d3d12_buffers;
 	std::vector<NV_ENC_REGISTERED_PTR> output_registered_ptrs;
+	std::vector<ID3D12Fence*> output_fences;
 	uint32_t buffer_count;
 };

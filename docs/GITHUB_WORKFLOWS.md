@@ -118,6 +118,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 **Security**:
 - Only trusted bot accounts are approved (explicitly listed)
 - Uses `actions: write` permission to approve runs
+- Uses `COPILOT_MCP_GITHUB_TOKEN` secret (PAT) for elevated permissions needed to approve workflow runs
 - Logs all approval actions for audit trail
 - Gracefully handles approval errors (e.g., already approved)
 

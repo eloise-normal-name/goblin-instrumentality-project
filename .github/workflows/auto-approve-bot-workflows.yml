@@ -6,6 +6,8 @@ on:
     workflows:
       - "Build and Validate"
       - "Run App and Log Output"
+      - "Code Quality Checks"
+      - "Docs Index Check"
 
 permissions:
   actions: write
@@ -52,9 +54,12 @@ jobs:
         if: steps.check_bot.outputs.should_approve == 'true'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}
           script: |
             const runId = context.payload.workflow_run.id;
             const actor = context.payload.workflow_run.actor.login;
+            
+            core.info(`Attempting to approve workflow run ${runId} from ${actor} using COPILOT_MCP_GITHUB_TOKEN`);
             
             try {
               await github.rest.actions.approveWorkflowRun({
@@ -63,7 +68,7 @@ jobs:
                 run_id: runId
               });
               
-              core.info(`Successfully approved workflow run ${runId} from ${actor}`);
+              core.info(`✓ Successfully approved workflow run ${runId} from ${actor}`);
             } catch (error) {
               // If approval fails (e.g., already approved or not needed), log but don't fail
               core.warning(`Could not approve workflow run ${runId}: ${error.message}`);
