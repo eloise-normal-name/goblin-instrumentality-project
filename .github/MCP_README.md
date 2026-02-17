@@ -89,7 +89,7 @@ Regardless of which option you choose, the `COPILOT_MCP_GITHUB_TOKEN` must have 
 1. Go to: https://github.com/settings/tokens?type=beta
 2. Click "Generate new token"
 3. Configure:
-   - Token name: "Goblin Instrumentality MCP Token"
+   - Token name: "GitHub Workflow Auto-Approve Token"
    - Expiration: Your preference
    - Repository access: Select this repository
    - Permissions: Actions (Read and write)

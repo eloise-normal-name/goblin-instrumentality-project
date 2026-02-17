@@ -83,7 +83,8 @@ jobs:
               core.setOutput('token_valid', 'true');
               
               // Note: Write permissions cannot be fully validated until approval is attempted
-              if (!process.env.COPILOT_MCP_GITHUB_TOKEN) {
+              const usingFallback = !context.payload.inputs || '${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}' === '';
+              if (usingFallback) {
                 core.warning('Using fallback GITHUB_TOKEN. It may lack workflow approval permissions.');
                 core.warning('Configure COPILOT_MCP_GITHUB_TOKEN secret for proper approval permissions.');
               }
@@ -123,8 +124,8 @@ jobs:
                 core.error('❌ Approval failed: Insufficient permissions');
                 core.error('The COPILOT_MCP_GITHUB_TOKEN may lack Actions write permissions.');
                 core.error('Required: Classic PAT with "repo" scope OR Fine-grained PAT with Actions "write" permission');
-              } else if (error.message.includes('already approved')) {
-                core.info(`Workflow run #${runId} is already approved. Nothing to do.`);
+              } else if (error.status === 422) {
+                core.info(`Workflow run #${runId} is already approved or cannot be approved. Nothing to do.`);
               } else {
                 core.error(`Approval failed: ${error.message}`);
               }
