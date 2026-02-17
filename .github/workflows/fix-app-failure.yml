@@ -1,0 +1,85 @@
+name: Fix App Failure
+
+on:
+  workflow_run:
+    workflows: ["Run App and Log Output"]
+    types: [completed]
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Workflow run ID that failed'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  notify-failure:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'failure' ||
+      github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Get workflow run details
+      id: get-run
+      uses: actions/github-script@v7
+      with:
+        script: |
+          let runId;
+          let conclusion;
+          
+          if (context.eventName === 'workflow_dispatch') {
+            runId = '${{ github.event.inputs.run_id }}';
+          } else {
+            runId = context.payload.workflow_run.id;
+            conclusion = context.payload.workflow_run.conclusion;
+          }
+          
+          core.setOutput('run_id', runId);
+          core.setOutput('run_url', `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`);
+          
+          console.log(`Run ID: ${runId}`);
+          console.log(`Conclusion: ${conclusion || 'N/A (manual trigger)'}`);
+    
+    - name: Download logs
+      uses: actions/download-artifact@v4
+      continue-on-error: true
+      with:
+        name: app-execution-logs
+        run-id: ${{ steps.get-run.outputs.run_id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path: ./failed-logs
+        
+    - name: Analyze failure
+      id: analyze
+      run: |
+        echo "## App Execution Failure Detected" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Workflow Run:** ${{ steps.get-run.outputs.run_url }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "./failed-logs/debug_output.txt" ]; then
+          echo "### Debug Output (first 50 lines)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -n 50 ./failed-logs/debug_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        else
+          echo "**Debug Output:** Not available" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Required Actions" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. Review the workflow logs at the link above" >> $GITHUB_STEP_SUMMARY
+        echo "2. Download the 'app-execution-logs' artifact if available" >> $GITHUB_STEP_SUMMARY
+        echo "3. Investigate the cause of the failure" >> $GITHUB_STEP_SUMMARY
+        echo "4. Fix the underlying issue in the codebase" >> $GITHUB_STEP_SUMMARY
+        echo "5. Create a PR with the fix" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Note:** This workflow notifies of failures but does not automatically fix them." >> $GITHUB_STEP_SUMMARY
+        echo "An agent or developer should investigate the failure and create a fix." >> $GITHUB_STEP_SUMMARY
+      shell: bash
