@@ -4,6 +4,19 @@ The Goblin Instrumentality Project now includes **BugBot**, an automated bug tri
 
 **[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - All issues currently assigned to copilot agents
 
+## Automated Crash Detection
+
+**NEW**: The system now automatically detects crashes in build verification and creates issues for agent analysis!
+
+When the "Run App and Log Output" workflow fails:
+1. **Crash Detection Workflow** (`create-crash-issue.yml`) triggers automatically
+2. Downloads crash logs and extracts crash details (access violations, HRESULT errors, exceptions)
+3. Creates a new bug issue with crash type, logs, and reproduction steps
+4. Labels the issue: `bug`, `critical`, `automated`, and appropriate component label
+5. **BugBot** automatically triages the new issue and assigns it to a specialist agent
+
+**No manual intervention needed** - agents can now discover and analyze crashes without local testing!
+
 ## Quick Start
 
 ### For Users Reporting Bugs
@@ -23,38 +36,48 @@ The Goblin Instrumentality Project now includes **BugBot**, an automated bug tri
 5. Wait for specialized agent analysis
 6. Implement fixes based on agent recommendations
 
+### For Automated Crash Issues
+Crashes detected in CI automatically create issues labeled `automated`:
+- Check the **[Run App and Log Output](https://github.com/eloise-normal-name/goblin-instrumentality-project/actions/workflows/run-app.yml)** workflow for crash history
+- Download `app-execution-logs` artifact from failed runs for detailed crash logs
+- Automated issues are triaged just like manual issues
+
 ## System Architecture
 
 ```
-User Creates Issue
-         ↓
-   [bug] label added
-         ↓
-   BugBot Monitors (Daily 9 AM UTC)
-         ↓
-   Categorizes Bug by:
-   - Component (graphics, encoder, nvenc, app)
-   - Severity (critical, high, medium, low)
-   - Type (crash, wrong behavior, performance, leak, etc.)
-         ↓
-   Routes to Specialist Agent:
-   - check-raii (resource/memory issues)
-   - review-error-handling (crashes, exceptions)
-   - review-frame-logic (D3D12 frame issues)
-   - debug-resources (GPU state issues)
-   - explain-nvenc (encoder integration)
-         ↓
-   Specialist Agent Analyzes:
-   - Reproduces issue
-   - Identifies root cause
-   - Suggests specific fix
-   - Recommends testing approach
-         ↓
-   Developer Implements Fix:
-   - Reviews agent analysis
-   - Makes targeted changes
-   - Tests thoroughly
-   - Creates PR with findings
+         User Creates Issue          OR      App Crashes in CI
+                 ↓                                    ↓
+           [bug] label added              Crash Detection Workflow
+                 ↓                                    ↓
+                 ↓                        Creates Bug Issue (automated)
+                 ↓                                    ↓
+                 └──────────────┬─────────────────────┘
+                                ↓
+                   BugBot Monitors (Daily 9 AM UTC or on issue create)
+                                ↓
+                   Categorizes Bug by:
+                   - Component (graphics, encoder, nvenc, app)
+                   - Severity (critical, high, medium, low)
+                   - Type (crash, wrong behavior, performance, leak, etc.)
+                                ↓
+                   Routes to Specialist Agent:
+                   - check-raii (resource/memory issues)
+                   - review-error-handling (crashes, exceptions)
+                   - review-frame-logic (D3D12 frame issues)
+                   - debug-resources (GPU state issues)
+                   - explain-nvenc (encoder integration)
+                                ↓
+                   Specialist Agent Analyzes:
+                   - Reproduces issue (or uses crash logs)
+                   - Identifies root cause
+                   - Suggests specific fix
+                   - Recommends testing approach
+                                ↓
+                   Developer Implements Fix:
+                   - Reviews agent analysis
+                   - Makes targeted changes
+                   - Tests thoroughly
+                   - Creates PR with findings
 ```
 
 ## Bug Labels & Categories
@@ -77,15 +100,39 @@ Use these to help BugBot route issues correctly:
 BugBot adds these automatically:
 - `agent:<agent-name>` - Indicates which agent is assigned (informational)
 - `triage:in-progress` - Bug has been triaged and assigned
+- `automated` - Issue was created automatically by crash detection system
 
 ## Configuration
 
 ### GitHub Actions Setup
 
-The bug triage workflow (`.github/workflows/bug-triage.yml`) runs automatically on:
-- **Schedule**: Daily at 9 AM UTC
-- **Trigger**: When issues are opened or labeled with `bug`
-- **Manual**: Use `workflow_dispatch` to trigger from Actions tab
+The automated bug triage system includes these workflows:
+
+#### 1. Run App and Log Output (`.github/workflows/run-app.yml`)
+- **Trigger**: On push to main/develop, PRs, or manual dispatch
+- **Purpose**: Runs the app in headless mode to detect crashes
+- **Detection**: Validates exit code and detects null (crash) or non-zero (error) codes
+- **Output**: Uploads execution logs as artifacts
+
+#### 2. Create Crash Issue (`.github/workflows/create-crash-issue.yml`)
+- **Trigger**: When "Run App and Log Output" workflow fails
+- **Purpose**: Automatically creates bug issues for detected crashes
+- **Features**:
+  - Downloads crash logs from failed workflow
+  - Extracts crash type (Access Violation, HRESULT Error, Exception)
+  - Creates or updates issue with crash details and reproduction steps
+  - Adds labels: `bug`, `critical`, `automated`, and component label
+  - Checks for existing open crash issues to avoid duplicates
+
+#### 3. Bug Triage & Assignment (`.github/workflows/bug-triage.yml`)
+- **Trigger**: Daily at 9 AM UTC, when issues are opened/labeled, or manual dispatch
+- **Purpose**: Routes bugs to appropriate specialist agents
+- **Routing Logic**:
+  - `explain-nvenc`: NVENC, encoder, bitstream issues
+  - `review-error-handling`: Crashes, exceptions, critical errors
+  - `check-raii`: Memory leaks, resource management
+  - `review-frame-logic`: D3D12 frames, command lists, graphics
+  - `debug-resources`: GPU resource states, diagnostics
 
 ### Permissions Required
 
