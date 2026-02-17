@@ -4,6 +4,40 @@ This directory contains specialized custom agents designed for the Goblin Instru
 
 ## Available Agents
 
+### Bug Triage & Orchestration
+
+#### BugBot (`bugbot.agent.md`)
+**When to use:**
+- System monitors new issues automatically (daily via GitHub Actions)
+- Manually trigger with `@clp /agent bugbot Analyze and triage new bugs`
+- When you need intelligent routing of complex issues
+
+**What it does:**
+- Queries open bugs from GitHub Issues
+- Classifies bugs by component and severity
+- Routes issues to appropriate specialized agents:
+  - Memory/RAII issues → `check-raii`
+  - Error handling/crashes → `review-error-handling`
+  - D3D12 frame/command issues → `review-frame-logic`
+  - GPU resource problems → `debug-resources`
+  - NVENC integration issues → `explain-nvenc`
+- Updates issue labels with component and severity
+- Creates detailed assignment comments with analysis context
+
+**Automatic Workflow:**
+- Runs daily at 9 AM UTC via `.github/workflows/bug-triage.yml`
+- Triggered when issues are opened or labeled with `bug`
+- Uses `COPILOT_MCP_GITHUB_TOKEN` for enhanced GitHub permissions
+- Fallback to default `GITHUB_TOKEN` if secret not configured
+
+**Manual Usage:**
+```
+@clp /agent bugbot Analyze issue #42 and determine which agent should investigate
+@clp /agent bugbot Create triage assignments for all open bugs in the graphics component
+```
+
+---
+
 ### Code Quality & Standards
 
 #### Check RAII (`check-raii.prompt.md`)
@@ -140,6 +174,25 @@ This directory contains specialized custom agents designed for the Goblin Instru
 
 ## Workflow Recommendations
 
+### Daily Bug Triage (Automated)
+BugBot runs automatically:
+1. Queries all open issues labeled `bug`
+2. Categorizes each bug by component and severity
+3. Routes to appropriate specialized agent
+4. Updates issue labels and assignments
+5. Creates comment with analysis request
+
+**If you open a bug report:**
+- Label it `bug`
+- Provide clear reproduction steps
+- Note the affected component (graphics, encoder, nvenc, app)
+- BugBot will automatically route to the right agent
+
+**To manually triage a complex issue:**
+```
+@clp /agent bugbot Analyze and categorize issue #42 for routing
+```
+
 ### New Feature Development
 1. Start: Use `explain-nvenc` or similar to understand existing patterns
 2. Implement: Follow project conventions from copilot-instructions.md
@@ -178,6 +231,7 @@ This directory contains specialized custom agents designed for the Goblin Instru
 - **Context matters**: Explain what you changed or what problem you're investigating
 
 ### Common Combinations
+- **BugBot** → `check-raii` / `review-error-handling` / `review-frame-logic`: Automated bug routing and analysis
 - `check-raii` + `review-error-handling`: New class implementation
 - `review-frame-logic` + `debug-resources`: Rendering issues
 - `explain-nvenc` + `review-error-handling`: Encoder integration

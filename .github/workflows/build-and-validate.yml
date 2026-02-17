@@ -7,6 +7,10 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -87,6 +91,7 @@ jobs:
       env:
         RESULT: ${{ needs.build.result }}
       with:
+        github-token: ${{ secrets.COPILOT_MCP_GITHUB_TOKEN || github.token }}
         script: |
           const prNumber = context.payload.pull_request.number;
           const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
