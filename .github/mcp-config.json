@@ -1,0 +1,15 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${COPILOT_MCP_GITHUB_TOKEN}"
+      }
+    }
+  }
+}
