@@ -89,10 +89,7 @@ jobs:
             }
 
       - name: Approve workflow run
-        if: |
-          github.event.workflow_run.actor.login == 'github-copilot[bot]' &&
-          steps.check_token.outputs.token_exists == 'true' &&
-          steps.validate_token.outputs.token_valid == 'true'
+        if: github.event.workflow_run.actor.login == 'github-copilot[bot]'
         run: |
           curl -X POST \
             -H "Authorization: token ${{ secrets.COPILOT_MCP_GITHUB_TOKEN }}" \
