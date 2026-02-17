@@ -7,6 +7,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Quick Links
 
 - **[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
+- **[Stop Workflow Approval Prompts](docs/QUICK_FIX_WORKFLOW_APPROVAL.md)** - Fix bot PRs requiring manual approval (30-second fix)
 
 ## Repository Structure
 

@@ -1,3 +1,22 @@
+# ⚠️ WARNING: This workflow does NOT solve the fork contributor approval problem!
+#
+# This workflow is a FAILED ATTEMPT to programmatically approve workflows.
+# It remains in the repository for reference purposes only.
+#
+# THE REAL SOLUTION is to configure repository settings:
+# Settings → Actions → General → "Fork pull request workflows from external contributors"
+# Change to: "Require approval for first-time contributors"
+#
+# See docs/WORKFLOW_APPROVAL_SOLUTION.md for the complete working solution.
+#
+# Why this doesn't work:
+# - GitHub's fork contributor approval is a SECURITY SETTING that cannot be bypassed via API
+# - The approveWorkflowRun API endpoint is for approving pending runs, not overriding security policy
+# - PAT tokens cannot override repository security settings by design
+# - This workflow triggers AFTER the security check blocks runs, so it can't preemptively allow them
+#
+# This workflow should be considered deprecated and may be removed in the future.
+
 name: Auto-Approve Bot Workflow Runs
 
 on:

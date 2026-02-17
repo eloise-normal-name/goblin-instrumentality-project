@@ -128,72 +128,35 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 ### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
 
-**Triggers**: 
-- `workflow_run` event when "Build and Validate", "Run App and Log Output", "Code Quality Checks", or "Docs Index Check" workflows are requested
-- Accepts both `pull_request` and `push` events (bot PRs may trigger workflows as either event type)
+> **⚠️ WARNING: This workflow does NOT solve the fork contributor approval problem!**
+> 
+> **The real solution** is to configure repository settings: Settings → Actions → General → "Fork pull request workflows from external contributors"
+> 
+> See **[docs/WORKFLOW_APPROVAL_SOLUTION.md](WORKFLOW_APPROVAL_SOLUTION.md)** for the working solution.
 
-**Purpose**: Enables trusted bot accounts to trigger PR review workflows without manual approval.
+**Status**: This workflow is a failed attempt to programmatically approve workflows. It remains in the repository for reference purposes only.
 
-**Actions**:
-- Detects when a workflow run is triggered by a pull request
-- Checks if the actor is a trusted bot (Copilot, github-actions[bot])
-- Validates that `COPILOT_MCP_GITHUB_TOKEN` secret is configured and has valid permissions
-- Automatically approves the workflow run using GitHub API if token validation passes
-- Logs approval status for auditing
+**Why This Doesn't Work**:
+- The GitHub API's `approveWorkflowRun` endpoint approves **pending workflow runs**, not the fork contributor security policy
+- GitHub's fork contributor approval requirement is a **repository security setting** that cannot be bypassed programmatically
+- Even with PAT tokens with full permissions, this workflow cannot override the repository's security policy
+- The workflow triggers after the security check blocks runs, so it cannot preemptively allow them
 
-**Benefits**:
-- Allows bot-created PRs to run automated checks immediately
-- Eliminates manual approval requirement for trusted bots
-- Improves automation workflow efficiency
-- Maintains security by restricting auto-approval to trusted bots only
+**What This Workflow Actually Does**:
+- Detects workflow runs triggered by pull requests
+- Checks if the actor is a trusted bot
+- Attempts to call GitHub's approve API endpoint (which fails to bypass the security policy)
+- Logs the attempt for auditing
 
-**Security**:
-- Only trusted bot accounts are approved (explicitly listed)
-- Validates `COPILOT_MCP_GITHUB_TOKEN` secret exists before attempting approval
-- Tests token permissions with a test API call to ensure it has required Actions permissions
-- Uses `COPILOT_MCP_GITHUB_TOKEN` secret (PAT) to authenticate the approval API call, providing elevated permissions beyond the default `GITHUB_TOKEN`
-- Falls back to default `GITHUB_TOKEN` if PAT is not configured (may have insufficient permissions)
-- Uses `actions: write` permission to approve runs
-- Logs all approval actions for audit trail
-- Gracefully handles approval errors (e.g., already approved, insufficient permissions)
+**The Real Solution**:
+Configure repository settings to not require approval for bot contributors:
+1. Go to repository **Settings** → **Actions** → **General**
+2. Scroll to **"Fork pull request workflows from external contributors"**
+3. Change to **"Require approval for first-time contributors"** or **"Require approval for first-time contributors who are new to GitHub"**
 
-**Token Configuration**:
-- **Recommended**: Configure `COPILOT_MCP_GITHUB_TOKEN` as a repository secret
-  - **Classic PAT**: Create with `repo` scope (includes Actions permissions)
-  - **Fine-grained PAT**: Select Actions permissions with `write` access level
-  - Add as repository secret: Settings → Secrets and variables → Actions → New repository secret
-  - Name: `COPILOT_MCP_GITHUB_TOKEN`
-- **Fallback**: Workflow uses default `GITHUB_TOKEN` when PAT is not configured
-  - Default token may lack permissions to approve workflow runs from bot PRs
-  - Workflow logs will show warnings when using fallback token
+This allows bot accounts with prior contributions to run workflows automatically.
 
-**Trusted Bots**:
-- `Copilot` - GitHub Copilot SWE agent
-- `copilot[bot]` - GitHub Copilot bot
-- `copilot-swe-agent[bot]` - GitHub Copilot SWE agent bot
-- `github-actions[bot]` - GitHub Actions bot
-
-**Token Requirements**:
-- The `COPILOT_MCP_GITHUB_TOKEN` secret must be configured as a GitHub Personal Access Token (PAT)
-- **Classic PAT**: Requires `repo` scope (full control of private repositories)
-- **Fine-grained PAT**: Requires Actions `write` permission level
-- If the token is not configured or lacks permissions:
-  - The auto-approve workflow logs warnings but does not fail
-  - The target workflow runs will not be approved
-  - The target workflow runs will remain pending, requiring manual approval
-- Token validation checks basic Actions read access
-- Write permissions cannot be validated in advance and will only be tested when the approval is attempted
-
-**Maintenance**:
-- When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
-- When adding trusted bot accounts, update the `trustedBots` array in the workflow script
-- Review workflow logs periodically to ensure approvals are working as expected
-- If approvals fail with permission errors, verify `COPILOT_MCP_GITHUB_TOKEN` is configured correctly
-
-**Alternative: MCP Configuration**:
-- For direct GitHub API integration using the Model Context Protocol, see `.github/MCP_README.md`
-- MCP configuration file available at `.github/mcp-config.json`
-- Provides an alternative to the GitHub Actions workflow for programmatic workflow approval
+For detailed explanation, see [docs/WORKFLOW_APPROVAL_SOLUTION.md](WORKFLOW_APPROVAL_SOLUTION.md).
 
 ### Docs Index Check (`.github/workflows/docs-index-check.yml`)
 
@@ -306,24 +269,30 @@ If the workflow fails to commit changes to `gh-pages`:
 - Confirm the `gh-pages` branch was created successfully (first run creates it)
 - Review if there are merge conflicts (shouldn't happen on main)
 
-### Auto-Approve Bot Workflow Runs
+### Bot Workflows Require Manual Approval
 
-**Adding New Workflows:**
-If a new workflow that runs on PRs is added:
-- Update `.github/workflows/auto-approve-bot-workflows.yml` to include the new workflow name in the `workflows:` list
-- This ensures trusted bots can trigger the new workflow without manual approval
+**Problem:** Bot PRs (from Copilot, github-actions[bot], etc.) show "Workflow awaiting approval" instead of running automatically.
 
-**Approval Not Working:**
-If bot PRs still require manual approval:
-- Verify the bot account is in the `trustedBots` list in the workflow
-- Check that the workflow has `actions: write` permission
-- Review workflow logs for API errors or permission issues
-- Ensure the actor login matches exactly (e.g., `copilot` vs `copilot[bot]`)
+**Solution:** Configure repository settings (NOT a workflow automation problem):
 
-**Debugging:**
-- Check the workflow run logs in the Actions tab
-- Look for "Check if run is from trusted bot" step output
-- Verify the actor and fork status are correctly detected
+1. Go to repository **Settings** → **Actions** → **General**
+2. Scroll to **"Fork pull request workflows from external contributors"**
+3. Change to **"Require approval for first-time contributors"** or **"Require approval for first-time contributors who are new to GitHub"**
+4. Click **Save**
+
+This allows bot accounts with prior merged contributions to run workflows automatically.
+
+**Why the auto-approve workflow doesn't work:**
+- GitHub's fork contributor approval is a **security setting**, not something that can be automated via API
+- The `approveWorkflowRun` API endpoint is for approving specific pending runs, not bypassing the security policy
+- PAT tokens cannot override this repository security setting by design
+
+**Verification:**
+- After changing settings, bot PRs should run workflows immediately
+- No "Approve and run" button should appear
+- If approval is still required, the bot may need to have a prior merged PR first
+
+For detailed explanation, see **[docs/WORKFLOW_APPROVAL_SOLUTION.md](WORKFLOW_APPROVAL_SOLUTION.md)**
 
 ### Workflow Fails but Builds Locally
 
