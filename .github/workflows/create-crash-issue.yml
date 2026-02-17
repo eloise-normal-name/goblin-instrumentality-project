@@ -1,0 +1,214 @@
+name: Create Issue for App Crash
+
+on:
+  workflow_run:
+    workflows: ["Run App and Log Output"]
+    types: [completed]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+jobs:
+  create-crash-issue:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    
+    steps:
+    - name: Get workflow run details
+      id: get-run
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runId = context.payload.workflow_run.id;
+          const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+          const branch = context.payload.workflow_run.head_branch;
+          const commit = context.payload.workflow_run.head_sha.substring(0, 7);
+          
+          core.setOutput('run_id', runId);
+          core.setOutput('run_url', runUrl);
+          core.setOutput('branch', branch);
+          core.setOutput('commit', commit);
+          
+          console.log(`Run ID: ${runId}`);
+          console.log(`Branch: ${branch}`);
+          console.log(`Commit: ${commit}`);
+    
+    - name: Download logs
+      uses: actions/download-artifact@v4.1.3
+      continue-on-error: true
+      with:
+        name: app-execution-logs
+        run-id: ${{ steps.get-run.outputs.run_id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path: ./failed-logs
+        
+    - name: Extract crash details
+      id: crash-details
+      run: |
+        echo "## Extracting crash information" >> $GITHUB_STEP_SUMMARY
+        
+        CRASH_INFO="No debug output available"
+        CRASH_TYPE="Unknown crash"
+        
+        if [ -f "./failed-logs/debug_output.txt" ]; then
+          # Extract first 20 lines for context
+          FIRST_LINES=$(head -n 20 ./failed-logs/debug_output.txt | sed 's/$/\\n/' | tr -d '\n')
+          
+          # Look for common crash patterns
+          if grep -q "access violation\|STATUS_ACCESS_VIOLATION\|0xC0000005" ./failed-logs/debug_output.txt; then
+            CRASH_TYPE="Access Violation"
+          elif grep -q "HRESULT\|0x8" ./failed-logs/debug_output.txt; then
+            CRASH_TYPE="HRESULT Error"
+          elif grep -q "Exception\|exception" ./failed-logs/debug_output.txt; then
+            CRASH_TYPE="Exception"
+          fi
+          
+          CRASH_INFO="$FIRST_LINES"
+        fi
+        
+        # Save crash details as multiline output
+        {
+          echo 'crash_type<<EOF'
+          echo "$CRASH_TYPE"
+          echo 'EOF'
+        } >> $GITHUB_OUTPUT
+        
+        {
+          echo 'crash_info<<EOF'
+          echo "$CRASH_INFO"
+          echo 'EOF'
+        } >> $GITHUB_OUTPUT
+        
+        echo "**Crash Type**: $CRASH_TYPE" >> $GITHUB_STEP_SUMMARY
+      shell: bash
+    
+    - name: Check for existing open crash issue
+      id: check-existing
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'bug,critical,automated',
+            per_page: 10
+          });
+          
+          // Check if there's already an open automated crash issue
+          const existingIssue = issues.find(issue => 
+            issue.title.includes('App Crash') && 
+            issue.labels.some(l => l.name === 'automated')
+          );
+          
+          if (existingIssue) {
+            core.setOutput('has_existing', 'true');
+            core.setOutput('existing_number', existingIssue.number);
+            core.info(`Found existing crash issue #${existingIssue.number}`);
+          } else {
+            core.setOutput('has_existing', 'false');
+            core.info('No existing open crash issue found');
+          }
+    
+    - name: Create or update crash issue
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runUrl = '${{ steps.get-run.outputs.run_url }}';
+          const branch = '${{ steps.get-run.outputs.branch }}';
+          const commit = '${{ steps.get-run.outputs.commit }}';
+          const crashType = `${{ steps.crash-details.outputs.crash_type }}`;
+          const crashInfo = `${{ steps.crash-details.outputs.crash_info }}`;
+          const hasExisting = '${{ steps.check-existing.outputs.has_existing }}' === 'true';
+          const existingNumber = '${{ steps.check-existing.outputs.existing_number }}';
+          
+          const issueBody = [
+            `## App Crash Detected in Build Verification`,
+            ``,
+            `**Crash Type**: ${crashType}`,
+            `**Branch**: \`${branch}\``,
+            `**Commit**: \`${commit}\``,
+            `**Workflow Run**: ${runUrl}`,
+            ``,
+            `### Crash Details`,
+            ``,
+            crashInfo === 'No debug output available' 
+              ? `⚠️  No debug output available. The app may have crashed before logging could be captured.`
+              : `\`\`\`\n${crashInfo}\n\`\`\``,
+            ``,
+            `### Reproduction`,
+            ``,
+            `1. Build the project: \`cmake --build build --config MinSizeRel\``,
+            `2. Run in headless mode: \`bin/MinSizeRel/goblin-stream.exe --headless\``,
+            `3. Observe crash within first 30 frames`,
+            ``,
+            `### What's Needed`,
+            ``,
+            `- Root cause analysis of the crash`,
+            `- Fix for the underlying issue`,
+            `- Test to prevent regression`,
+            ``,
+            `### Artifacts`,
+            ``,
+            `Download the \`app-execution-logs\` artifact from the workflow run above for full crash logs.`,
+            ``,
+            `---`,
+            `*This issue was automatically created by the crash detection system.*`
+          ].join('\n');
+          
+          if (hasExisting) {
+            // Update existing issue with new information
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(existingNumber),
+              body: [
+                `## New Crash Detected`,
+                ``,
+                `**Branch**: \`${branch}\``,
+                `**Commit**: \`${commit}\``,
+                `**Workflow Run**: ${runUrl}`,
+                `**Crash Type**: ${crashType}`,
+                ``,
+                `The crash is still occurring. See the workflow run above for latest logs.`
+              ].join('\n')
+            });
+            
+            core.info(`Updated existing issue #${existingNumber} with new crash information`);
+          } else {
+            // Create new issue
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `App Crash in Build Verification (${crashType})`,
+              body: issueBody,
+              labels: ['bug', 'critical', 'automated', 'nvenc']
+            });
+            
+            core.info(`Created new crash issue #${issue.number}`);
+            core.setOutput('issue_number', issue.number);
+            
+            // Add to summary
+            core.summary
+              .addHeading('Crash Issue Created', 2)
+              .addLink(`Issue #${issue.number}`, issue.html_url)
+              .addRaw(`\n\nA new bug issue has been created and will be automatically triaged by BugBot.`)
+              .write();
+          }
+    
+    - name: Workflow summary
+      if: always()
+      run: |
+        echo "## Crash Detection Complete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✓ Downloaded crash logs from failed workflow run" >> $GITHUB_STEP_SUMMARY
+        echo "✓ Analyzed crash details" >> $GITHUB_STEP_SUMMARY
+        echo "✓ Created or updated bug issue" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Steps**:" >> $GITHUB_STEP_SUMMARY
+        echo "- BugBot will automatically triage the issue" >> $GITHUB_STEP_SUMMARY
+        echo "- An agent will be assigned based on crash type" >> $GITHUB_STEP_SUMMARY
+        echo "- Check the issue for agent analysis and recommendations" >> $GITHUB_STEP_SUMMARY
