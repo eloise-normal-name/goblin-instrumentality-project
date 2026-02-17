@@ -39,7 +39,7 @@ class NvencD3D12 {
 	void UnregisterBitstreamBuffer(uint32_t index);
 	void UnregisterAllBitstreamBuffers();
 
-	void MapInputTexture(uint32_t index, uint64_t fence_wait_value);
+	void MapInputTexture(uint32_t index, uint64_t);
 	void UnmapInputTexture(uint32_t index);
 
 	NvencSession& session;

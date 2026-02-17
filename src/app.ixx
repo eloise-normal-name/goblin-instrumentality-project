@@ -139,7 +139,7 @@ export class App {
 			command_list->ResourceBarrier(1, &barrier);
 		}
 
-		float clear_color[]{(float)(index / 4 % 2), (float)(index / 2 % 2), (float)(index % 2), 1};
+		float clear_color[]{(float)(index / 4 % 2), (float)(index / 2 % 2), (float)(index % 2), 1.0f};
 		command_list->ClearRenderTargetView(rtv, clear_color, 0, nullptr);
 
 		{
@@ -184,7 +184,7 @@ export class App {
 	}
 
 	FrameWaitResult WaitForFrame(FrameDebugLog& frame_debug_log,
-								 HANDLE frame_latency_waitable, MSG& msg) {
+								 HANDLE frame_latency_waitable, MSG&) {
 		frame_debug_log.Line() << "WaitForFrame..." << "\n";
 
 		auto wait_result
