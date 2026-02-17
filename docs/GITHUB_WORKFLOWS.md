@@ -106,7 +106,8 @@ The repository includes GitHub Actions workflows that automate build validation:
 **Actions**:
 - Detects when a workflow run is triggered by a pull request
 - Checks if the actor is a trusted bot (Copilot, github-actions[bot])
-- Automatically approves the workflow run using GitHub API
+- Validates that `COPILOT_MCP_GITHUB_TOKEN` secret is configured and has valid permissions
+- Automatically approves the workflow run using GitHub API if token validation passes
 - Logs approval status for auditing
 
 **Benefits**:
@@ -117,14 +118,29 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 **Security**:
 - Only trusted bot accounts are approved (explicitly listed)
+- Validates `COPILOT_MCP_GITHUB_TOKEN` secret exists before attempting approval
+- Tests token permissions with a test API call to ensure it has required Actions permissions
 - Uses `COPILOT_MCP_GITHUB_TOKEN` secret (PAT) to authenticate the approval API call, providing elevated permissions beyond the default `GITHUB_TOKEN`
 - Uses `actions: write` permission to approve runs
-- Logs all approval actions for audit trail
-- Gracefully handles approval errors (e.g., already approved)
+- Logs all approval actions and validation results for audit trail
+- Gracefully handles approval errors (e.g., already approved) and missing/invalid tokens
 
 **Trusted Bots**:
 - `Copilot` - GitHub Copilot SWE agent
+- `copilot[bot]` - GitHub Copilot bot
+- `copilot-swe-agent[bot]` - GitHub Copilot SWE agent (alternative name)
 - `github-actions[bot]` - GitHub Actions bot
+
+**Token Requirements**:
+- The `COPILOT_MCP_GITHUB_TOKEN` secret must be configured as a GitHub Personal Access Token (PAT)
+- **Classic PAT**: Requires `repo` scope (full control of private repositories)
+- **Fine-grained PAT**: Requires Actions `write` permission level
+- If the token is not configured or lacks permissions:
+  - The auto-approve workflow logs warnings but does not fail
+  - The target workflow runs will not be approved
+  - The target workflow runs will remain pending, requiring manual approval
+- Token validation checks basic Actions read access
+- Write permissions cannot be validated in advance and will only be tested when the approval is attempted
 
 **Maintenance**:
 - When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
