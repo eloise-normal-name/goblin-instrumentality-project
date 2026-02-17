@@ -139,7 +139,8 @@ The repository includes GitHub Actions workflows that automate build validation:
   - The auto-approve workflow logs warnings but does not fail
   - The target workflow runs will not be approved
   - The target workflow runs will remain pending, requiring manual approval
-- Token validation checks basic Actions read access; write permissions cannot be validated in advance and will only be tested when the approval is attempted
+- Token validation checks basic Actions read access
+- Write permissions cannot be validated in advance and will only be tested when the approval is attempted
 
 **Maintenance**:
 - When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
