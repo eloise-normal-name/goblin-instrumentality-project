@@ -11,8 +11,7 @@ The repository includes GitHub Actions workflows that automate build validation:
 3. **Fix App Failure** - Automatically triggers when Run App workflow fails to notify and provide analysis
 4. **Update Highlights Page** - Automatically updates the refactor highlights page with latest metrics
 5. **Monitor Assigned Issues** - Tracks updates to issues assigned to bots/agents
-6. **Auto-Approve Bot Workflow Runs** - Automatically approves workflow runs from trusted bot accounts
-7. **Docs Index Check** - Ensures docs are indexed in README
+6. **Docs Index Check** - Ensures docs are indexed in README
 
 **Note**: This repository does not use GitHub Issues for task tracking.
 
@@ -126,70 +125,6 @@ The repository includes GitHub Actions workflows that automate build validation:
 
 **Note**: The workflow has `contents: write` permission to commit changes to the `gh-pages` branch. It will only commit if there are actual changes to the highlights file. The `gh-pages` branch is automatically created if it doesn't exist.
 
-### Auto-Approve Bot Workflow Runs (`.github/workflows/auto-approve-bot-workflows.yml`)
-
-**Triggers**: 
-- `workflow_run` event when "Build and Validate", "Run App and Log Output", "Code Quality Checks", or "Docs Index Check" workflows are requested
-- Only for pull request events
-
-**Purpose**: Enables trusted bot accounts to trigger PR review workflows without manual approval.
-
-**Actions**:
-- Detects when a workflow run is triggered by a pull request
-- Checks if the actor is a trusted bot (Copilot, github-actions[bot])
-- Validates that `COPILOT_MCP_GITHUB_TOKEN` secret is configured and has valid permissions
-- Automatically approves the workflow run using GitHub API if token validation passes
-- Logs approval status for auditing
-
-**Benefits**:
-- Allows bot-created PRs to run automated checks immediately
-- Eliminates manual approval requirement for trusted bots
-- Improves automation workflow efficiency
-- Maintains security by restricting auto-approval to trusted bots only
-
-**Security**:
-- Only trusted bot accounts are approved (explicitly listed)
-- Validates `COPILOT_MCP_GITHUB_TOKEN` secret exists before attempting approval
-- Tests token permissions with a test API call to ensure it has required Actions permissions
-- Uses `COPILOT_MCP_GITHUB_TOKEN` secret (PAT) to authenticate the approval API call, providing elevated permissions beyond the default `GITHUB_TOKEN`
-- Falls back to default `GITHUB_TOKEN` if PAT is not configured (may have insufficient permissions)
-- Uses `actions: write` permission to approve runs
-- Logs all approval actions for audit trail
-- Gracefully handles approval errors (e.g., already approved, insufficient permissions)
-
-**Token Configuration**:
-- **Recommended**: Configure `COPILOT_MCP_GITHUB_TOKEN` as a repository secret
-  - **Classic PAT**: Create with `repo` scope (includes Actions permissions)
-  - **Fine-grained PAT**: Select Actions permissions with `write` access level
-  - Add as repository secret: Settings → Secrets and variables → Actions → New repository secret
-  - Name: `COPILOT_MCP_GITHUB_TOKEN`
-- **Fallback**: Workflow uses default `GITHUB_TOKEN` when PAT is not configured
-  - Default token may lack permissions to approve workflow runs from bot PRs
-  - Workflow logs will show warnings when using fallback token
-
-**Trusted Bots**:
-- `Copilot` - GitHub Copilot SWE agent
-- `copilot[bot]` - GitHub Copilot bot
-- `copilot-swe-agent[bot]` - GitHub Copilot SWE agent bot
-- `github-actions[bot]` - GitHub Actions bot
-
-**Token Requirements**:
-- The `COPILOT_MCP_GITHUB_TOKEN` secret must be configured as a GitHub Personal Access Token (PAT)
-- **Classic PAT**: Requires `repo` scope (full control of private repositories)
-- **Fine-grained PAT**: Requires Actions `write` permission level
-- If the token is not configured or lacks permissions:
-  - The auto-approve workflow logs warnings but does not fail
-  - The target workflow runs will not be approved
-  - The target workflow runs will remain pending, requiring manual approval
-- Token validation checks basic Actions read access
-- Write permissions cannot be validated in advance and will only be tested when the approval is attempted
-
-**Maintenance**:
-- When adding new workflows that run on PRs, update the `workflows:` list in this workflow file
-- When adding trusted bot accounts, update the `trustedBots` array in the workflow script
-- Review workflow logs periodically to ensure approvals are working as expected
-- If approvals fail with permission errors, verify `COPILOT_MCP_GITHUB_TOKEN` is configured correctly
-
 ### Docs Index Check (`.github/workflows/docs-index-check.yml`)
 
 **Triggers**: Push, PRs, manual dispatch
@@ -300,25 +235,6 @@ If the workflow fails to commit changes to `gh-pages`:
 - Ensure no protected branch rules prevent bot commits to `gh-pages`
 - Confirm the `gh-pages` branch was created successfully (first run creates it)
 - Review if there are merge conflicts (shouldn't happen on main)
-
-### Auto-Approve Bot Workflow Runs
-
-**Adding New Workflows:**
-If a new workflow that runs on PRs is added:
-- Update `.github/workflows/auto-approve-bot-workflows.yml` to include the new workflow name in the `workflows:` list
-- This ensures trusted bots can trigger the new workflow without manual approval
-
-**Approval Not Working:**
-If bot PRs still require manual approval:
-- Verify the bot account is in the `trustedBots` list in the workflow
-- Check that the workflow has `actions: write` permission
-- Review workflow logs for API errors or permission issues
-- Ensure the actor login matches exactly (e.g., `copilot` vs `copilot[bot]`)
-
-**Debugging:**
-- Check the workflow run logs in the Actions tab
-- Look for "Check if run is from trusted bot" step output
-- Verify the actor and fork status are correctly detected
 
 ### Workflow Fails but Builds Locally
 

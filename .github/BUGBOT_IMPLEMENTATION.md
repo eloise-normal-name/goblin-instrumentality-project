@@ -234,7 +234,6 @@ Set repository secret: `COPILOT_MCP_GITHUB_TOKEN`
 ### With Existing Workflows
 - `build-and-validate.yml` - No changes (independent)
 - `code-quality.yml` - No changes (independent)
-- `auto-approve-bot-workflows.yml` - Can use BugBot labels in logic
 - Other workflows - Can reference `agent:*` and `triage:*` labels
 
 ### With GitHub Projects
