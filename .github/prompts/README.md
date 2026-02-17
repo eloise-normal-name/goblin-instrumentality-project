@@ -10,7 +10,6 @@ This directory contains specialized custom agents designed for the Goblin Instru
 
 #### BugBot (`bugbot.agent.md`)
 **When to use:**
-- System monitors new issues automatically (daily via GitHub Actions)
 - Manually trigger with `@clp /agent bugbot Analyze and triage new bugs`
 - When you need intelligent routing of complex issues
 
@@ -26,11 +25,8 @@ This directory contains specialized custom agents designed for the Goblin Instru
 - Updates issue labels with component and severity
 - Creates detailed assignment comments with analysis context
 
-**Automatic Workflow:**
-- Runs daily at 9 AM UTC via `.github/workflows/bug-triage.yml`
-- Triggered when issues are opened or labeled with `bug`
-- Uses `COPILOT_MCP_GITHUB_TOKEN` for enhanced GitHub permissions
-- Fallback to default `GITHUB_TOKEN` if secret not configured
+**Automation Status:**
+GitHub Actions workflows are temporarily removed and will be refactored back in eventually. Use manual BugBot invocation until automation returns.
 
 **Manual Usage:**
 ```
@@ -176,8 +172,8 @@ This directory contains specialized custom agents designed for the Goblin Instru
 
 ## Workflow Recommendations
 
-### Daily Bug Triage (Automated)
-BugBot runs automatically:
+### Bug Triage (Manual, Temporary)
+BugBot can be run manually:
 1. Queries all open issues labeled `bug`
 2. Categorizes each bug by component and severity
 3. Routes to appropriate specialized agent

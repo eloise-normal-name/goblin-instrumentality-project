@@ -1,14 +1,14 @@
 # Bug Triage Agent Implementation Summary
 
 ## Overview
-Successfully implemented **BugBot**, a comprehensive automated bug triage and assignment system for the Goblin Instrumentality Project. The system monitors issues, intelligently routes them to specialized agents, and keeps the project board current.
+Successfully implemented **BugBot**, a comprehensive agent-assisted bug triage and assignment system for the Goblin Instrumentality Project. The system monitors issues, intelligently routes them to specialized agents, and keeps the project board current.
 
 ## What Was Added
 
 ### 1. BugBot Agent (`.github/agents/bugbot.agent.md`)
 - **Purpose**: Orchestrate bug triage and intelligent routing to specialist agents
 - **Tools**: search, read, edit
-- **Methods**: Automated daily runs, manual invocation, event-triggered processing
+- **Methods**: Manual invocation (workflow automation temporarily removed)
 - **Capabilities**:
   - Parse bug reports and categorize by component and severity
   - Route to 5 specialist agents based on bug type
@@ -22,20 +22,8 @@ Successfully implemented **BugBot**, a comprehensive automated bug triage and as
   - GPU resource problems → `debug-resources`
   - NVENC integration issues → `explain-nvenc`
 
-### 2. Bug Triage Workflow (`.github/workflows/bug-triage.yml`)
-- **Trigger Events**:
-  - Daily schedule: 9 AM UTC
-  - GitHub Issues opened or labeled with `bug`
-  - Manual dispatch via Actions tab
-- **Features**:
-  - Queries up to 20 open bugs per run
-  - Token fallback: `COPILOT_MCP_GITHUB_TOKEN` → `github.token`
-  - Intelligent keyword-based routing algorithm
-  - Creates detailed assignment comments
-  - Updates issue labels with component, severity, and agent info
-  - Provides summary of triage run
-- **Permissions**: Issues write, contents read, repository-projects write
-- **Token Support**: Graceful degradation with full permissions when secret configured
+### 2. Automation Status
+GitHub Actions workflows are temporarily removed and will be refactored back in eventually. BugBot can still be invoked manually via `@clp /agent bugbot`.
 
 ### 3. Comprehensive Documentation
 
@@ -54,31 +42,29 @@ Successfully implemented **BugBot**, a comprehensive automated bug triage and as
 - Feature overview with checkmarks
 - How BugBot works (5-step process)
 - Supported bug categories and routing table
-- Usage (automatic and manual)
+- Usage (manual)
 - Expected output example
 - Filing good bug reports (Do's and Don'ts)
-- Workflow integration for reporters, fixers, and reviewers
+- Reporter/fixer/reviewer guidance
 - Troubleshooting quick tips
-- Example workflow walkthrough
+- Example walkthrough
 
 #### Updated `.github/prompts/README.md`
 - Added BugBot section in "Available Agents"
-- Explained automatic vs. manual invocation
+- Explained manual invocation and temporary automation removal
 - Listed all 5 agent routing destinations
-- Described automatic workflow triggering
-- Added BugBot to "Daily Bug Triage" workflow recommendations
+- Updated BugBot triage recommendations to manual mode
 - Updated "Common Combinations" to include BugBot orchestration
 
 #### Updated `.github/copilot-instructions.md`
 - Added `.github/BUG_TRIAGE_SYSTEM.md` to Quick Links
 - Positioned as official bug triage documentation
-- Labeled as "BugBot automated issue routing"
+- Labeled as "BugBot issue routing"
 
 ### 4. Key Features
 
-✅ **Automatic Monitoring**
-- Runs daily at 9 AM UTC
-- Triggered on issue creation/labeling with `bug`
+✅ **Manual Invocation**
+- Run on demand via `@clp /agent bugbot`
 
 ✅ **Intelligent Routing**  
 - Keyword-based categorization from issue title and labels
@@ -102,7 +88,6 @@ Successfully implemented **BugBot**, a comprehensive automated bug triage and as
 - Graceful fallback when optional secret not configured
 
 ✅ **No Breaking Changes**
-- Existing workflow unchanged
 - Opt-in by labeling issues with `bug`
 - Non-intrusive additions to project structure
 
@@ -112,7 +97,7 @@ Successfully implemented **BugBot**, a comprehensive automated bug triage and as
 ```
 1. Create GitHub issue
 2. Add 'bug' label
-3. BugBot automatically triages (next daily run or immediately)
+3. Trigger BugBot manually (or ask a maintainer to run it)
 4. Specialist agent analyzes in comment thread
 5. Continue discussion with agent if needed
 ```
@@ -134,10 +119,8 @@ triage:in-progress - Status tracking
 
 ## Technical Implementation Details
 
-### Workflow Triggering
-- **Schedule**: `0 9 * * *` (9 AM UTC daily)
-- **Event**: `issues.opened` or `issues.labeled` with `bug`
-- **Manual**: `workflow_dispatch` (user can trigger from Actions tab)
+### Invocation
+- **Manual**: `@clp /agent bugbot` (run from Copilot Chat)
 
 ### Bug Categorization Algorithm
 ```javascript
@@ -198,8 +181,6 @@ Set repository secret: `COPILOT_MCP_GITHUB_TOKEN`
 ├── agents/
 │   ├── bugbot.agent.md              [NEW] BugBot agent definition
 │   └── BUGBOT_GUIDE.md              [NEW] Quick reference guide
-├── workflows/
-│   └── bug-triage.yml               [NEW] Automation workflow
 ├── BUG_TRIAGE_SYSTEM.md             [NEW] Comprehensive documentation
 └── copilot-instructions.md          [UPDATED] Added to Quick Links
 
@@ -209,10 +190,10 @@ Set repository secret: `COPILOT_MCP_GITHUB_TOKEN`
 
 ## Testing & Validation
 
-### To Test the Workflow
+### To Test Manually
 1. Create a test issue with clear title like "Test memory leak in component"
 2. Add `bug` label
-3. Check that workflow triggering works (manually from Actions tab if needed)
+3. Trigger BugBot manually: `@clp /agent bugbot`
 4. Verify assignment comment is created with correct agent routing
 5. Verify labels are applied: agent:*, triage:in-progress, component label
 
@@ -230,12 +211,6 @@ Set repository secret: `COPILOT_MCP_GITHUB_TOKEN`
 - `review-frame-logic` - Gets routed D3D12 and frame bugs
 - `debug-resources` - Gets routed GPU state bugs
 - `explain-nvenc` - Gets routed NVENC integration bugs
-
-### With Existing Workflows
-- `build-and-validate.yml` - No changes (independent)
-- `code-quality.yml` - No changes (independent)
-- `auto-approve-bot-workflows.yml` - Can use BugBot labels in logic
-- Other workflows - Can reference `agent:*` and `triage:*` labels
 
 ### With GitHub Projects
 - Can set up automation to move cards based on `triage:*` labels
@@ -258,7 +233,6 @@ Possible future improvements:
 - **Main Guide**: [`.github/BUG_TRIAGE_SYSTEM.md`](../BUG_TRIAGE_SYSTEM.md)
 - **Quick Reference**: [`.github/agents/BUGBOT_GUIDE.md`](../agents/BUGBOT_GUIDE.md)
 - **Agent Definition**: [`.github/agents/bugbot.agent.md`](../agents/bugbot.agent.md)
-- **Workflow**: [`.github/workflows/bug-triage.yml`](../workflows/bug-triage.yml)
 - **Prompts Guide**: [`.github/prompts/README.md`](../prompts/README.md)
 
 ## Success Criteria Met
@@ -269,12 +243,11 @@ Possible future improvements:
 ✅ Uses COPILOT_MCP_GITHUB_TOKEN for enhanced functionality  
 ✅ Comprehensive documentation for users  
 ✅ Integration with existing agent ecosystem  
-✅ Zero breaking changes to existing workflow  
 ✅ Works out of the box with default permissions  
 
 ## Getting Started
 
-1. **For Bug Reporters**: Just add `bug` label to issues → BugBot handles the rest
+1. **For Bug Reporters**: Add `bug` label and ask for BugBot triage if needed
 2. **For Developers**: Review assignment comments → Implement fixes based on agent findings
 3. **For Maintainers**: See [BUG_TRIAGE_SYSTEM.md](../BUG_TRIAGE_SYSTEM.md) for full setup and configuration
 

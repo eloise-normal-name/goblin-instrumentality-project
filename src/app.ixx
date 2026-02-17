@@ -68,8 +68,9 @@ export class App {
   public:
 	App(HWND hwnd, bool headless, uint32_t width, uint32_t height)
 		: hwnd(hwnd), headless(headless), width(width), height(height) {
-		Try | device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-												IID_PPV_ARGS(&allocator));
+		Try
+			| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+													IID_PPV_ARGS(&allocator));
 
 		auto mvp_buffer_size = (UINT)((sizeof(MvpConstants) + MVP_BUFFER_ALIGNMENT - 1)
 									  & ~(MVP_BUFFER_ALIGNMENT - 1));
@@ -88,9 +89,10 @@ export class App {
 			.Layout			  = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		};
 
-		Try | device.device->CreateCommittedResource(
-				  &cb_heap_properties, D3D12_HEAP_FLAG_NONE, &cb_resource_desc,
-				  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mvp_constant_buffer));
+		Try
+			| device.device->CreateCommittedResource(
+				&cb_heap_properties, D3D12_HEAP_FLAG_NONE, &cb_resource_desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mvp_constant_buffer));
 
 		D3D12_RANGE range{.Begin = 0, .End = 0};
 		Try | mvp_constant_buffer->Map(0, &range, (void**)&mvp_mapped);
@@ -100,7 +102,9 @@ export class App {
 			.NumDescriptors = BUFFER_COUNT,
 		};
 
-		Try | device.device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&offscreen_rtv_heap));
+		Try
+			| device.device->CreateDescriptorHeap(&rtv_heap_desc,
+												  IID_PPV_ARGS(&offscreen_rtv_heap));
 		offscreen_rtv_descriptor_size
 			= device.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
@@ -114,7 +118,8 @@ export class App {
 
 		for (auto j = 0u; j < BUFFER_COUNT; ++j)
 			nvenc_d3d12.RegisterTexture(frames.offscreen_render_targets[j], width, height,
-										DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT), frames.fences[j]);
+										DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
+										frames.fences[j]);
 
 		for (auto k = 0u; k < BUFFER_COUNT; ++k) {
 			D3D12_CPU_DESCRIPTOR_HANDLE cmd_rtv

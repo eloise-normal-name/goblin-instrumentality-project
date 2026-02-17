@@ -11,9 +11,8 @@
 
 - Project overview: `README.md`
 - **[Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
-- CI workflows & troubleshooting: `docs/GITHUB_WORKFLOWS.md`
 - Known errors & fixes: `docs/copilot-known-errors.md`
-- Bug triage system: `.github/BUG_TRIAGE_SYSTEM.md` (BugBot automated issue routing)
+- Bug triage system: `.github/BUG_TRIAGE_SYSTEM.md` (BugBot issue routing)
 - Copilot setup validation: `.github/COPILOT_SETUP_VALIDATION.md`
 - Custom agent guide: `.github/prompts/README.md`
 - NVENC integration guide: `.github/prompts/snippets/nvenc-guide.md`
@@ -55,7 +54,7 @@
   - Do not format `include/nvenc/nvEncodeAPI.h` since it is a 3rd party vendor header
   - Single-statement conditionals (`if`, `for`, `while`) should omit braces
   - Multi-statement blocks require braces
-  - **CI validates formatting** on all PRs via `.github/workflows/format-check.yml`
+  - **Formatting is enforced** on all changes; run the formatter before finalizing edits
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
@@ -97,7 +96,7 @@
   - Keep code minimal and direct; avoid unnecessary indirection
 
 ## Prohibited Patterns
-**CI automatically checks for these patterns** via `.github/workflows/code-quality.yml`:
+These patterns are prohibited and should be avoided:
 - **snake_case Methods**: All methods must use PascalCase, not snake_case (CI enforced)
 - **C++ Casts**: Use C-style casts `(Type)value` instead of `static_cast`, `const_cast`, `dynamic_cast`, `reinterpret_cast` (CI enforced)
 - **Namespaces**: Do not use namespaces; keep all code in the global namespace (CI enforced)
@@ -140,10 +139,7 @@ If you commit any CodeQL artifact to version control despite reading this warnin
 ## Build Process
 - **Generator**: Use `-G "Visual Studio 18 2026" -A x64` (local development)
 - **Intermediate Files**: Located in `build/` (git-ignored)
-- **Automated CI**: GitHub workflows validate builds, formatting, and code quality on all PRs
-  - `.github/workflows/build-and-validate.yml` - Builds all configurations, tracks binary size and source lines (uses VS 2022 on GitHub runners)
-  - `.github/workflows/format-check.yml` - Validates clang-format compliance
-  - `.github/workflows/code-quality.yml` - Checks RAII patterns, error handling, and prohibited patterns
+- **Automation note**: GitHub Actions workflows are temporarily removed and will be refactored back in eventually. Rely on local builds for validation.
 
 ## VS Code Workflow
 - **Extension**: Use CMake Tools extension
@@ -168,21 +164,8 @@ If you commit any CodeQL artifact to version control despite reading this warnin
 - **CMake commands**: Always specify generator explicitly: `-G "Visual Studio 18 2026" -A x64`
 
 ## Continuous Integration
-- **Automated Validation**: All PRs automatically run GitHub workflows that:
-  - Build all configurations (Debug, Release, MinSizeRel)
-  - Track binary size and source line metrics
-- **Status Checks**: PR merge requires all workflow checks to pass
-- **Build Artifacts**: Each workflow run uploads binaries for manual testing if needed
-- **Documentation**: See `docs/GITHUB_WORKFLOWS.md` for detailed workflow information
-- **GitHub Issues**: This repository does not use GitHub Issues for task tracking
-
-### Fixing Workflow Check Failures
-
-**Build Failures:**
-Check the build logs and ensure:
-- All source files are listed in CMakeLists.txt
-- Code compiles with `/W4` warning level
-- No missing headers or undefined references
+- **Status**: GitHub Actions workflows are temporarily removed and will be refactored back in eventually.
+- **Validation**: Use local builds and manual checks until automation returns.
 
 ## Git Merge and PR Management
 - **Review Changes Before Merging**: Always carefully review git changes when merging a PR
@@ -192,9 +175,9 @@ Check the build logs and ensure:
 - **Integration Considerations**: When merging changes from main into a feature branch:
   - Review the commit history to understand what changed
   - Test the integrated code after merging
-  - Verify that CI workflows still pass after integration
+  - Verify builds succeed locally after integration
 - **Code Review**: Before finalizing a PR merge:
-  - Ensure all CI checks pass
+  - Ensure local builds and checks pass
   - Review the cumulative diff of all changes
   - Verify changes align with project conventions and standards
 

@@ -12,7 +12,6 @@ This document validates that the Goblin Instrumentality Project has properly con
   - ✅ Dependencies (C++ STL and Windows APIs only - no external dependencies)
   - ✅ Code quality standards (RAII, naming conventions, error handling)
   - ✅ Build commands (`cmake -G "Visual Studio 18 2026" -A x64`)
-  - ✅ Test/validation workflows (CI workflows documented)
   - ✅ Prohibited patterns (CI enforced)
   - ✅ Custom agents documentation
   - ✅ Documentation guidelines
@@ -39,7 +38,7 @@ This document validates that the Goblin Instrumentality Project has properly con
 - **File**: `.github/copilot-setup-steps.yml`
 - **Status**: ❌ Not configured
 - **Assessment**: **Not needed** for this project
-- **Reason**: Project has NO external dependencies. Only uses C++ Standard Library and Windows APIs, which are available in GitHub Actions Windows runners by default.
+- **Reason**: Project has NO external dependencies. Only uses C++ Standard Library and Windows APIs.
 
 ### ✅ Other Custom Instruction Files
 - **AGENTS.md**: ❌ Not present (not needed)
@@ -73,4 +72,5 @@ The current setup is excellent. No changes are recommended at this time. The ins
 - Best practices guide: https://gh.io/copilot-coding-agent-tips
 - Current instructions: `.github/copilot-instructions.md`
 - Custom agents: `.github/prompts/README.md`
-- Workflow documentation: `docs/GITHUB_WORKFLOWS.md`
+
+**Note**: GitHub Actions workflows are temporarily removed and will be refactored back in eventually.

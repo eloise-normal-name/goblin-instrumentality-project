@@ -1,14 +1,14 @@
-# BugBot - Automated Bug Triage Agent
+# BugBot - Bug Triage Agent
 
 ## Overview
 
-**BugBot** is an automated bug triage specialist agent that automatically monitors issues, categorizes them by component and severity, and routes them to appropriate specialist agents for detailed analysis.
+**BugBot** is a bug triage specialist agent that can be invoked to monitor issues, categorize them by component and severity, and route them to appropriate specialist agents for detailed analysis.
 
 **[📋 View All Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See issues currently assigned to copilot agents
 
 ## Key Features
 
-✅ **Automated Monitoring** - Runs daily (9 AM UTC) or triggered by issue events  
+✅ **Manual Invocation** - Run on demand via Copilot Chat  
 ✅ **Intelligent Routing** - Routes bugs to: check-raii, review-error-handling, review-frame-logic, debug-resources, explain-nvenc  
 ✅ **Component Detection** - Automatically labels issues with component: graphics, encoder, nvenc, app  
 ✅ **Severity Classification** - Labels by severity: critical, high, medium, low  
@@ -17,7 +17,7 @@
 
 ## How BugBot Works
 
-1. **Detection**: Monitors GitHub Issues labeled with `bug` (daily or on issue creation)
+1. **Detection**: Scans GitHub Issues labeled with `bug` when invoked
 2. **Analysis**: Parses bug reports and categorizes by:
    - Component (graphics, encoder, novenc, app)
    - Severity (critical → low)
@@ -38,18 +38,12 @@
 
 ## Usage
 
-### Automatic (Recommended)
-BugBot runs automatically:
-- **Daily schedule**: 9 AM UTC (`.github/workflows/bug-triage.yml`)
-- **Event trigger**: When issues are opened or labeled `bug`
+### Manual (Recommended)
+Trigger BugBot on demand:
+- `@clp /agent bugbot Analyze and triage all open bugs`
+- `@clp /agent bugbot Determine routing for issue #42`
 
-Just label your issue with `bug` and BugBot will handle the triage!
-
-### Manual Invocation
-```bash
-@clp /agent bugbot Analyze and triage all open bugs
-@clp /agent bugbot Determine routing for issue #42
-```
+GitHub Actions workflows are temporarily removed and will be refactored back in eventually.
 
 ### Expected Output
 BugBot posts a comment like:
@@ -122,11 +116,11 @@ Error: 0x80070057 (STATUS_INVALID_PARAMETER)
 Labels: bug, graphics
 ```
 
-## Workflow Integration
+## Usage Integration
 
 ### For Issue Reporters
 1. Create issue with `bug` label  
-2. BugBot analyzes automatically  
+2. Trigger BugBot manually  
 3. Wait for specialist agent analysis in comments  
 4. Provide additional context if needed  
 
@@ -147,8 +141,7 @@ Labels: bug, graphics
 
 **Issue not triaged?**
 - Add `bug` label
-- Trigger workflow manually (Actions tab)
-- Check workflow logs
+- Trigger BugBot manually via Copilot Chat
 
 **Wrong agent assigned?**
 - Reply in issue: `@clp /agent <correct-name>`
@@ -161,15 +154,14 @@ Labels: bug, graphics
 ## Files
 
 - **Agent Definition**: `.github/agents/bugbot.agent.md`
-- **Workflow Automation**: `.github/workflows/bug-triage.yml`
 - **Full Documentation**: `.github/BUG_TRIAGE_SYSTEM.md`
 - **Quick Reference**: `.github/prompts/README.md` (BugBot section)
 
-## Example Workflow
+## Example Flow
 
 ```
 User Opens Issue #42: "Memory leak in encoder"
-         ↓ (9 AM UTC daily or on creation)
+         ↓ (manual invocation)
 BugBot Detects Label: bug
          ↓
 BugBot Analyzes: Title mentions "memory leak"

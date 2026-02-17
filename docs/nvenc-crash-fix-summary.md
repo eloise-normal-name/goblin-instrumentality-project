@@ -90,7 +90,9 @@ To prevent similar issues:
 1. **Always consult API documentation**: Check `nvEncodeAPI.h` for parameter requirements
 2. **Use the Try | pattern**: Ensures all NVENC API calls are error-checked
 3. **Test with debug layers**: D3D12 debug layer may catch some interop issues
-4. **Run automated tests**: The "Run App and Log Output" workflow catches crashes in CI
+4. **Run local tests**: Build and run headless locally to catch crashes early
+
+**Note**: GitHub Actions workflows are temporarily removed and will be refactored back in eventually.
 
 ## Testing
 
@@ -99,22 +101,6 @@ The fix will be validated by:
 2. Running the app in headless mode (30 frames)
 3. Verifying no crashes occur during encoding
 4. Checking that bitstream output is generated correctly
-
-## Related Changes
-
-As part of resolving this issue, automated crash detection infrastructure was added:
-
-### New Workflow: `.github/workflows/create-crash-issue.yml`
-- Automatically creates bug issues when the app crashes in CI
-- Downloads and analyzes crash logs
-- Labels issues appropriately (`bug`, `critical`, `automated`)
-- Integrates with BugBot for automatic agent assignment
-
-### Benefits
-- Agents can now discover crashes without local testing
-- Crash logs are automatically attached to issues
-- Reproduction steps are included in issue descriptions
-- No manual intervention required for triage
 
 ## References
 

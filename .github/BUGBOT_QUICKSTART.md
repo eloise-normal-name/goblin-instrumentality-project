@@ -2,7 +2,7 @@
 
 ## What Was Added
 
-A complete automated bug triage system that **monitors bugs, routes them intelligently, and keeps your project organized**.
+A complete agent-assisted bug triage system that **routes bugs intelligently and keeps your project organized**.
 
 **[📋 View All Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - See all issues currently being analyzed by copilot agents
 
@@ -13,7 +13,7 @@ A complete automated bug triage system that **monitors bugs, routes them intelli
 - **`.github/agents/BUGBOT_GUIDE.md`** - Quick reference and getting started guide
 
 ### Workflows
-- **`.github/workflows/bug-triage.yml`** - GitHub Actions workflow that runs daily and on issue events
+GitHub Actions workflows are temporarily removed and will be refactored back in eventually.
 
 ### Documentation
 - **`.github/BUG_TRIAGE_SYSTEM.md`** - Comprehensive setup, configuration, and usage guide
@@ -29,7 +29,7 @@ A complete automated bug triage system that **monitors bugs, routes them intelli
 ```
 Bug Created with 'bug' label
          ↓
-Daily run (9 AM UTC) OR on issue event
+Manual BugBot invocation
          ↓
 BugBot Analyzes:
 • Title for keywords (crash, leak, frame, nvenc, etc.)
@@ -63,7 +63,7 @@ Developer Implements Fix → PR → Issue Closed ✓
 1. Create GitHub issue
 2. Write clear description with repro steps
 3. Add 'bug' label
-4. BugBot automatically triages!
+4. Trigger BugBot manually for triage
 ```
 
 ### To Trigger Manually
@@ -125,7 +125,7 @@ Set `COPILOT_MCP_GITHUB_TOKEN` secret for:
 
 ## ✨ Key Features
 
-✅ **Automatic Monitoring** - Daily runs + event-triggered  
+✅ **Manual Invocation** - Run on demand via Copilot Chat  
 ✅ **Intelligent Routing** - Keyword-based categorization  
 ✅ **Rich Context** - Detailed assignment comments  
 ✅ **Component Detection** - Auto-labels graphics, encoder, nvenc, app  
@@ -136,17 +136,7 @@ Set `COPILOT_MCP_GITHUB_TOKEN` secret for:
 
 ## 🔄 Workflow Automation
 
-**Triggers:**
-- ⏰ Daily at 9 AM UTC
-- 🏷️ When issues opened or labeled with `bug`
-- 🎮 Manual dispatch from Actions tab
-
-**Process:**
-- Queries up to 20 open bugs
-- Routes each based on keywords
-- Creates assignment comment
-- Updates labels
-- Reports summary
+GitHub Actions workflows are temporarily removed and will be refactored back in eventually. Use manual BugBot invocation in the meantime.
 
 ## 📚 Documentation Quick Links
 
@@ -154,7 +144,6 @@ Set `COPILOT_MCP_GITHUB_TOKEN` secret for:
 Main Guide:          .github/BUG_TRIAGE_SYSTEM.md
 Quick Start:         .github/agents/BUGBOT_GUIDE.md
 Agent Definition:    .github/agents/bugbot.agent.md
-Workflow:            .github/workflows/bug-triage.yml
 Updated Guides:      .github/prompts/README.md
                      .github/copilot-instructions.md
 Technical Details:   .github/BUGBOT_IMPLEMENTATION.md
@@ -171,7 +160,7 @@ Technical Details:   .github/BUGBOT_IMPLEMENTATION.md
 
 ## 🚀 Getting Started Now
 
-1. **For Bug Reporters**: Add `bug` label to issues → BugBot routes automatically
+1. **For Bug Reporters**: Add `bug` label and trigger BugBot for triage when needed
 2. **For Developers**: Check issue assignment comments → Follow agent recommendations
 3. **For Setup**: See `.github/BUG_TRIAGE_SYSTEM.md` for configuration details
 
