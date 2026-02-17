@@ -46,7 +46,7 @@ jobs:
           console.log(`Conclusion: ${conclusion || 'N/A (manual trigger)'}`);
     
     - name: Download logs
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v4.1.3
       continue-on-error: true
       with:
         name: app-execution-logs
