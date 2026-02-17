@@ -266,12 +266,16 @@ Closes #<original_bug_number>
 
 ## Additional Resources
 
+- **Copilot Interaction Guide**: `.github/COPILOT_INTERACTION_GUIDE.md` - How to use @copilot and custom agents
 - **BugBot Agent**: `.github/agents/bugbot.agent.md` - Full agent instructions
 - **Workflow**: `.github/workflows/bug-triage.yml` - Automation configuration
 - **Agent Guide**: `.github/prompts/README.md` - Specialized agent documentation
 - **Project Instructions**: `.github/copilot-instructions.md` - Coding standards and patterns
 
 ## FAQ
+
+**Q: Why can't I use @copilot in issue comments?**
+A: Typing @copilot in comments references a GitHub user account named "copilot" (not the AI agent), which is a security risk. Instead, assign issues to @copilot via the Assignees dropdown, or use `@clp /agent` pattern for custom agents. See `.github/COPILOT_INTERACTION_GUIDE.md` for details.
 
 **Q: Does this replace code review?**
 A: No. BugBot performs initial triage and routing. Developer review and code review processes are unchanged.

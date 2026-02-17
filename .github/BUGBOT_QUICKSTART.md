@@ -151,6 +151,7 @@ Set `COPILOT_MCP_GITHUB_TOKEN` secret for:
 ## 📚 Documentation Quick Links
 
 ```
+Copilot Interaction: .github/COPILOT_INTERACTION_GUIDE.md
 Main Guide:          .github/BUG_TRIAGE_SYSTEM.md
 Quick Start:         .github/agents/BUGBOT_GUIDE.md
 Agent Definition:    .github/agents/bugbot.agent.md
