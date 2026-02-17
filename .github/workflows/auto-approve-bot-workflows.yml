@@ -1,4 +1,5 @@
 name: Auto-Approve Bot Workflow Runs
+# Automatically approves workflow runs from trusted bot accounts (both push and pull_request events)
 
 on:
   workflow_run:
