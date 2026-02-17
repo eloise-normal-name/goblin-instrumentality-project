@@ -1,5 +1,6 @@
 name: Auto-Approve Bot Workflow Runs
-# Automatically approves workflow runs from trusted bot accounts (both push and pull_request events)
+# Automatically approves workflow runs from trusted bot accounts
+# Accepts both push and pull_request events to handle bot PR commits
 
 on:
   workflow_run:
