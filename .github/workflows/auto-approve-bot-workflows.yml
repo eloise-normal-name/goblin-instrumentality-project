@@ -72,7 +72,10 @@ jobs:
             
             // Try to validate token permissions by making a test API call
             try {
-              const octokit = github;
+              // Create an Octokit instance with the MCP token to test it
+              const { Octokit } = require('@octokit/rest');
+              const octokit = new Octokit({ auth: token });
+              
               // Check if we can list workflow runs (requires Actions read permission)
               await octokit.rest.actions.listWorkflowRunsForRepo({
                 owner: context.repo.owner,
