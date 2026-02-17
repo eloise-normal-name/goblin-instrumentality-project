@@ -30,7 +30,7 @@ jobs:
           echo "Actor: $ACTOR"
           
           # Define trusted bots
-          TRUSTED_BOTS=("Copilot" "copilot[bot]" "copilot-swe-agent[bot]" "github-actions[bot]")
+          TRUSTED_BOTS=("Copilot" "copilot[bot]" "copilot-swe-agent[bot]" "github-actions[bot]" "eloise-normal-name")
           
           IS_TRUSTED=false
           for bot in "${TRUSTED_BOTS[@]}"; do
