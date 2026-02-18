@@ -129,7 +129,7 @@ GitHub Actions workflows are temporarily removed and will be refactored back in 
 
 **Example usage:**
 ```
-@workspace /agent explain-nvenc Explain the resource mapping in nvenc_d3d12.cpp lines 45-78
+@workspace /agent explain-nvenc Explain the resource registration and mapping flow in frame_encoder.cpp (RegisterTexture and MapInputTexture)
 ```
 
 ### Refactoring & Maintenance

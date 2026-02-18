@@ -8,8 +8,24 @@
 #include <vector>
 
 #include "bitstream_file_writer.h"
-#include "nvenc_d3d12.h"
 #include "nvenc_session.h"
+
+struct RegisteredTexture {
+	ID3D12Resource* resource;
+	NV_ENC_REGISTERED_PTR registered_ptr;
+	NV_ENC_INPUT_PTR mapped_ptr;
+	NV_ENC_BUFFER_FORMAT buffer_format;
+	uint32_t width;
+	uint32_t height;
+	bool is_mapped;
+	ID3D12Fence* fence;
+};
+
+struct BitstreamBuffer {
+	ID3D12Resource* resource;
+	NV_ENC_REGISTERED_PTR registered_ptr;
+	uint32_t size;
+};
 
 class FrameEncoder {
   public:
@@ -20,17 +36,28 @@ class FrameEncoder {
 		uint64_t wait_count;
 	};
 
-	FrameEncoder(NvencSession& session, NvencD3D12& nvenc_d3d12, ID3D12Device* device,
-				 uint32_t buffer_count, uint32_t output_buffer_size);
+	FrameEncoder(NvencSession& session, ID3D12Device* device, uint32_t buffer_count,
+				 uint32_t output_buffer_size);
 	~FrameEncoder();
+
+	void RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
+						 NV_ENC_BUFFER_FORMAT format, ID3D12Fence* fence);
+	void UnregisterTexture(uint32_t index);
+	void UnregisterAllTextures();
+
+	void RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size);
+	void UnregisterBitstreamBuffer(uint32_t index);
+	void UnregisterAllBitstreamBuffers();
 
 	void EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value, uint32_t frame_index);
 	void ProcessCompletedFrames(BitstreamFileWriter& writer, bool wait_for_all = false);
 	Stats GetStats() const;
 
+	std::vector<RegisteredTexture> textures;
+	std::vector<BitstreamBuffer> bitstream_buffers;
+
   private:
 	NvencSession& session;
-	NvencD3D12& nvenc_d3d12;
 	std::vector<ID3D12Resource*> output_d3d12_buffers;
 	std::vector<NV_ENC_REGISTERED_PTR> output_registered_ptrs;
 	std::vector<ID3D12Fence*> output_fences;
@@ -42,8 +69,13 @@ class FrameEncoder {
 		uint64_t fence_value;
 	};
 
+	void MapInputTexture(uint32_t index, uint64_t);
+	void UnmapInputTexture(uint32_t index);
+
 	std::deque<PendingOutput> pending_outputs;
 	uint64_t submitted_frames = 0;
 	uint64_t completed_frames = 0;
 	uint64_t wait_count		  = 0;
 };
+
+NV_ENC_BUFFER_FORMAT DxgiFormatToNvencFormat(DXGI_FORMAT format);

@@ -2,9 +2,11 @@
 
 #include "try.h"
 
-FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* device,
-						   uint32_t count, uint32_t output_buffer_size)
-	: session(sess), nvenc_d3d12(nvenc), buffer_count(count) {
+FrameEncoder::FrameEncoder(NvencSession& sess, ID3D12Device* device, uint32_t count,
+						   uint32_t output_buffer_size)
+	: session(sess), buffer_count(count) {
+	textures.reserve(count);
+
 	output_d3d12_buffers.resize(count);
 	output_registered_ptrs.resize(count);
 	output_fences.resize(count);
@@ -54,6 +56,9 @@ FrameEncoder::FrameEncoder(NvencSession& sess, NvencD3D12& nvenc, ID3D12Device* 
 }
 
 FrameEncoder::~FrameEncoder() {
+	UnregisterAllTextures();
+	UnregisterAllBitstreamBuffers();
+
 	void* encoder = session.encoder;
 
 	for (auto i = 0u; i < output_registered_ptrs.size(); ++i) {
@@ -78,6 +83,146 @@ FrameEncoder::~FrameEncoder() {
 		CloseHandle(output_event);
 }
 
+void FrameEncoder::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
+								   NV_ENC_BUFFER_FORMAT format, ID3D12Fence* fence) {
+	void* encoder = session.encoder;
+
+	NV_ENC_FENCE_POINT_D3D12 fence_point{
+		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence	   = fence,
+		.waitValue = 0,
+		.bWait	   = 1,
+	};
+
+	NV_ENC_REGISTER_RESOURCE register_params{
+		.version			= NV_ENC_REGISTER_RESOURCE_VER,
+		.resourceType		= NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
+		.width				= width,
+		.height				= height,
+		.resourceToRegister = texture,
+		.bufferFormat		= format,
+		.bufferUsage		= NV_ENC_INPUT_IMAGE,
+		.pInputFencePoint	= &fence_point,
+	};
+
+	Try | session.nvEncRegisterResource(encoder, &register_params);
+
+	textures.push_back({
+		.resource		= texture,
+		.registered_ptr = register_params.registeredResource,
+		.buffer_format	= format,
+		.width			= width,
+		.height			= height,
+		.fence			= fence,
+	});
+}
+
+void FrameEncoder::UnregisterTexture(uint32_t index) {
+	if (index >= textures.size())
+		throw;
+
+	RegisteredTexture& texture = textures[index];
+	if (texture.is_mapped)
+		UnmapInputTexture(index);
+
+	if (texture.registered_ptr) {
+		void* encoder = session.encoder;
+		Try | session.nvEncUnregisterResource(encoder, texture.registered_ptr);
+		texture.registered_ptr = nullptr;
+	}
+}
+
+void FrameEncoder::UnregisterAllTextures() {
+	for (uint32_t i = 0; i < textures.size(); ++i) {
+		UnregisterTexture(i);
+	}
+	textures.clear();
+}
+
+void FrameEncoder::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) {
+	if (!buffer)
+		throw;
+
+	void* encoder = session.encoder;
+
+	NV_ENC_REGISTER_RESOURCE register_params{
+		.version			= NV_ENC_REGISTER_RESOURCE_VER,
+		.resourceType		= NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
+		.width				= size,
+		.height				= 1,
+		.resourceToRegister = buffer,
+		.bufferFormat		= NV_ENC_BUFFER_FORMAT_U8,
+		.bufferUsage		= NV_ENC_OUTPUT_BITSTREAM,
+	};
+
+	Try | session.nvEncRegisterResource(encoder, &register_params);
+
+	bitstream_buffers.push_back({
+		.resource		= buffer,
+		.registered_ptr = register_params.registeredResource,
+		.size			= size,
+	});
+}
+
+void FrameEncoder::UnregisterBitstreamBuffer(uint32_t index) {
+	if (index >= bitstream_buffers.size())
+		return;
+
+	BitstreamBuffer& buffer = bitstream_buffers[index];
+	if (buffer.registered_ptr) {
+		void* encoder = session.encoder;
+		Try | session.nvEncUnregisterResource(encoder, buffer.registered_ptr);
+		buffer.registered_ptr = nullptr;
+	}
+}
+
+void FrameEncoder::UnregisterAllBitstreamBuffers() {
+	for (uint32_t i = 0; i < bitstream_buffers.size(); ++i) {
+		UnregisterBitstreamBuffer(i);
+	}
+	bitstream_buffers.clear();
+}
+
+void FrameEncoder::MapInputTexture(uint32_t index, uint64_t) {
+	if (index >= textures.size())
+		throw;
+
+	RegisteredTexture& texture = textures[index];
+	if (texture.is_mapped)
+		return;
+	if (!texture.registered_ptr)
+		throw;
+
+	void* encoder = session.encoder;
+
+	NV_ENC_MAP_INPUT_RESOURCE map_params{
+		.version			= NV_ENC_MAP_INPUT_RESOURCE_VER,
+		.registeredResource = texture.registered_ptr,
+	};
+
+	Try | session.nvEncMapInputResource(encoder, &map_params);
+
+	texture.mapped_ptr	  = map_params.mappedResource;
+	texture.buffer_format = map_params.mappedBufferFmt;
+	texture.is_mapped	  = true;
+}
+
+void FrameEncoder::UnmapInputTexture(uint32_t index) {
+	if (index >= textures.size())
+		throw;
+
+	RegisteredTexture& texture = textures[index];
+	if (!texture.is_mapped)
+		return;
+
+	void* encoder = session.encoder;
+
+	Try | session.nvEncUnmapInputResource(encoder, texture.mapped_ptr);
+
+	texture.mapped_ptr = nullptr;
+	texture.is_mapped  = false;
+}
+
 void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value,
 							   uint32_t frame_index) {
 	if (texture_index >= buffer_count)
@@ -85,9 +230,9 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 
 	void* encoder = session.encoder;
 
-	nvenc_d3d12.MapInputTexture(texture_index, fence_wait_value);
+	MapInputTexture(texture_index, fence_wait_value);
 
-	RegisteredTexture& texture = nvenc_d3d12.textures[texture_index];
+	RegisteredTexture& texture = textures[texture_index];
 
 	NV_ENC_FENCE_POINT_D3D12 input_fence_point{
 		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
@@ -133,7 +278,7 @@ void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value
 		PendingOutput{.output_resource = output_resource, .fence_value = frame_index + 1});
 	++submitted_frames;
 
-	nvenc_d3d12.UnmapInputTexture(texture_index);
+	UnmapInputTexture(texture_index);
 }
 
 void FrameEncoder::ProcessCompletedFrames(BitstreamFileWriter& writer, bool wait_for_all) {
@@ -178,4 +323,21 @@ FrameEncoder::Stats FrameEncoder::GetStats() const {
 		.pending_frames	  = pending_outputs.size(),
 		.wait_count		  = wait_count,
 	};
+}
+
+NV_ENC_BUFFER_FORMAT DxgiFormatToNvencFormat(DXGI_FORMAT format) {
+	switch (format) {
+		case DXGI_FORMAT_B8G8R8A8_UNORM:
+			return NV_ENC_BUFFER_FORMAT_ARGB;
+		case DXGI_FORMAT_R8G8B8A8_UNORM:
+			return NV_ENC_BUFFER_FORMAT_ABGR;
+		case DXGI_FORMAT_R10G10B10A2_UNORM:
+			return NV_ENC_BUFFER_FORMAT_ABGR10;
+		case DXGI_FORMAT_NV12:
+			return NV_ENC_BUFFER_FORMAT_NV12;
+		case DXGI_FORMAT_P010:
+			return NV_ENC_BUFFER_FORMAT_YUV420_10BIT;
+		default:
+			return NV_ENC_BUFFER_FORMAT_ARGB;
+	}
 }

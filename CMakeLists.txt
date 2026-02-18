@@ -16,7 +16,6 @@ set(SOURCES
     src/encoder/bitstream_file_writer.cpp
     src/encoder/frame_encoder.cpp
     src/encoder/nvenc_config.cpp
-    src/encoder/nvenc_d3d12.cpp
     src/encoder/nvenc_session.cpp
     src/graphics/d3d12_command_allocators.cpp
     src/graphics/d3d12_commands.cpp
