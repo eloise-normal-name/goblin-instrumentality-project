@@ -62,3 +62,8 @@ Use this file as the first-stop orientation for future coding sessions. It links
 - Follow `.github/copilot-instructions.md` for style and policy.
 - Prefer minimal, targeted edits over broad refactors.
 - Update docs when behavior changes, especially NVENC flow and frame lifecycle.
+
+
+# ExecPlans
+
+When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
