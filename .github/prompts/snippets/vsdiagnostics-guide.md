@@ -6,15 +6,16 @@ TOOL
 LOCATE (run once to find path)
   Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Recurse -Filter "VSDiagnostics.exe" | Select-Object -First 1 -ExpandProperty FullName
 
-EXPECTED PATHS (VS 2026 Community)
-  Exe:     C:\Program Files\Microsoft Visual Studio\2026\Community\Team Tools\DiagnosticsHub\Collector\VSDiagnostics.exe
-  Configs: C:\Program Files\Microsoft Visual Studio\2026\Community\Team Tools\DiagnosticsHub\Collector\AgentConfigs\
+EXPECTED PATHS (VS 2026 Community / internal version 18)
+  Exe:     C:\Program Files\Microsoft Visual Studio\18\Community\Team Tools\DiagnosticsHub\Collector\VSDiagnostics.exe
+  Configs: C:\Program Files\Microsoft Visual Studio\18\Community\Team Tools\DiagnosticsHub\Collector\AgentConfigs\
 
-AVAILABLE AGENT CONFIGS
+AVAILABLE AGENT CONFIGS (VS 18 Community, verified)
   CpuUsageHigh.json   — CPU sampling at ~1 kHz; yields hot function list and call tree
   CpuUsageLow.json    — CPU sampling at lower frequency; lower overhead for longer runs
-  MemoryUsage.json    — Heap snapshot at process start/end; shows total allocations and top sites
-  FileIO.json         — ETW file read/write tracing; shows I/O volume and per-file breakdown
+  FileIOBase.json     — ETW file read/write tracing; shows I/O volume and per-file breakdown
+  NOTE: MemoryUsage.json does NOT exist in VS 18 Community. Memory profiling requires opening
+        a .diagsession in VS Performance Profiler UI, or use DotNetObjectAllocBase.json (.NET only).
 
 SESSION LIFECYCLE
   # Step 1: start session (launches process and attaches collector)
@@ -28,21 +29,24 @@ SESSION LIFECYCLE
   <id> is 1–255 (local slot number; reuse after stop)
 
 CANONICAL HEADLESS PROFILING SEQUENCE
-  $vsdiag  = "C:\Program Files\Microsoft Visual Studio\2026\Community\Team Tools\DiagnosticsHub\Collector\VSDiagnostics.exe"
-  $configs = "C:\Program Files\Microsoft Visual Studio\2026\Community\Team Tools\DiagnosticsHub\Collector\AgentConfigs"
+  $vsdiag  = "C:\Program Files\Microsoft Visual Studio\18\Community\Team Tools\DiagnosticsHub\Collector\VSDiagnostics.exe"
+  $configs = "C:\Program Files\Microsoft Visual Studio\18\Community\Team Tools\DiagnosticsHub\Collector\AgentConfigs"
   $stamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
   $out     = "docs\perf-baselines"
 
+  # NOTE: 'start' is NON-BLOCKING — it launches the process and returns immediately.
+  # Wait for the process to finish before calling stop.
+
   # CPU
   & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
+  Start-Sleep -Seconds 20   # wait for 30-frame headless run to complete
   & $vsdiag stop  1 /output:"$out\cpu_$stamp.diagsession"
 
-  # Memory
-  & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\MemoryUsage.json"
-  & $vsdiag stop  1 /output:"$out\memory_$stamp.diagsession"
+  # Memory — MemoryUsage.json not available in VS 18 Community; skip or use VS UI
 
-  # File I/O
-  & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIO.json"
+  # File I/O (config is FileIOBase.json, not FileIO.json)
+  & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIOBase.json"
+  Start-Sleep -Seconds 20
   & $vsdiag stop  1 /output:"$out\fileio_$stamp.diagsession"
 
 OPENING RESULTS

@@ -1,0 +1,27 @@
+{
+  "run_label": "initial-baseline_2026-02-19",
+  "build_config": "Release",
+  "app_args": "--headless",
+  "frames": 30,
+  "notes": "First baseline run. Memory profiling skipped: MemoryUsage.json not present in VS 18 Community AgentConfigs (only .NET allocation configs available). Use VS Performance Profiler (Debug > Performance Profiler > Memory Usage) for native heap data.",
+  "cpu": {
+    "wall_time_ms": 1067,
+    "avg_cpu_pct": null,
+    "peak_cpu_pct": null,
+    "top_hot_functions": "open docs/perf-baselines/cpu_20260219_040758.diagsession in VS Performance Profiler for flamegraph",
+    "diagsession": "cpu_20260219_040758.diagsession"
+  },
+  "memory": {
+    "peak_private_bytes": null,
+    "total_heap_allocs": null,
+    "top_alloc_sites": [],
+    "notes": "MemoryUsage.json not available in this VS 18 installation. Run manually via VS Performance Profiler."
+  },
+  "fileio": {
+    "total_read_bytes": null,
+    "total_write_bytes": null,
+    "write_calls": null,
+    "top_files": "open docs/perf-baselines/fileio_20260219_040919.diagsession in VS Performance Profiler for I/O table",
+    "diagsession": "fileio_20260219_040919.diagsession"
+  }
+}

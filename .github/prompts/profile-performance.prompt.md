@@ -36,18 +36,20 @@ You will:
    CPU:
    ```powershell
    & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
+   Start-Sleep -Seconds 20   # start is non-blocking; wait for 30-frame headless run
    & $vsdiag stop  1 /output:"docs\perf-baselines\cpu_$stamp.diagsession"
    ```
 
-   Memory:
-   ```powershell
-   & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\MemoryUsage.json"
-   & $vsdiag stop  1 /output:"docs\perf-baselines\memory_$stamp.diagsession"
+   Memory (unavailable in VS 18 Community — MemoryUsage.json missing; skip and note in JSON):
+   ```
+   # No native memory config in VS 18 Community AgentConfigs.
+   # Use VS Performance Profiler UI: Debug > Performance Profiler > Memory Usage.
    ```
 
    File I/O:
    ```powershell
-   & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIO.json"
+   & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIOBase.json"
+   Start-Sleep -Seconds 20
    & $vsdiag stop  1 /output:"docs\perf-baselines\fileio_$stamp.diagsession"
    ```
 

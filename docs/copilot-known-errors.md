@@ -31,6 +31,14 @@ A living list of reproducible, solvable build and tooling problems that Copilot 
 |---|---|---|---|---|---|
 | `rmdir /S /Q "src\pipeline"` (PowerShell) | PowerShell reports: `Remove-Item : A positional parameter cannot be found that accepts argument '/Q'.` | `rmdir` maps to `Remove-Item` in PowerShell, which expects `-Recurse`/`-Force` switches instead of slash options | Run the command through CMD (e.g., `cmd /c rmdir /S /Q "src\pipeline"`) or use PowerShell syntax: `Remove-Item src\pipeline -Recurse -Force` | Windows 10/11/Server PowerShell reproduces this when using Unix-style switch syntax | N/A |
 
+## VSDiagnostics Profiling
+
+| Command | Symptom | Cause | Fix | Notes | Verified |
+|---|---|---|---|---|---|
+| `VSDiagnostics.exe start 1 ... /loadConfig:"...\MemoryUsage.json"` | `FileNotFoundException: Could not find file 'MemoryUsage.json'` | `MemoryUsage.json` does not exist in VS 18 Community `AgentConfigs`; guide docs listed an incorrect name | Skip memory CLI session; use VS Performance Profiler UI (Debug > Performance Profiler > Memory Usage) for native heap data. For .NET: `DotNetObjectAllocBase.json` is available. | Verified against VS 18.0 Community installation | 2026-02-19 |
+| `VSDiagnostics.exe start 1 ... /loadConfig:"...\FileIO.json"` | `FileNotFoundException: Could not find file 'FileIO.json'` | Correct config name is `FileIOBase.json`, not `FileIO.json` | Use `FileIOBase.json` | Verified against VS 18.0 Community installation | 2026-02-19 |
+| `VSDiagnostics.exe start 1 ...` then immediately `stop 1` | Session file is empty or missing data | `start` is non-blocking — it returns immediately after launching the process; calling `stop` before the process exits yields an empty session | After `start`, add `Start-Sleep -Seconds <N>` (20s is sufficient for the 30-frame headless run) before calling `stop` | Per VSDiagnostics troubleshooting: "Stop returns before flush" | 2026-02-19 |
+
 ## Windows Overlapped I/O
 
 | Command | Symptom | Cause | Fix | Notes | Verified |
