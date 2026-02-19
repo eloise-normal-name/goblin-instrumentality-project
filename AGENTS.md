@@ -70,6 +70,7 @@ Use `scripts/agent-wrap.ps1` for long-running or critical commands:
 - Follow `.github/copilot-instructions.md` for style and policy.
 - Prefer minimal, targeted edits over broad refactors.
 - Update docs when behavior changes, especially NVENC flow and frame lifecycle.
+- If agent write tools are available, local VS Code environment settings belong in `C:\Users\Admin\AppData\Roaming\Code\User\settings.json` (not `.vscode/settings.json`).
 
 
 # ExecPlans
