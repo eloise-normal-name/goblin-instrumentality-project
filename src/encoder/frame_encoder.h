@@ -3,8 +3,8 @@
 #include <d3d12.h>
 #include <nvenc/nvEncodeAPI.h>
 
+#include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <vector>
 
 #include "bitstream_file_writer.h"
@@ -53,26 +53,40 @@ class FrameEncoder {
 	void ProcessCompletedFrames(BitstreamFileWriter& writer, bool wait_for_all = false);
 	Stats GetStats() const;
 
+	bool HasPendingOutputs() const;
+	HANDLE NextOutputEvent() const;
+
 	std::vector<RegisteredTexture> textures;
 	std::vector<BitstreamBuffer> bitstream_buffers;
 
   private:
+	struct TextureEncodeCache {
+		NV_ENC_FENCE_POINT_D3D12 input_fence_point;
+		NV_ENC_INPUT_RESOURCE_D3D12 input_resource;
+		NV_ENC_FENCE_POINT_D3D12 output_fence_point;
+		NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource;
+		NV_ENC_PIC_PARAMS pic_params;
+	};
+
 	NvencSession& session;
 	std::vector<ID3D12Resource*> output_d3d12_buffers;
 	std::vector<NV_ENC_REGISTERED_PTR> output_registered_ptrs;
 	std::vector<ID3D12Fence*> output_fences;
+	std::vector<TextureEncodeCache> texture_encode_caches;
 	uint32_t buffer_count;
-	HANDLE output_event = nullptr;
-
 	struct PendingOutput {
-		NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource;
+		NV_ENC_REGISTERED_PTR output_buffer;
+		ID3D12Fence* output_fence;
 		uint64_t fence_value;
+		HANDLE event;
 	};
 
-	void MapInputTexture(uint32_t index, uint64_t);
+	void MapInputTexture(uint32_t index);
 	void UnmapInputTexture(uint32_t index);
 
-	std::deque<PendingOutput> pending_outputs;
+	std::vector<PendingOutput> pending_ring;
+	uint32_t pending_head	  = 0;
+	uint32_t pending_count	  = 0;
 	uint64_t submitted_frames = 0;
 	uint64_t completed_frames = 0;
 	uint64_t wait_count		  = 0;

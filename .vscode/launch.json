@@ -10,6 +10,9 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
+			"logging": {
+				"moduleLoad": false
+			},
 			"console": "externalTerminal"
 		},
 		{
@@ -21,6 +24,9 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
+			"logging": {
+				"moduleLoad": false
+			},
 			"console": "externalTerminal"
 		},
 		{
@@ -32,6 +38,9 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
+			"logging": {
+				"moduleLoad": false
+			},
 			"console": "externalTerminal"
 		},
 		{
@@ -43,6 +52,9 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
+			"logging": {
+				"moduleLoad": false
+			},
 			"console": "externalTerminal"
 		}
 	]
