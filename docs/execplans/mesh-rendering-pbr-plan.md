@@ -281,10 +281,10 @@ src/
     mesh_vs.hlsl              Vertex shader source (loaded at runtime)
     mesh_ps.hlsl              Pixel shader source (loaded at runtime)
   graphics/
-    d3d12_mesh.h              Mesh class (vertex/index buffers, draw)
-    d3d12_mesh.cpp
-    d3d12_pipeline.h          Root signature, PSO creation, shader compilation + cache
-    d3d12_pipeline.cpp
+    mesh.h              Mesh class (vertex/index buffers, draw)
+    mesh.cpp
+    pipeline.h          Root signature, PSO creation, shader compilation + cache
+    pipeline.cpp
     d3d12_depth_buffer.h      Depth buffer + DSV heap
     d3d12_depth_buffer.cpp
     d3d12_camera.h            Camera (view/projection matrices)
@@ -292,3 +292,4 @@ src/
     d3d12_material.h          Material parameters + texture bindings
     d3d12_material.cpp
 ```
+

@@ -28,14 +28,14 @@ set(SOURCES
     src/encoder/frame_encoder.cpp
     src/encoder/nvenc_config.cpp
     src/encoder/nvenc_session.cpp
-    src/graphics/d3d12_command_allocators.cpp
-    src/graphics/d3d12_commands.cpp
-    src/graphics/d3d12_device.cpp
-    src/graphics/d3d12_frame_resources.cpp
-    src/graphics/d3d12_mesh.cpp
-    src/graphics/d3d12_pipeline.cpp
-    src/graphics/d3d12_resources.cpp
-    src/graphics/d3d12_swap_chain.cpp
+    src/graphics/command_allocators.cpp
+    src/graphics/commands.cpp
+    src/graphics/device.cpp
+    src/graphics/frame_resources.cpp
+    src/graphics/mesh.cpp
+    src/graphics/pipeline.cpp
+    src/graphics/resources.cpp
+    src/graphics/swap_chain.cpp
 )
 
 # 4. Define Executable (WIN32 = subsystem:windows)
@@ -68,3 +68,4 @@ set_target_properties(goblin-stream PROPERTIES
 
 # 9. Link Dependencies
 target_link_libraries(goblin-stream PRIVATE d3d12 dxgi dxguid d3dcompiler)
+

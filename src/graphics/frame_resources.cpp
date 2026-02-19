@@ -1,4 +1,4 @@
-#include "d3d12_frame_resources.h"
+#include "frame_resources.h"
 
 #include <wrl/client.h>
 
@@ -75,3 +75,4 @@ D3D12FrameResources::~D3D12FrameResources() {
 			CloseHandle(fence_event);
 	fence_events.clear();
 }
+

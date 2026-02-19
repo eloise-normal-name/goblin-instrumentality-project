@@ -1,4 +1,4 @@
-#include "d3d12_command_allocators.h"
+#include "command_allocators.h"
 
 #include "try.h"
 
@@ -18,3 +18,4 @@ void D3D12CommandAllocators::CreateCommandAllocators(ID3D12Device* device) {
 											 IID_PPV_ARGS(&command_allocators[i]));
 	}
 }
+

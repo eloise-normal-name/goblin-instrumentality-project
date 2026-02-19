@@ -1,4 +1,4 @@
-#include "graphics/d3d12_mesh.h"
+#include "graphics/mesh.h"
 
 #include <array>
 #include <cstring>
@@ -52,3 +52,4 @@ void D3D12Mesh::Draw(ID3D12GraphicsCommandList* command_list) const {
 	command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	command_list->DrawInstanced(vertex_count, 1, 0, 0);
 }
+
