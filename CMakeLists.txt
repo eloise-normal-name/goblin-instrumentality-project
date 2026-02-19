@@ -31,6 +31,7 @@ set(SOURCES
     src/graphics/d3d12_command_allocators.cpp
     src/graphics/d3d12_commands.cpp
     src/graphics/d3d12_device.cpp
+    src/graphics/d3d12_frame_resources.cpp
     src/graphics/d3d12_mesh.cpp
     src/graphics/d3d12_pipeline.cpp
     src/graphics/d3d12_resources.cpp

@@ -37,7 +37,7 @@ D3D12FrameResources::D3D12FrameResources(ID3D12Device* device, uint32_t count, u
 	};
 
 	for (auto i = 0u; i < count; ++i) {
-		fence_events[i] = CreateEvent(nullptr, FALSE, TRUE, nullptr);
+		fence_events[i] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 		if (!fence_events[i])
 			throw;
 

@@ -7,6 +7,8 @@
 
 using Microsoft::WRL::ComPtr;
 
+class D3D12Mesh;
+
 class D3D12Commands {
   public:
 	D3D12Commands(ID3D12Device* device, ID3D12CommandAllocator* allocator);
@@ -30,3 +32,11 @@ class D3D12Commands {
 };
 
 void ExecuteCommandList(ID3D12CommandQueue* queue, D3D12Commands& commands);
+
+void RecordFrameCommandList(ID3D12GraphicsCommandList* command_list,
+							D3D12_CPU_DESCRIPTOR_HANDLE rtv,
+							ID3D12Resource* offscreen_render_target,
+							ID3D12Resource* swap_chain_render_target, uint32_t width,
+							uint32_t height, ID3D12RootSignature* root_signature,
+							ID3D12PipelineState* pipeline_state,
+							D3D12_GPU_VIRTUAL_ADDRESS mvp_buffer_address, const D3D12Mesh& mesh);

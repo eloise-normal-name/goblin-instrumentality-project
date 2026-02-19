@@ -31,6 +31,7 @@ A living list of reproducible, solvable build and tooling problems that Copilot 
 | Command | Symptom | Cause | Fix | Notes | Verified |
 |---|---|---|---|---|---|
 | `rmdir /S /Q "src\pipeline"` (PowerShell) | PowerShell reports: `Remove-Item : A positional parameter cannot be found that accepts argument '/Q'.` | `rmdir` maps to `Remove-Item` in PowerShell, which expects `-Recurse`/`-Force` switches instead of slash options | Run the command through CMD (e.g., `cmd /c rmdir /S /Q "src\pipeline"`) or use PowerShell syntax: `Remove-Item src\pipeline -Recurse -Force` | Windows 10/11/Server PowerShell reproduces this when using Unix-style switch syntax | N/A |
+| `clang-format -i <files>` | PowerShell reports: `clang-format: The term 'clang-format' is not recognized...` | Active shell is not the Developer PowerShell profile (or PATH does not include LLVM tools) | Use explicit VS 18 path: `"C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\Llvm\x64\bin\clang-format.exe" -i <files>` or switch terminal profile to **Developer PowerShell (VS 18)** | Encountered during App coordinator refactor validation; build passed after formatting with explicit path | 2026-02-19 |
 
 ## VSDiagnostics Profiling
 

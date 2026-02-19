@@ -1,5 +1,5 @@
 ---
-status: draft
+status: completed
 owner: Nova [g53c]
 related: PR #85 (refactor(app): simplify Run() into orchestration, remove log wrapper noise)
 ---
@@ -19,10 +19,10 @@ After this change, `src/app.ixx` will read as an orchestration layer that coordi
 - [x] (2026-02-19 00:00Z) Captured current `App` responsibility map and extraction seams from `src/app.ixx` and collaborators in `src/graphics/*` and `src/encoder/*`.
 - [x] (2026-02-19 00:00Z) Confirmed refactor direction with user: deep refactor, hybrid file split, preserve startup pre-recorded command lists, keep App-owned defaults.
 - [x] (2026-02-19 00:00Z) Authored this draft ExecPlan only; no implementation edits have been executed under this plan.
-- [ ] Implement graphics helper extraction for frame resource ownership and cleanup.
-- [ ] Implement command recording extraction while preserving startup pre-record semantics.
-- [ ] Simplify `App::Run()` into coordinator-first orchestration and keep wait/completion semantics equivalent.
-- [ ] Build and run validation (Debug/Release build and headless smoke run) and record evidence.
+- [x] (2026-02-19 13:39Z) Implemented graphics helper extraction for frame resource ownership and cleanup by replacing `App::FrameResources` with `D3D12FrameResources` from `src/graphics/d3d12_frame_resources.*`.
+- [x] (2026-02-19 13:39Z) Implemented command recording extraction while preserving startup pre-record semantics by adding `RecordFrameCommandList(...)` in `src/graphics/d3d12_commands.*` and invoking it from `App` constructor pre-record loop.
+- [x] (2026-02-19 13:40Z) Simplified `src/app.ixx` into coordinator-first composition by removing embedded low-level frame resource ownership and command recording mechanics while preserving wait/completion flow.
+- [x] (2026-02-19 13:40Z) Build and run validation completed (Debug build + headless smoke run) with output artifact verification.
 
 ## Surprises & Discoveries
 
@@ -34,6 +34,12 @@ After this change, `src/app.ixx` will read as an orchestration layer that coordi
 
 - Observation: There are non-obvious synchronization and encoder lifecycle invariants that must be preserved during cleanup.
   Evidence: `FrameEncoder` fixed-size pending ring behavior and completion handling paths in `src/encoder/frame_encoder.cpp`; wait and drain behavior in `src/app.ixx`.
+
+- Observation: `d3d12_frame_resources.cpp` existed but was not listed in `CMakeLists.txt`, so extraction could compile but fail to link when used from `App`.
+  Evidence: Initial `CMakeLists.txt` source list omitted `src/graphics/d3d12_frame_resources.cpp`; added during implementation.
+
+- Observation: In this terminal session, `clang-format` was not available on PATH despite project guidance expecting Developer PowerShell profile usage.
+  Evidence: Terminal error: `clang-format: The term 'clang-format' is not recognized...`; resolved with explicit VS 18 clang-format path.
 
 ## Decision Log
 
@@ -51,7 +57,25 @@ After this change, `src/app.ixx` will read as an orchestration layer that coordi
 
 ## Outcomes & Retrospective
 
-This section will be completed after implementation and validation. Success means `App` reads as a coordinator with preserved behavior, and verification evidence shows build and runtime parity.
+`App` now reads as a coordinator with low-level frame ownership and command recording logic extracted into graphics helpers.
+
+Implemented changes:
+- `src/app.ixx`
+  - Replaced nested `App::FrameResources` ownership block with `D3D12FrameResources` member.
+  - Removed in-class `RecordCommandList(...)` implementation.
+  - Switched startup pre-recording loop to call `RecordFrameCommandList(...)` from graphics helper code.
+- `src/graphics/d3d12_commands.h/.cpp`
+  - Added `RecordFrameCommandList(...)` helper to encapsulate low-level render/copy barrier + draw recording.
+- `CMakeLists.txt`
+  - Added `src/graphics/d3d12_frame_resources.cpp` to the build sources.
+
+Behavior validation evidence:
+- Build (Debug): succeeded via CMake Tools (`goblin-stream.vcxproj -> ...\bin\Debug\goblin-stream.exe`).
+- Runtime smoke: `bin\Debug\goblin-stream.exe --headless` exited normally.
+- Output artifact: `output.h264` exists and is non-empty (`Length: 1185`, timestamp updated during validation).
+
+Terminal/tooling issue captured:
+- Added a `docs/copilot-known-errors.md` entry for `clang-format` not found in non-Developer PowerShell PATH and documented explicit VS 18 path workaround.
 
 ## Context and Orientation
 
