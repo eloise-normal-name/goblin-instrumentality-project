@@ -1,5 +1,6 @@
 #include "d3d12_commands.h"
 
+#include "d3d12_mesh.h"
 #include "d3d12_resources.h"
 #include "try.h"
 
@@ -70,4 +71,81 @@ ID3D12CommandList* const* D3D12Commands::GetCommandListForExecution() const {
 void ExecuteCommandList(ID3D12CommandQueue* queue, D3D12Commands& cmds) {
 	cmds.Close();
 	queue->ExecuteCommandLists(1, cmds.GetCommandListForExecution());
+}
+
+void RecordFrameCommandList(ID3D12GraphicsCommandList* command_list,
+							D3D12_CPU_DESCRIPTOR_HANDLE rtv,
+							ID3D12Resource* offscreen_render_target,
+							ID3D12Resource* swap_chain_render_target, uint32_t width,
+							uint32_t height, ID3D12RootSignature* root_signature,
+							ID3D12PipelineState* pipeline_state,
+							D3D12_GPU_VIRTUAL_ADDRESS mvp_buffer_address, const D3D12Mesh& mesh) {
+	{
+		D3D12_RESOURCE_BARRIER barrier{
+			.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			.Transition = {.pResource	= offscreen_render_target,
+						   .StateBefore = D3D12_RESOURCE_STATE_COMMON,
+						   .StateAfter	= D3D12_RESOURCE_STATE_RENDER_TARGET}};
+		command_list->ResourceBarrier(1, &barrier);
+	}
+
+	command_list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+
+	D3D12_VIEWPORT viewport{.TopLeftX = 0.0f,
+							.TopLeftY = 0.0f,
+							.Width	  = (float)width,
+							.Height	  = (float)height,
+							.MinDepth = 0.0f,
+							.MaxDepth = 1.0f};
+	D3D12_RECT scissor{.left = 0, .top = 0, .right = (LONG)width, .bottom = (LONG)height};
+	command_list->RSSetViewports(1, &viewport);
+	command_list->RSSetScissorRects(1, &scissor);
+
+	command_list->SetGraphicsRootSignature(root_signature);
+	command_list->SetPipelineState(pipeline_state);
+	command_list->SetGraphicsRootConstantBufferView(0, mvp_buffer_address);
+
+	float clear_color[]{0.0f, 0.0f, 0.0f, 1.0f};
+	command_list->ClearRenderTargetView(rtv, clear_color, 0, nullptr);
+
+	mesh.Draw(command_list);
+
+	{
+		D3D12_RESOURCE_BARRIER barrier{
+			.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			.Transition = {.pResource	= offscreen_render_target,
+						   .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
+						   .StateAfter	= D3D12_RESOURCE_STATE_COPY_SOURCE}};
+		command_list->ResourceBarrier(1, &barrier);
+	}
+
+	{
+		D3D12_RESOURCE_BARRIER barrier{
+			.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			.Transition = {.pResource	= swap_chain_render_target,
+						   .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
+						   .StateAfter	= D3D12_RESOURCE_STATE_COPY_DEST}};
+		command_list->ResourceBarrier(1, &barrier);
+	}
+
+	command_list->CopyResource(swap_chain_render_target, offscreen_render_target);
+
+	{
+		D3D12_RESOURCE_BARRIER barrier{.Type	   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+									   .Transition = {.pResource   = swap_chain_render_target,
+													  .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
+													  .StateAfter  = D3D12_RESOURCE_STATE_PRESENT}};
+		command_list->ResourceBarrier(1, &barrier);
+	}
+
+	{
+		D3D12_RESOURCE_BARRIER barrier{
+			.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			.Transition = {.pResource	= offscreen_render_target,
+						   .StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
+						   .StateAfter	= D3D12_RESOURCE_STATE_COMMON}};
+		command_list->ResourceBarrier(1, &barrier);
+	}
+
+	command_list->Close();
 }

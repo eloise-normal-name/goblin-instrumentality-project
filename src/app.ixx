@@ -12,7 +12,9 @@ module;
 #include "encoder/frame_encoder.h"
 #include "encoder/nvenc_config.h"
 #include "encoder/nvenc_session.h"
+#include "graphics/d3d12_commands.h"
 #include "graphics/d3d12_device.h"
+#include "graphics/d3d12_frame_resources.h"
 #include "graphics/d3d12_mesh.h"
 #include "graphics/d3d12_pipeline.h"
 #include "graphics/d3d12_swap_chain.h"
@@ -25,17 +27,6 @@ constexpr auto RENDER_TARGET_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 constexpr auto MVP_BUFFER_ALIGNMENT = 256u;
 
 export class App {
-	class FrameResources {
-	  public:
-		FrameResources(ID3D12Device* device, uint32_t count, uint32_t width, uint32_t height,
-					   DXGI_FORMAT format);
-		~FrameResources();
-
-		std::vector<ID3D12GraphicsCommandList*> command_lists;
-		std::vector<ID3D12Fence*> fences;
-		std::vector<HANDLE> fence_events;
-		std::vector<ID3D12Resource*> offscreen_render_targets;
-	};
 	HWND hwnd;
 	bool headless;
 	uint32_t width;
@@ -58,10 +49,9 @@ export class App {
 	uint32_t offscreen_rtv_descriptor_size;
 	ComPtr<ID3D12Resource> mvp_constant_buffer;
 	uint8_t* mvp_mapped = nullptr;
-	FrameResources frames{*&device.device, BUFFER_COUNT, width, height, RENDER_TARGET_FORMAT};
+	D3D12FrameResources frames{*&device.device, BUFFER_COUNT, width, height, RENDER_TARGET_FORMAT};
 	BitstreamFileWriter bitstream_writer{"output.h264"};
-	FrameEncoder frame_encoder{nvenc_session, *&device.device, BUFFER_COUNT,
-							   width * height * 4 * 2};
+	FrameEncoder frame_encoder{nvenc_session, *&device.device, BUFFER_COUNT, width* height * 4 * 2};
 
   public:
 	App(HWND hwnd, bool headless, uint32_t width, uint32_t height)
@@ -125,8 +115,10 @@ export class App {
 			cmd_rtv.ptr += k * offscreen_rtv_descriptor_size;
 
 			frames.command_lists[k]->Reset(*&allocator, nullptr);
-			RecordCommandList(frames.command_lists[k], cmd_rtv, frames.offscreen_render_targets[k],
-							  *&swap_chain.render_targets[k]);
+			RecordFrameCommandList(
+				frames.command_lists[k], cmd_rtv, frames.offscreen_render_targets[k],
+				*&swap_chain.render_targets[k], width, height, pipeline.GetRootSignature(),
+				pipeline.GetPipelineState(), mvp_constant_buffer->GetGPUVirtualAddress(), mesh);
 		}
 	}
 
@@ -237,81 +229,6 @@ export class App {
 
 	FrameWaitCoordinator frame_wait_coordinator;
 
-	void RecordCommandList(ID3D12GraphicsCommandList* command_list, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
-						   ID3D12Resource* offscreen_render_target,
-						   ID3D12Resource* swap_chain_render_target) {
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= offscreen_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_COMMON,
-							   .StateAfter	= D3D12_RESOURCE_STATE_RENDER_TARGET}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
-
-		command_list->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
-
-		D3D12_VIEWPORT viewport{.TopLeftX = 0.0f,
-								.TopLeftY = 0.0f,
-								.Width	  = (float)width,
-								.Height	  = (float)height,
-								.MinDepth = 0.0f,
-								.MaxDepth = 1.0f};
-		D3D12_RECT scissor{.left = 0, .top = 0, .right = (LONG)width, .bottom = (LONG)height};
-		command_list->RSSetViewports(1, &viewport);
-		command_list->RSSetScissorRects(1, &scissor);
-
-		command_list->SetGraphicsRootSignature(pipeline.GetRootSignature());
-		command_list->SetPipelineState(pipeline.GetPipelineState());
-		command_list->SetGraphicsRootConstantBufferView(
-			0, mvp_constant_buffer->GetGPUVirtualAddress());
-
-		float clear_color[]{0.0f, 0.0f, 0.0f, 1.0f};
-		command_list->ClearRenderTargetView(rtv, clear_color, 0, nullptr);
-
-		mesh.Draw(command_list);
-
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= offscreen_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
-							   .StateAfter	= D3D12_RESOURCE_STATE_COPY_SOURCE}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
-
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= swap_chain_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
-							   .StateAfter	= D3D12_RESOURCE_STATE_COPY_DEST}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
-
-		command_list->CopyResource(swap_chain_render_target, offscreen_render_target);
-
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= swap_chain_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-							   .StateAfter	= D3D12_RESOURCE_STATE_PRESENT}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
-
-		{
-			D3D12_RESOURCE_BARRIER barrier{
-				.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Transition = {.pResource	= offscreen_render_target,
-							   .StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
-							   .StateAfter	= D3D12_RESOURCE_STATE_COMMON}};
-			command_list->ResourceBarrier(1, &barrier);
-		}
-
-		command_list->Close();
-	}
-
 	FrameLoopAction OnFrameLatencyReady() {
 		return FrameLoopAction::Proceed;
 	}
@@ -326,19 +243,19 @@ export class App {
 		return FrameLoopAction::Continue;
 	}
 
-	bool IsFrameReady(const FrameResources& resources, uint32_t back_buffer_index,
+	bool IsFrameReady(const D3D12FrameResources& resources, uint32_t back_buffer_index,
 					  uint32_t frames_submitted, uint64_t& completed_value) {
 		completed_value = resources.fences[back_buffer_index]->GetCompletedValue();
 		return completed_value + resources.fences.size() >= frames_submitted + 1;
 	}
 
 	HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain_handle,
-							 FrameResources& frame_resources, uint32_t back_buffer_index,
+							 D3D12FrameResources& frame_resources, uint32_t back_buffer_index,
 							 uint64_t signaled_value) {
 		auto present_result = swap_chain_handle->Present(1, DXGI_PRESENT_DO_NOT_WAIT);
-		command_queue->Signal(frame_resources.fences[back_buffer_index], signaled_value);
-		frame_resources.fences[back_buffer_index]->SetEventOnCompletion(
-			signaled_value, frame_resources.fence_events[back_buffer_index]);
+		Try | command_queue->Signal(frame_resources.fences[back_buffer_index], signaled_value)
+			| frame_resources.fences[back_buffer_index]->SetEventOnCompletion(
+				signaled_value, frame_resources.fence_events[back_buffer_index]);
 		return present_result;
 	}
 
@@ -355,76 +272,6 @@ export class App {
 
 	void UpdateMvpConstants();
 };
-
-App::FrameResources::FrameResources(ID3D12Device* device, uint32_t count, uint32_t width,
-									uint32_t height, DXGI_FORMAT format) {
-	command_lists.resize(count);
-	fences.resize(count);
-	fence_events.resize(count);
-	offscreen_render_targets.resize(count);
-
-	ComPtr<ID3D12Device4> device4;
-	Try | device->QueryInterface(IID_PPV_ARGS(&device4));
-
-	D3D12_HEAP_PROPERTIES default_heap_props{
-		.Type = D3D12_HEAP_TYPE_DEFAULT,
-	};
-
-	D3D12_RESOURCE_DESC texture_desc{
-		.Dimension		  = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		.Width			  = width,
-		.Height			  = height,
-		.DepthOrArraySize = 1,
-		.MipLevels		  = 1,
-		.Format			  = format,
-		.SampleDesc		  = {.Count = 1},
-		.Flags			  = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-	};
-
-	D3D12_CLEAR_VALUE clear_value{
-		.Format = format,
-		.Color	= {0, 0, 0, 1},
-	};
-
-	for (auto i = 0u; i < count; ++i) {
-		fence_events[i] = CreateEvent(nullptr, FALSE, TRUE, nullptr);
-		if (!fence_events[i])
-			throw;
-
-		ID3D12GraphicsCommandList1* command_list1 = nullptr;
-		Try | device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fences[i]))
-			| device4->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-										  D3D12_COMMAND_LIST_FLAG_NONE,
-										  IID_PPV_ARGS(&command_list1))
-			| device->CreateCommittedResource(&default_heap_props, D3D12_HEAP_FLAG_NONE,
-											  &texture_desc, D3D12_RESOURCE_STATE_COMMON,
-											  &clear_value,
-											  IID_PPV_ARGS(&offscreen_render_targets[i]));
-		command_lists[i] = (ID3D12GraphicsCommandList*)command_list1;
-	}
-}
-
-App::FrameResources::~FrameResources() {
-	for (auto command_list : command_lists)
-		if (command_list)
-			command_list->Release();
-	command_lists.clear();
-
-	for (auto fence : fences)
-		if (fence)
-			fence->Release();
-	fences.clear();
-
-	for (auto offscreen_render_target : offscreen_render_targets)
-		if (offscreen_render_target)
-			offscreen_render_target->Release();
-	offscreen_render_targets.clear();
-
-	for (auto fence_event : fence_events)
-		if (fence_event)
-			CloseHandle(fence_event);
-	fence_events.clear();
-}
 
 App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_submitted,
 													 double cpu_ms) {
@@ -464,6 +311,15 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 		= MsgWaitForMultipleObjects(component_count, handles, FALSE, INFINITE, QS_ALLINPUT);
 	FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu component_count=%lu",
 			  frames_submitted, cpu_ms, wait_result, component_count);
+	if (wait_result == WAIT_FAILED) {
+		auto wait_error = GetLastError();
+		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame failed error=%lu", frames_submitted,
+				  cpu_ms, wait_error);
+#ifndef ENABLE_FRAME_DEBUG_LOG
+		(void)wait_error;
+#endif
+		throw;
+	}
 
 	if (wait_result >= WAIT_OBJECT_0 && wait_result < WAIT_OBJECT_0 + component_count) {
 		DWORD component_index = wait_result - WAIT_OBJECT_0;
