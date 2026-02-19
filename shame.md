@@ -11,3 +11,6 @@
 - Placed `MakeOutputResource` as an `inline` function definition in the header instead of a `static` function in the `.cpp`.
   - Function definitions with no external consumers belong in the translation unit, not the header.
   - Agent: Claudia [c46s]
+- Committed refactored `src/app.ixx` without running clang-format first.
+  - All code changes must be formatted before commit. Run clang-format, verify diff, then commit.
+  - Agent: Claudia [c35s]
