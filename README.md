@@ -13,7 +13,7 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 - `src/` - Application sources
   - `app.ixx`, `main.cpp` - App entry points and orchestration
   - `try.h` - Error handling via `Try |` pattern
-  - `debug_log.h` - Compile-gated `FRAME_LOG(...)` macro output to `stderr` (enabled only in `Debug` and `RelWithDebInfo`; redirect streams or run from a terminal because the app uses `WIN32` subsystem)
+  - `debug_log.h` - Compile-gated `FRAME_LOG(...)` macro output to the debugger (`OutputDebugStringA`; enabled only in `Debug` and `RelWithDebInfo`)
   - `graphics/` - D3D12 device, swap chain, command allocators, command lists, and resource management
   - `encoder/` - NVENC configuration, D3D12 interop, and session management
 - `include/` - Vendor headers (`nvenc/nvEncodeAPI.h`)

@@ -38,6 +38,22 @@ GitHub Actions workflows are temporarily removed and will be refactored back in 
 
 ### Code Quality & Standards
 
+#### Gobbo (Subagent) — Elegance Review (`gobbo-subagent.prompt.md`)
+**When to use:**
+- Quick, single-shot review for elegance and adherence to project rules on a narrow scope (specific files/lines or a diff)
+- PR polish passes focused on conciseness and readability without behavior changes
+
+**What it does:**
+- Reads only the specified scope; surfaces at most 3 actionable findings
+- Enforces RAII-only construction/destruction, designated initializers, naming/style rules, and `Try |` error handling patterns
+- Returns a compact checklist with precise, minimal fixes
+
+**Example usage:**
+```
+@workspace /agent Gobbo (Subagent) src/app.ixx:120-220 — tighten readability and confirm RAII + Try |
+@workspace /agent Gobbo (Subagent) Review this diff for elegance (paste diff below)
+```
+
 #### Check RAII (`check-raii.prompt.md`)
 **When to use:**
 - After adding new classes that manage resources (GPU objects, HANDLEs, COM interfaces)
