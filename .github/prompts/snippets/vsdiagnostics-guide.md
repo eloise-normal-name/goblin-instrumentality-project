@@ -39,8 +39,6 @@ CANONICAL HEADLESS PROFILING SEQUENCE
 
   # CPU
   & $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
-  & $vsdiag stop  1 /output:"$out\cpu_$stamp.diagsession"
-
   Start-Sleep -Seconds 20   # wait for 30-frame headless run to complete
   & $vsdiag stop  1 /output:"$out\cpu_$stamp.diagsession"
 
