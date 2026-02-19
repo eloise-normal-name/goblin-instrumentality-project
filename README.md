@@ -7,13 +7,14 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Quick Links
 
 - **[View Copilot-Assigned Issues](https://github.com/eloise-normal-name/goblin-instrumentality-project/issues?q=is%3Aissue+is%3Aopen+label%3Atriage%3Ain-progress)** - Issues triaged and assigned to copilot agents
+- `perf-highlights.html` - Performance findings report (publishable to `gh-pages`)
 
 ## Repository Structure
 
 - `src/` - Application sources
   - `app.ixx`, `main.cpp` - App entry points and orchestration
   - `try.h` - Error handling via `Try |` pattern
-  - `debug_log.h` - Compile-gated `FRAME_LOG(...)` macro output to `stderr` (enabled only in `Debug` and `RelWithDebInfo`; redirect streams or run from a terminal because the app uses `WIN32` subsystem)
+  - `debug_log.h` - Compile-gated `FRAME_LOG(...)` macro output to `stderr` (enabled only in `Debug`, `RelWithDebInfo`, and `RelWithDbgInfo`; redirect streams or run from a terminal because the app uses `WIN32` subsystem)
   - `graphics/` - D3D12 device, swap chain, command allocators, command lists, and resource management
   - `encoder/` - NVENC configuration, D3D12 interop, and session management
 - `include/` - Vendor headers (`nvenc/nvEncodeAPI.h`)
@@ -32,6 +33,20 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 
 - Configure: `cmake -G "Visual Studio 18 2026" -A x64 -S . -B build`
 - Build (Debug): `cmake --build build --config Debug`
+- Build (RelWithDbgInfo): `cmake --build build --config RelWithDbgInfo`
+
+## Reusable Profiling Workflow
+
+Run profiling and regenerate the publishable performance report:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDbgInfo -Focus all -RunLabel baseline
+```
+
+This produces:
+- `docs/perf-baselines/baseline_<label>_<timestamp>.json`
+- `.diagsession` files in `docs/perf-baselines/` (gitignored)
+- `perf-highlights.html` (for `gh-pages` publication)
 
 ## Agent Terminal Wrapper
 

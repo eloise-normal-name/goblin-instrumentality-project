@@ -1,7 +1,7 @@
 ---
-status: active
+status: superseded
 owner: codex
-related: user-request-2026-02-19-vsdiagnostics-profiling
+related: user-request-2026-02-19-vsdiagnostics-profiling (superseded by docs/execplans/2026-02-19-relwithdbginfo-profiling-ghpages-execplan.md)
 ---
 
 # CLI Profiling with VSDiagnostics.exe — CPU, Memory, File I/O

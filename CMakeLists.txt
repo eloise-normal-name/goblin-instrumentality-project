@@ -1,6 +1,18 @@
 cmake_minimum_required(VERSION 3.28)
 project(goblin-stream CXX)
 
+if(CMAKE_CONFIGURATION_TYPES)
+    list(FIND CMAKE_CONFIGURATION_TYPES "RelWithDbgInfo" has_relwithdbginfo)
+    if(has_relwithdbginfo EQUAL -1)
+        list(APPEND CMAKE_CONFIGURATION_TYPES RelWithDbgInfo)
+        set(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}" CACHE STRING "" FORCE)
+    endif()
+endif()
+
+set(CMAKE_CXX_FLAGS_RELWITHDBGINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+set(CMAKE_C_FLAGS_RELWITHDBGINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_RELWITHDBGINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+
 # 1. Settings
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -41,13 +53,15 @@ target_compile_options(goblin-stream PRIVATE /W4 /EHs)
 target_compile_definitions(goblin-stream PRIVATE UNICODE _UNICODE)
 target_compile_definitions(
     goblin-stream PRIVATE
-    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:ENABLE_FRAME_DEBUG_LOG>"
+    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>,$<CONFIG:RelWithDbgInfo>>:ENABLE_FRAME_DEBUG_LOG>"
 )
 
 # 8. Output Directory Configuration (Match existing bin/ structure)
 set_target_properties(goblin-stream PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}/bin/Debug"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/bin/RelWithDebInfo"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDBGINFO "${CMAKE_SOURCE_DIR}/bin/RelWithDbgInfo"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}/bin/Release"
 )
 
