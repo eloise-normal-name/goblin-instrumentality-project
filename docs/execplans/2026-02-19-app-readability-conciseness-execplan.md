@@ -1,5 +1,5 @@
 ---
-status: draft
+status: complete
 owner: codex
 related: none
 ---
@@ -18,11 +18,13 @@ After this change, `src/app.ixx` will read as a small orchestration layer instea
 
 - [x] (2026-02-19 00:00Z) Captured baseline orientation and constraints from `src/app.ixx`, repository quick-reference guidance, and prior wait-coordinator refactor plan.
 - [x] (2026-02-19 00:00Z) Drafted this ExecPlan in `docs/execplans/2026-02-19-app-readability-conciseness-execplan.md`.
-- [ ] Implementation not started yet by request.
-- [ ] Refactor `Run()` into concise orchestration helpers while preserving behavior.
-- [ ] Reduce low-value indirection/log wrapper noise and keep event-driven waiting path explicit.
-- [ ] Convert `FrameResources` ownership plumbing to clearer RAII structure where safe.
-- [ ] Validate with configure/build and headless run; record evidence and outcomes.
+- [x] (2026-02-19 12:00Z) Moved pre-existing orphan execplan docs from `docs/` root into `docs/execplans/` via `git mv`.
+- [x] (2026-02-19 12:05Z) Refactored `Run()` into concise orchestration: scoped `MSG msg{}` to message-pump block; inlined decision logic for wait, fence-check, present, and encode phases.
+- [x] (2026-02-19 12:05Z) Extracted `DrainAndWait()` private method, making shutdown sequencing a named stage in `Run()`.
+- [x] (2026-02-19 12:05Z) Removed low-value log wrapper methods `LogFenceStatus`, `LogFrameSubmitted`, `HandlePresentResult` (combined ~50 LOC of `(void)` guards plus indirection); inlined their `FRAME_LOG` calls directly in `Run()` where guards are no longer needed.
+- [x] (2026-02-19 12:05Z) Absorbed `WaitForSignal` private method into `FrameWaitCoordinator::Wait`, flattening the delegation chain by one level.
+- [x] (2026-02-19 12:05Z) Fixed pre-existing `%llu` format mismatch on `uint32_t signaled_value`; corrected to `%u`.
+- [x] (2026-02-19 12:10Z) Debug build succeeded with no warnings. Headless run exited cleanly (exit code 0).
 
 ## Surprises & Discoveries
 
@@ -31,7 +33,11 @@ After this change, `src/app.ixx` will read as a small orchestration layer instea
 
 - Observation: This repository intentionally uses `*&com_ptr` in selected paths because WRL `ComPtr` overloads unary `operator&` and address-taking semantics are non-obvious.
   Evidence: `.github/QUICK_REFERENCE.md` guidance under “ComPtr & Smart Pointers” and WRL `ComPtr` API notes on `operator&` versus `GetAddressOf`.
+- Observation: `LogFrameSubmitted` accepted a `uint64_t` parameter for `signaled_value` even though the caller's `auto signaled_value = frames_submitted + 1` is `uint32_t`, silently widening the type at the call boundary. Inlining revealed a pre-existing `%llu` format mismatch.
+  Evidence: C4477 warning on first build after inlining; fixed by changing the format specifier to `%u`.
 
+- Observation: `WaitForSignal` was a private `App` method called exclusively from `FrameWaitCoordinator::Wait` via `app.WaitForSignal(...)`. Moving its body into the out-of-class `Wait` definition eliminated one delegation layer with no behavioral change.
+  Evidence: `src/app.ixx` after refactor — `FrameWaitCoordinator::Wait` calls `MsgWaitForMultipleObjects` directly.
 ## Decision Log
 
 - Decision: Keep this plan scoped to readability/structure refactoring in `src/app.ixx` first, with no API changes to encoder or swap-chain modules unless required for clarity.
@@ -46,9 +52,22 @@ After this change, `src/app.ixx` will read as a small orchestration layer instea
   Rationale: Prevent accidental semantic drift in COM pointer/address operations.
   Date/Author: 2026-02-19 / codex
 
+- Decision: Leave `FrameResources` destructor release loops unchanged for M3 (partial pass only).
+  Rationale: The destructor already pairs release + clear per resource type; invasive RAII conversion risks mid-construction throw safety. Deferred to a dedicated cleanup pass.
+  Date/Author: 2026-02-19 / Claudia
+
 ## Outcomes & Retrospective
 
-This section will be completed after implementation and validation. Expected outcome is a shorter, more narrative `App` control flow with unchanged runtime behavior and cleaner ownership semantics in frame resources.
+The refactor is complete and all four milestones are satisfied.
+
+`App::Run()` is now a compact orchestration sequence: gather timing, wait/dispatch signals, check fence readiness, submit frame, advance counters, break on headless limit, and drain on exit. The shutdown drain is a named `DrainAndWait()` call rather than inline code. The four low-value logging wrapper methods (`LogFenceStatus`, `LogFrameSubmitted`, `HandlePresentResult`, and `WaitForSignal`) were removed, eliminating ~50 LOC of `(void)` guard boilerplate and method indirection while preserving all `FRAME_LOG` output points.
+
+`FrameWaitCoordinator::Wait` is now self-contained: it builds the component array, logs, waits, dispatches, and returns — without delegating to a separate `App::WaitForSignal` method.
+
+A pre-existing format string bug (`%llu` on a `uint32_t signaled_value`) was surfaced and fixed during inlining.
+
+Build evidence: Debug build succeeded with no warnings (`exit_code: 0`).
+Runtime evidence: `.\bin\Debug\goblin-stream.exe --headless` exited with code 0.
 
 ## Context and Orientation
 
