@@ -12,7 +12,6 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(SOURCES
     src/app.ixx
     src/main.cpp
-    src/frame_debug_log.cpp
     src/encoder/bitstream_file_writer.cpp
     src/encoder/frame_encoder.cpp
     src/encoder/nvenc_config.cpp
@@ -40,6 +39,10 @@ target_compile_options(goblin-stream PRIVATE /W4 /EHs)
 
 # 7. Definitions
 target_compile_definitions(goblin-stream PRIVATE UNICODE _UNICODE)
+target_compile_definitions(
+    goblin-stream PRIVATE
+    "$<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:ENABLE_FRAME_DEBUG_LOG>"
+)
 
 # 8. Output Directory Configuration (Match existing bin/ structure)
 set_target_properties(goblin-stream PROPERTIES

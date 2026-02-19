@@ -51,5 +51,5 @@ This file is a quick mental model for debugging and feature work in `goblin-stre
 3. Inspect:
    - `debug_output.txt` for frame/encoder timing
    - `output.h264` for output existence/size changes
-4. If you touched docs, validate index:
+4. If requested, validate docs index:
    - `python scripts/check-docs-index.py`
