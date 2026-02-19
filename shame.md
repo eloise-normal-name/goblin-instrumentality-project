@@ -8,3 +8,6 @@
 - Attempted to use `replace_string_in_file` without checking if editing tools were enabled.
   - Should have verified tool availability first, per eloise.instructions.md and prior memories.
   - Agent: Nia [gpt52]
+- Placed `MakeOutputResource` as an `inline` function definition in the header instead of a `static` function in the `.cpp`.
+  - Function definitions with no external consumers belong in the translation unit, not the header.
+  - Agent: Claudia [c46s]
