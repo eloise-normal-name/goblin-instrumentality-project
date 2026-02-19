@@ -42,7 +42,7 @@ Return format (compact):
 ```
 Findings (≤3):
 1. [File:Line] Title — 1–2 line rationale
-	 Fix: [precise, minimal change]
+   Fix: [precise, minimal change]
 2. ...
 
 Quick wins: [bulleted 1-liners if any]
