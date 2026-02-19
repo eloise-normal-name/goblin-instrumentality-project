@@ -138,7 +138,6 @@ export class App {
 	}
 
 	int Run() && {
-		MSG msg{};
 		bool running			   = true;
 		uint32_t frames_submitted  = 0;
 		uint32_t back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
@@ -146,11 +145,10 @@ export class App {
 		auto last_frame_time	   = std::chrono::steady_clock::now();
 
 		while (running) {
-			auto frame_start_time = std::chrono::steady_clock::now();
+			auto now = std::chrono::steady_clock::now();
 			auto cpu_ms
-				= std::chrono::duration<double, std::milli>(frame_start_time - last_frame_time)
-					  .count();
-			last_frame_time = frame_start_time;
+				= std::chrono::duration<double, std::milli>(now - last_frame_time).count();
+			last_frame_time = now;
 			{
 				auto stats = frame_encoder.GetStats();
 				FRAME_LOG(
@@ -159,8 +157,9 @@ export class App {
 					frames_submitted, cpu_ms, stats.submitted_frames, stats.completed_frames,
 					stats.pending_frames, stats.wait_count);
 			}
-			auto wait_action = frame_wait_coordinator.Wait(*this, frames_submitted, cpu_ms);
-			if (wait_action == FrameLoopAction::Continue) {
+			if (frame_wait_coordinator.Wait(*this, frames_submitted, cpu_ms)
+				== FrameLoopAction::Continue) {
+				MSG msg{};
 				while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 					if (msg.message == WM_QUIT) {
 						running = false;
@@ -175,7 +174,10 @@ export class App {
 			uint64_t completed_value = 0;
 			if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
 				continue;
-			LogFenceStatus(frames_submitted, cpu_ms, completed_value, present_result);
+			FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frames_submitted,
+					  cpu_ms, completed_value);
+			FRAME_LOG("frame=%u cpu_ms=%.3f present_result=%ld", frames_submitted, cpu_ms,
+					  present_result);
 
 			UpdateMvpConstants();
 
@@ -189,15 +191,21 @@ export class App {
 
 			present_result = PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 											  frames, back_buffer_index, signaled_value);
-			if (!HandlePresentResult(frames_submitted, cpu_ms, present_result))
+			if (present_result == DXGI_ERROR_WAS_STILL_DRAWING) {
+				FRAME_LOG(
+					"frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
+					frames_submitted, cpu_ms);
 				continue;
+			}
 
 			if (SUCCEEDED(present_result))
 				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-			LogFrameSubmitted(frames_submitted, cpu_ms, back_buffer_index, signaled_value,
-							  new_back_buffer_index);
+		FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%u",
+					  frames_submitted, cpu_ms, back_buffer_index, signaled_value);
+			FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frames_submitted,
+					  cpu_ms, new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
@@ -205,16 +213,7 @@ export class App {
 				break;
 		}
 
-		frame_encoder.ProcessCompletedFrames(bitstream_writer, true);
-		WaitForMultipleObjects((DWORD)frames.fences.size(), frames.fence_events.data(), TRUE,
-							   INFINITE);
-		frame_encoder.ProcessCompletedFrames(bitstream_writer, true);
-		{
-			auto stats = frame_encoder.GetStats();
-			FRAME_LOG("encoder_drain submitted=%llu completed=%llu pending=%llu waits=%llu",
-					  stats.submitted_frames, stats.completed_frames, stats.pending_frames,
-					  stats.wait_count);
-		}
+		DrainAndWait();
 		return 0;
 	}
 
@@ -329,50 +328,10 @@ export class App {
 		return FrameLoopAction::Continue;
 	}
 
-	FrameLoopAction WaitForSignal(FrameWaitCoordinator::WaitableComponent* components,
-								  DWORD component_count, uint32_t frames_submitted,
-								  double cpu_ms) {
-#ifndef ENABLE_FRAME_DEBUG_LOG
-		(void)frames_submitted;
-		(void)cpu_ms;
-#endif
-		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame begin", frames_submitted, cpu_ms);
-
-		HANDLE handles[3];
-		for (DWORD i = 0; i < component_count; ++i)
-			handles[i] = components[i].handle;
-
-		DWORD wait_result = MsgWaitForMultipleObjects(component_count, handles, FALSE, INFINITE,
-													  QS_ALLINPUT);
-		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu component_count=%lu",
-				  frames_submitted, cpu_ms, wait_result, component_count);
-
-		if (wait_result >= WAIT_OBJECT_0 && wait_result < WAIT_OBJECT_0 + component_count) {
-			DWORD component_index = wait_result - WAIT_OBJECT_0;
-			auto on_complete		= components[component_index].on_complete;
-			return (this->*on_complete)();
-		}
-		return FrameLoopAction::Continue;
-	}
-
 	bool IsFrameReady(const FrameResources& resources, uint32_t back_buffer_index,
 					  uint32_t frames_submitted, uint64_t& completed_value) {
 		completed_value = resources.fences[back_buffer_index]->GetCompletedValue();
 		return completed_value + resources.fences.size() >= frames_submitted + 1;
-	}
-
-	void LogFenceStatus(uint32_t frames_submitted, double cpu_ms, uint64_t completed_value,
-						HRESULT present_result) {
-#ifndef ENABLE_FRAME_DEBUG_LOG
-		(void)frames_submitted;
-		(void)cpu_ms;
-		(void)completed_value;
-		(void)present_result;
-#endif
-		FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frames_submitted, cpu_ms,
-				  completed_value);
-		FRAME_LOG("frame=%u cpu_ms=%.3f present_result=%ld", frames_submitted, cpu_ms,
-				  present_result);
 	}
 
 	HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain_handle,
@@ -385,32 +344,15 @@ export class App {
 		return present_result;
 	}
 
-	bool HandlePresentResult(uint32_t frames_submitted, double cpu_ms, HRESULT present_result) {
-#ifndef ENABLE_FRAME_DEBUG_LOG
-		(void)frames_submitted;
-		(void)cpu_ms;
-#endif
-		if (present_result != DXGI_ERROR_WAS_STILL_DRAWING)
-			return true;
-
-		FRAME_LOG("frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
-				  frames_submitted, cpu_ms);
-		return false;
-	}
-
-	void LogFrameSubmitted(uint32_t frames_submitted, double cpu_ms, uint32_t back_buffer_index,
-						   uint64_t signaled_value, uint32_t new_back_buffer_index) {
-#ifndef ENABLE_FRAME_DEBUG_LOG
-		(void)frames_submitted;
-		(void)cpu_ms;
-		(void)back_buffer_index;
-		(void)signaled_value;
-		(void)new_back_buffer_index;
-#endif
-		FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%llu",
-				  frames_submitted, cpu_ms, back_buffer_index, signaled_value);
-		FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frames_submitted, cpu_ms,
-				  new_back_buffer_index);
+	void DrainAndWait() {
+		frame_encoder.ProcessCompletedFrames(bitstream_writer, true);
+		WaitForMultipleObjects((DWORD)frames.fences.size(), frames.fence_events.data(), TRUE,
+							   INFINITE);
+		frame_encoder.ProcessCompletedFrames(bitstream_writer, true);
+		auto stats = frame_encoder.GetStats();
+		FRAME_LOG("encoder_drain submitted=%llu completed=%llu pending=%llu waits=%llu",
+				  stats.submitted_frames, stats.completed_frames, stats.pending_frames,
+				  stats.wait_count);
 	}
 
 	void UpdateMvpConstants();
@@ -510,7 +452,27 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 		};
 	}
 
-	return app.WaitForSignal(components, component_count, frames_submitted, cpu_ms);
+#ifndef ENABLE_FRAME_DEBUG_LOG
+	(void)frames_submitted;
+	(void)cpu_ms;
+#endif
+	FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame begin", frames_submitted, cpu_ms);
+
+	HANDLE handles[3];
+	for (DWORD i = 0; i < component_count; ++i)
+		handles[i] = components[i].handle;
+
+	DWORD wait_result = MsgWaitForMultipleObjects(component_count, handles, FALSE, INFINITE,
+												  QS_ALLINPUT);
+	FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu component_count=%lu",
+			  frames_submitted, cpu_ms, wait_result, component_count);
+
+	if (wait_result >= WAIT_OBJECT_0 && wait_result < WAIT_OBJECT_0 + component_count) {
+		DWORD component_index = wait_result - WAIT_OBJECT_0;
+		auto on_complete	  = components[component_index].on_complete;
+		return (app.*on_complete)();
+	}
+	return FrameLoopAction::Continue;
 }
 
 void App::UpdateMvpConstants() {
