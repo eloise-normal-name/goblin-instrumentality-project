@@ -12,6 +12,27 @@ When discussing an executable specification (ExecPlan), record decisions in a lo
 
 When researching a design with challenging requirements or significant unknowns, use milestones to implement proof of concepts, "toy implementations", etc., that allow validating whether the user's proposal is feasible. Read the source code of libraries by finding or acquiring them, research deeply, and include prototypes to guide a fuller implementation.
 
+## Repository doc hygiene for ExecPlans
+
+To prevent long-term documentation sprawl, store ExecPlan files under `docs/execplans/` and keep completed historical plans in `docs/archive/execplans/`.
+
+Use this filename format for new plans:
+
+`YYYY-MM-DD-<short-topic>-execplan.md`
+
+Every ExecPlan must begin with frontmatter containing at least:
+
+- `status: draft | active | done | superseded`
+- `owner:` (agent or human owner)
+- `related:` (issue/PR reference, if one exists)
+
+Lifecycle rules:
+
+- Keep only currently relevant plans in `docs/execplans/`.
+- Move plans with `status: done` or `status: superseded` to `docs/archive/execplans/` once they are no longer actively referenced.
+- If a newer plan replaces an older one, set the older plan to `superseded` and include a pointer to the replacing file.
+- Do not create duplicate active plans for the same topic; update the existing active plan instead.
+
 ## Requirements
 
 NON-NEGOTIABLE REQUIREMENTS:
@@ -137,13 +158,17 @@ Prefer additive code changes followed by subtractions that keep tests passing. P
 
     ## Interfaces and Dependencies
 
-    Be prescriptive. Name the libraries, modules, and services to use and why. Specify the types, traits/interfaces, and function signatures that must exist at the end of the milestone. Prefer stable names and paths such as `crate::module::function` or `package.submodule.Interface`. E.g.:
+    Be prescriptive. Name the libraries, modules, and services to use and why. Specify the types, classes, and function signatures that must exist at the end of the milestone. Prefer stable names and paths from the repository root. E.g.:
 
-    In crates/foo/planner.rs, define:
+    In src/graphics/d3d12_resources.h, define:
 
-        pub trait Planner {
-            fn plan(&self, observed: &Observed) -> Vec<Action>;
-        }
+        struct TextureResource {
+            ComPtr<ID3D12Resource> resource;
+            D3D12_RESOURCE_STATES current_state{D3D12_RESOURCE_STATE_COMMON};
+
+            void TransitionTo(ID3D12GraphicsCommandList* cmd_list, D3D12_RESOURCE_STATES new_state);
+            D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle() const;
+        };
 
 If you follow the guidance above, a single, stateless agent -- or a human novice -- can read your ExecPlan from top to bottom and produce a working, observable result. That is the bar: SELF-CONTAINED, SELF-SUFFICIENT, NOVICE-GUIDING, OUTCOME-FOCUSED.
 

@@ -132,6 +132,35 @@ GitHub Actions workflows are temporarily removed and will be refactored back in 
 @workspace /agent explain-nvenc Explain the resource registration and mapping flow in frame_encoder.cpp (RegisterTexture and MapInputTexture)
 ```
 
+### Performance Profiling
+
+#### Profile Performance (`profile-performance.prompt.md`)
+**When to use:**
+- After significant code changes to the encode loop, frame submission, or I/O path
+- Before merging a performance-sensitive PR
+- When investigating CPU time, memory growth, or unexpected file write volume
+- Establishing or updating the stored baseline in `docs/perf-baselines/`
+
+**What it does:**
+- Locates `VSDiagnostics.exe` in the local VS 2026 install
+- Builds the Release binary via `cmake --build`
+- Runs three separate VSDiagnostics sessions (CPU, memory, file I/O) against the `--headless` 30-frame workload
+- Compares new measurements against the latest baseline JSON in `docs/perf-baselines/`
+- Flags CPU wall time regression (>10%), memory regression (>5%), and any new file write calls
+- Routes regressions to `review-frame-logic`, `check-raii`, or `debug-resources` as appropriate
+- Writes a new dated baseline JSON file for future comparisons
+
+**Reference snippet**: `.github/prompts/snippets/vsdiagnostics-guide.md`
+
+**Example usage:**
+```
+@workspace /agent profile-performance all post-encoder-refactor
+@workspace /agent profile-performance cpu only, label before-merge
+@workspace /agent profile-performance Has memory usage regressed since last baseline?
+```
+
+---
+
 ### Refactoring & Maintenance
 
 #### Refactor Extract (`refactor-extract.prompt.md`)
@@ -212,6 +241,14 @@ BugBot can be run manually:
 4. Documentation: Ensure code is self-documenting per project standards
 5. Stage: Use `stage-changelist` to prepare comprehensive PR
 
+### Performance Profiling
+1. Baseline: Run `/agent profiler` or `profile-performance` to capture CPU/memory/file I/O baseline
+2. Change: Make the target code change
+3. Measure: Re-run `profile-performance` with a descriptive label
+4. Compare: Agent auto-diffs against prior baseline and flags regressions
+5. Fix: Route CPU regressions to `review-frame-logic`; memory to `check-raii`/`debug-resources`
+6. Verify: Re-run profiling to confirm regression resolved
+
 ### Refactoring Sessions
 1. Plan: Use `refactor-extract` to identify extraction opportunities
 2. Extract: Create new classes following RAII patterns
@@ -234,6 +271,9 @@ BugBot can be run manually:
 - `review-frame-logic` + `debug-resources`: Rendering issues
 - `explain-nvenc` + `review-error-handling`: Encoder integration
 - `refactor-extract` + `check-raii`: Code reorganization
+- `profile-performance` → `review-frame-logic`: CPU regression investigation
+- `profile-performance` → `check-raii` + `debug-resources`: Memory regression investigation
+- **Profiler agent** → `review-frame-logic` / `check-raii`: Automated regression routing after measurement
 
 ### Anti-patterns to Avoid
 - Running agents without specific questions or focus areas
@@ -268,6 +308,8 @@ When reviewing PRs:
 
 - Project conventions: `.github/copilot-instructions.md`
 - NVENC guide: `.github/prompts/snippets/nvenc-guide.md`
+- VSDiagnostics CLI guide: `.github/prompts/snippets/vsdiagnostics-guide.md`
+- Performance baselines: `docs/perf-baselines/`
 - Known errors: `docs/copilot-known-errors.md`
 
 ## Contributing New Agents

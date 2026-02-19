@@ -53,10 +53,18 @@ Use this file as the first-stop orientation for future coding sessions. It links
 ## Fast Validation
 - Build debug:
   - `cmake --build build --config Debug`
+  - Or with wrapper: `powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config Debug" -TimeoutSec 300`
 - Run headless from VS Code launch config:
   - `Debug (Headless)`
 - Check docs index after adding docs:
   - `python scripts/check-docs-index.py`
+
+## Agent Command Execution
+Use `scripts/agent-wrap.ps1` for long-running or critical commands:
+- Provides timeout protection, structured JSON output, and per-run logs
+- Use for: builds, tests, code analysis, validation runs
+- Don't use for: file operations, git commands, quick checks
+- See `.github/copilot-instructions.md` for detailed usage
 
 ## Working Agreements
 - Follow `.github/copilot-instructions.md` for style and policy.
@@ -67,3 +75,5 @@ Use this file as the first-stop orientation for future coding sessions. It links
 # ExecPlans
 
 When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+
+ExecPlan documentation hygiene policy (file placement, naming, lifecycle, and archiving) is canonical in `.agent/PLANS.md` and must be followed for all new plan docs.
