@@ -10,6 +10,7 @@ This directory stores committed performance summary JSON files for the Goblin In
 | `cpu_<timestamp>.diagsession` | **Gitignored** binary CPU profiling session (open in VS) |
 | `memory_<timestamp>.diagsession` | **Gitignored** binary memory profiling session |
 | `fileio_<timestamp>.diagsession` | **Gitignored** binary file I/O profiling session |
+| `../../perf-highlights.html` | Generated performance highlights report for `gh-pages` publication |
 
 ## How to run
 
@@ -19,6 +20,11 @@ Use the profiler agent:
 ```
 
 Or follow `.github/prompts/snippets/vsdiagnostics-guide.md` for manual CLI steps.
+
+Reusable script workflow:
+```
+powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDbgInfo -Focus all -RunLabel baseline
+```
 
 ## Regression thresholds
 
@@ -31,7 +37,7 @@ Or follow `.github/prompts/snippets/vsdiagnostics-guide.md` for manual CLI steps
 ```json
 {
   "run_label": "post-<change>_YYYY-MM-DD",
-  "build_config": "Release",
+  "build_config": "RelWithDbgInfo",
   "app_args": "--headless",
   "frames": 30,
   "session_files": {

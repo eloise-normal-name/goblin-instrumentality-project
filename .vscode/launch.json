@@ -56,6 +56,34 @@
 				"moduleLoad": false
 			},
 			"console": "externalTerminal"
+		},
+		{
+			"name": "RelWithDbgInfo (Normal)",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/bin/RelWithDbgInfo/goblin-stream.exe",
+			"args": [],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"logging": {
+				"moduleLoad": false
+			},
+			"console": "externalTerminal"
+		},
+		{
+			"name": "RelWithDbgInfo (Headless)",
+			"type": "cppvsdbg",
+			"request": "launch",
+			"program": "${workspaceFolder}/bin/RelWithDbgInfo/goblin-stream.exe",
+			"args": ["--headless"],
+			"stopAtEntry": false,
+			"cwd": "${workspaceFolder}",
+			"environment": [],
+			"logging": {
+				"moduleLoad": false
+			},
+			"console": "externalTerminal"
 		}
 	]
 }

@@ -38,16 +38,21 @@ CANONICAL HEADLESS PROFILING SEQUENCE
   # Wait for the process to finish before calling stop.
 
   # CPU
-  & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
+  & $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
+  & $vsdiag stop  1 /output:"$out\cpu_$stamp.diagsession"
+
   Start-Sleep -Seconds 20   # wait for 30-frame headless run to complete
   & $vsdiag stop  1 /output:"$out\cpu_$stamp.diagsession"
 
   # Memory — MemoryUsage.json not available in VS 18 Community; skip or use VS UI
 
   # File I/O (config is FileIOBase.json, not FileIO.json)
-  & $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIOBase.json"
+  & $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIOBase.json"
   Start-Sleep -Seconds 20
   & $vsdiag stop  1 /output:"$out\fileio_$stamp.diagsession"
+
+REUSABLE AUTOMATION
+  powershell -ExecutionPolicy Bypass -File scripts\profile-exe.ps1 -BuildConfig RelWithDbgInfo -Focus all -RunLabel baseline
 
 OPENING RESULTS
   In Visual Studio: File → Open → <session.diagsession>
@@ -56,7 +61,7 @@ OPENING RESULTS
 BASELINE SUMMARY JSON (commit to docs/perf-baselines/)
   {
     "run_label": "",          // e.g. "post-encoder-refactor_2026-02-19"
-    "build_config": "Release",
+    "build_config": "RelWithDbgInfo",
     "app_args": "--headless",
     "frames": 30,
     "cpu":    { "wall_time_ms": 0, "avg_cpu_pct": 0.0, "peak_cpu_pct": 0.0, "top_hot_functions": [] },

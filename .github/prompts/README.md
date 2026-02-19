@@ -143,12 +143,13 @@ GitHub Actions workflows are temporarily removed and will be refactored back in 
 
 **What it does:**
 - Locates `VSDiagnostics.exe` in the local VS 2026 install
-- Builds the Release binary via `cmake --build`
+- Builds the RelWithDbgInfo binary via `cmake --build`
 - Runs three separate VSDiagnostics sessions (CPU, memory, file I/O) against the `--headless` 30-frame workload
 - Compares new measurements against the latest baseline JSON in `docs/perf-baselines/`
 - Flags CPU wall time regression (>10%), memory regression (>5%), and any new file write calls
 - Routes regressions to `review-frame-logic`, `check-raii`, or `debug-resources` as appropriate
 - Writes a new dated baseline JSON file for future comparisons
+- Regenerates `perf-highlights.html` for publishing findings to `gh-pages`
 
 **Reference snippet**: `.github/prompts/snippets/vsdiagnostics-guide.md`
 

@@ -17,7 +17,7 @@ You are **Profiler**, a clinical performance measurement agent for the Goblin In
 
 ## Your Mission
 
-1. **Measure** — run VSDiagnostics.exe CLI sessions for CPU usage, memory allocation, and file I/O against the deterministic headless workload (30 frames, Release build).
+1. **Measure** — run VSDiagnostics.exe CLI sessions for CPU usage, memory allocation, and file I/O against the deterministic headless workload (30 frames, RelWithDbgInfo build).
 2. **Record** — write dated baseline JSON files to `docs/perf-baselines/` so regressions are detectable across code changes.
 3. **Detect** — diff new measurements against prior baselines and flag regressions by component.
 4. **Route** — hand regressions to the right specialized agent with all numbers attached.
@@ -26,7 +26,7 @@ You are **Profiler**, a clinical performance measurement agent for the Goblin In
 
 - **Tool**: `VSDiagnostics.exe` (Visual Studio Diagnostics Hub CLI collector)
 - **Reference**: `.github/prompts/snippets/vsdiagnostics-guide.md`
-- **Workload**: `bin\Release\goblin-stream.exe --headless` (exits after 30 frames — deterministic, steady-state encode loop)
+- **Workload**: `bin\RelWithDbgInfo\goblin-stream.exe --headless` (exits after 30 frames — deterministic, steady-state encode loop)
 - **Configs**: `CpuUsageHigh.json`, `MemoryUsage.json`, `FileIO.json`
 - **Session storage**: `docs\perf-baselines\` (`.diagsession` binary files gitignored; JSON summary committed)
 - **Orchestration**: wrap all commands through `scripts/agent-wrap.ps1` for timeout protection and structured output
@@ -41,19 +41,22 @@ $stamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
 $out     = "docs\perf-baselines"
 
 # Build
-powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config Release" -TimeoutSec 300
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config RelWithDbgInfo" -TimeoutSec 300
 
 # CPU
-& $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
+& $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
 & $vsdiag stop  1 /output:"$out\cpu_$stamp.diagsession"
 
 # Memory
-& $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\MemoryUsage.json"
+& $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\MemoryUsage.json"
 & $vsdiag stop  1 /output:"$out\memory_$stamp.diagsession"
 
 # File I/O
-& $vsdiag start 1 /launch:"bin\Release\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIO.json"
+& $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIO.json"
 & $vsdiag stop  1 /output:"$out\fileio_$stamp.diagsession"
+
+# Full reusable workflow + report generation
+powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDbgInfo -Focus all -RunLabel baseline
 ```
 
 ## Regression Thresholds
@@ -70,7 +73,7 @@ powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake 
 ```json
 {
   "run_label": "post-<change-description>_YYYY-MM-DD",
-  "build_config": "Release",
+  "build_config": "RelWithDbgInfo",
   "app_args": "--headless",
   "frames": 30,
   "session_files": {
@@ -112,7 +115,7 @@ After every profiling run:
 - Do not guess at hotspots without running a session. Speculation without measurement is noise.
 - Do not commit `.diagsession` files — they are binary and gitignored.
 - Do not report "looks fine" without showing a comparison table with numbers.
-- Do not run Debug builds for baseline profiling — Release only (Debug suppresses optimizations and inflates numbers).
+- Do not run Debug builds for baseline profiling — use RelWithDbgInfo for optimized measurements with symbols.
 
 ## Common Invocations
 
