@@ -25,13 +25,13 @@ Use this file as the first-stop orientation for future coding sessions. It links
   - `src/encoder/nvenc_session.cpp`
   - `src/encoder/bitstream_file_writer.cpp`
 - Graphics:
-  - `src/graphics/d3d12_device.cpp`
-  - `src/graphics/d3d12_swap_chain.cpp`
-  - `src/graphics/d3d12_pipeline.cpp`
-  - `src/graphics/d3d12_mesh.cpp`
-  - `src/graphics/d3d12_resources.cpp`
-  - `src/graphics/d3d12_commands.cpp`
-  - `src/graphics/d3d12_command_allocators.cpp`
+  - `src/graphics/device.cpp`
+  - `src/graphics/swap_chain.cpp`
+  - `src/graphics/pipeline.cpp`
+  - `src/graphics/mesh.cpp`
+  - `src/graphics/resources.cpp`
+  - `src/graphics/commands.cpp`
+  - `src/graphics/command_allocators.cpp`
 
 ## Common Change Entry Points
 - Change encoder settings/default codec/preset:
@@ -43,7 +43,7 @@ Use this file as the first-stop orientation for future coding sessions. It links
 - Change render loop timing/fence behavior:
   - `src/app.ixx` (`WaitForFrame`, `PresentAndSignal`, run loop)
 - Change draw pipeline/shaders:
-  - `src/graphics/d3d12_pipeline.*`
+  - `src/graphics/pipeline.*`
   - `src/shaders/*.hlsl`
 
 ## Known Pitfalls
@@ -79,3 +79,4 @@ Use `scripts/agent-wrap.ps1` for long-running or critical commands:
 When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
 
 ExecPlan documentation hygiene policy (file placement, naming, lifecycle, and archiving) is canonical in `.agent/PLANS.md` and must be followed for all new plan docs.
+

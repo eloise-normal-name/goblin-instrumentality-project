@@ -14,7 +14,7 @@
 - ✓ Good: Resource acquired in constructor, released in destructor
 - ✗ Bad: `Texture::Initialize()` called after construction
 
-**Example** ([d3d12_pipeline.cpp](../src/graphics/d3d12_pipeline.cpp#L12-L39)):
+**Example** ([pipeline.cpp](../src/graphics/pipeline.cpp#L12-L39)):
 ```cpp
 struct FileHandle {
 	HANDLE handle = INVALID_HANDLE_VALUE;

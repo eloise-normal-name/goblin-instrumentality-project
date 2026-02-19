@@ -35,8 +35,8 @@ This file is a quick mental model for debugging and feature work in `goblin-stre
 - Output file empty or truncated:
   - `src/encoder/bitstream_file_writer.cpp` (`WriteFrame`, `DrainCompleted`, destructor flush)
 - Render output wrong but app runs:
-  - `src/graphics/d3d12_pipeline.*`
-  - `src/graphics/d3d12_mesh.*`
+  - `src/graphics/pipeline.*`
+  - `src/graphics/mesh.*`
   - `src/shaders/mesh_vs.hlsl`, `src/shaders/mesh_ps.hlsl`
 
 ## Key Invariants
@@ -53,3 +53,4 @@ This file is a quick mental model for debugging and feature work in `goblin-stre
    - `output.h264` for output existence/size changes
 4. If requested, validate docs index:
    - `python scripts/check-docs-index.py`
+

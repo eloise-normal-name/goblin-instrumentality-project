@@ -11,12 +11,12 @@ module;
 #include "encoder/bitstream_file_writer.h"
 #include "encoder/frame_encoder.h"
 #include "encoder/nvenc_session.h"
-#include "graphics/d3d12_commands.h"
-#include "graphics/d3d12_device.h"
-#include "graphics/d3d12_frame_resources.h"
-#include "graphics/d3d12_mesh.h"
-#include "graphics/d3d12_pipeline.h"
-#include "graphics/d3d12_swap_chain.h"
+#include "graphics/commands.h"
+#include "graphics/device.h"
+#include "graphics/frame_resources.h"
+#include "graphics/mesh.h"
+#include "graphics/pipeline.h"
+#include "graphics/swap_chain.h"
 #include "try.h"
 
 export module App;
@@ -343,3 +343,4 @@ void App::UpdateMvpConstants() {
 
 	memcpy(mvp_mapped, &constants, sizeof(constants));
 }
+
