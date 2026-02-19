@@ -10,7 +10,6 @@ module;
 #include "debug_log.h"
 #include "encoder/bitstream_file_writer.h"
 #include "encoder/frame_encoder.h"
-#include "encoder/nvenc_config.h"
 #include "encoder/nvenc_session.h"
 #include "graphics/d3d12_commands.h"
 #include "graphics/d3d12_device.h"
@@ -32,13 +31,12 @@ export class App {
 	uint32_t width;
 	uint32_t height;
 	D3D12Device device;
-	NvencSession nvenc_session{*&device.device};
 	EncoderConfig encoder_config{.codec		   = EncoderCodec::H264,
 								 .preset	   = EncoderPreset::Fastest,
 								 .rate_control = RateControlMode::VariableBitrate,
 								 .width		   = width,
 								 .height	   = height};
-	NvencConfig nvenc_config{&nvenc_session, encoder_config};
+	NvencSession nvenc_session{*&device.device, encoder_config};
 	D3D12SwapChain swap_chain{*&device.device, *&device.factory, *&device.command_queue, hwnd,
 							  SwapChainConfig{.buffer_count			= BUFFER_COUNT,
 											  .render_target_format = RENDER_TARGET_FORMAT}};
@@ -51,7 +49,8 @@ export class App {
 	uint8_t* mvp_mapped = nullptr;
 	D3D12FrameResources frames{*&device.device, BUFFER_COUNT, width, height, RENDER_TARGET_FORMAT};
 	BitstreamFileWriter bitstream_writer{"output.h264"};
-	FrameEncoder frame_encoder{nvenc_session, *&device.device, BUFFER_COUNT, width* height * 4 * 2};
+	FrameEncoder frame_encoder{nvenc_session, *&device.device, BUFFER_COUNT,
+							   width * height * 4 * 2};
 
   public:
 	App(HWND hwnd, bool headless, uint32_t width, uint32_t height)
@@ -313,8 +312,8 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 			  frames_submitted, cpu_ms, wait_result, component_count);
 	if (wait_result == WAIT_FAILED) {
 		auto wait_error = GetLastError();
-		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame failed error=%lu", frames_submitted,
-				  cpu_ms, wait_error);
+		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame failed error=%lu", frames_submitted, cpu_ms,
+				  wait_error);
 #ifndef ENABLE_FRAME_DEBUG_LOG
 		(void)wait_error;
 #endif
