@@ -145,9 +145,8 @@ export class App {
 		auto last_frame_time	   = std::chrono::steady_clock::now();
 
 		while (running) {
-			auto now = std::chrono::steady_clock::now();
-			auto cpu_ms
-				= std::chrono::duration<double, std::milli>(now - last_frame_time).count();
+			auto now	= std::chrono::steady_clock::now();
+			auto cpu_ms = std::chrono::duration<double, std::milli>(now - last_frame_time).count();
 			last_frame_time = now;
 			{
 				auto stats = frame_encoder.GetStats();
@@ -174,8 +173,8 @@ export class App {
 			uint64_t completed_value = 0;
 			if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
 				continue;
-			FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frames_submitted,
-					  cpu_ms, completed_value);
+			FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frames_submitted, cpu_ms,
+					  completed_value);
 			FRAME_LOG("frame=%u cpu_ms=%.3f present_result=%ld", frames_submitted, cpu_ms,
 					  present_result);
 
@@ -192,9 +191,8 @@ export class App {
 			present_result = PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 											  frames, back_buffer_index, signaled_value);
 			if (present_result == DXGI_ERROR_WAS_STILL_DRAWING) {
-				FRAME_LOG(
-					"frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
-					frames_submitted, cpu_ms);
+				FRAME_LOG("frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
+						  frames_submitted, cpu_ms);
 				continue;
 			}
 
@@ -202,10 +200,10 @@ export class App {
 				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-		FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%u",
+			FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%u",
 					  frames_submitted, cpu_ms, back_buffer_index, signaled_value);
-			FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frames_submitted,
-					  cpu_ms, new_back_buffer_index);
+			FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frames_submitted, cpu_ms,
+					  new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
@@ -429,25 +427,25 @@ App::FrameResources::~FrameResources() {
 }
 
 App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_submitted,
-													  double cpu_ms) {
+													 double cpu_ms) {
 	WaitableComponent components[3];
 	DWORD component_count = 0;
 
 	components[component_count++] = WaitableComponent{
-		.handle		= app.swap_chain.frame_latency_waitable,
+		.handle		 = app.swap_chain.frame_latency_waitable,
 		.on_complete = &App::OnFrameLatencyReady,
 	};
 
 	if (app.bitstream_writer.HasPendingWrites()) {
 		components[component_count++] = WaitableComponent{
-			.handle		= app.bitstream_writer.NextWriteEvent(),
+			.handle		 = app.bitstream_writer.NextWriteEvent(),
 			.on_complete = &App::OnWriterReady,
 		};
 	}
 
 	if (app.frame_encoder.HasPendingOutputs()) {
 		components[component_count++] = WaitableComponent{
-			.handle		= app.frame_encoder.NextOutputEvent(),
+			.handle		 = app.frame_encoder.NextOutputEvent(),
 			.on_complete = &App::OnEncoderReady,
 		};
 	}
@@ -462,8 +460,8 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 	for (DWORD i = 0; i < component_count; ++i)
 		handles[i] = components[i].handle;
 
-	DWORD wait_result = MsgWaitForMultipleObjects(component_count, handles, FALSE, INFINITE,
-												  QS_ALLINPUT);
+	DWORD wait_result
+		= MsgWaitForMultipleObjects(component_count, handles, FALSE, INFINITE, QS_ALLINPUT);
 	FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu component_count=%lu",
 			  frames_submitted, cpu_ms, wait_result, component_count);
 
