@@ -44,6 +44,8 @@ struct FileHandle {
 ## ComPtr & Smart Pointers
 - **ComPtr**: Use for ownership in members; pass raw pointers to functions ❌ NOT CI-enforced
 - `ComPtr<ID3D12Device> device;` (owns) vs `void Func(ID3D12Device* device)` (borrows)
+- **`*&com_ptr` pattern is intentional here**: WRL `ComPtr` overloads unary `operator&` and it is **not** the built-in object address operation. Keep `*&device.device` where used for borrowed `T*` flow in this repo; do not simplify it to `&device.device`.
+- For COM out-params, use the explicit `ComPtr` address APIs (`GetAddressOf` / `ReleaseAndGetAddressOf`) based on whether release is desired.
 - **NO `unique_ptr`/`shared_ptr`/`make_unique`** - use RAII with inline members
 
 ## Prohibited Patterns
@@ -58,6 +60,11 @@ struct FileHandle {
 - Prefer `auto` when it avoids repeating the type
 - Single-statement conditionals: omit braces; multi-statement: require braces
 - Remove trivial wrappers; keep code minimal and direct
+
+## Main Loop Waiting
+- Prefer event-driven waits in steady-state main loops (`WaitFor*`/`MsgWaitForMultipleObjects`) instead of polling completion methods every iteration
+- Call completion handlers like `ProcessCompletedFrames` in response to their signaled events whenever possible
+- Poll only when no waitable signal path exists (or in explicit shutdown/drain flows)
 
 ---
 

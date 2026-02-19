@@ -19,6 +19,12 @@ A living list of reproducible, solvable build and tooling problems that Copilot 
 |---|---|---|---|---|---|
 | `cmake -G "Visual Studio 18 2026" -A x64` | CMake picks a different generator on CI | Environment or default CMake generator misconfigured | Explicitly pass the generator and architecture: `-G "Visual Studio 18 2026" -A x64`; verify with `cmake --help` | See CMake docs for generators; rerun on clean CI to confirm | N/A |
 
+## ComPtr Address-Of Semantics
+
+| Command | Symptom | Cause | Fix | Notes | Verified |
+|---|---|---|---|---|---|
+| Refactor `*&device.device` to `&device.device` in app setup code | Type mismatch, wrong overload path, or accidental pointer release behavior around `ComPtr` address operations | `Microsoft::WRL::ComPtr` overloads unary `operator&`; this is not equivalent to built-in address-of on plain objects | Keep `*&` where code needs borrowed `T*` from existing `ComPtr` flow. For out-params use `GetAddressOf` / `ReleaseAndGetAddressOf` intentionally. | Microsoft docs: `ComPtr::operator&` releases then returns `ComPtrRef`; this differs from `GetAddressOf`. C++ operator overloading docs also note unary `&` semantics can be changed for class types. | 2026-02-19 |
+
 ## PowerShell Command Compatibility
 
 | Command | Symptom | Cause | Fix | Notes | Verified |
