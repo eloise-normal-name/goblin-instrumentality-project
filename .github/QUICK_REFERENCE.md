@@ -57,6 +57,7 @@ struct FileHandle {
 
 ## Style
 - Format with `.clang-format` (tabs, 4-wide, 100-column) ✅ CI enforced
+- Markdown files (`.md`): use spaces, not tabs
 - Prefer `auto` when it avoids repeating the type
 - Single-statement conditionals: omit braces; multi-statement: require braces
 - Remove trivial wrappers; keep code minimal and direct

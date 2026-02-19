@@ -55,6 +55,7 @@
   - Single-statement conditionals (`if`, `for`, `while`) should omit braces
   - Multi-statement blocks require braces
   - **Formatting is enforced** on all changes; run the formatter before finalizing edits
+- **Markdown files**: Use spaces (not tabs) for indentation in all `.md` files
 - **Warnings**: Compile with `/W4` (validated by CI; treat all warnings as errors in future)
 - **Type Deduction**: Prefer `auto` when it avoids writing the type (e.g., function returns, lambdas). Do not add `*` or `&` to `auto` declarations unless required for correctness. For struct initialization where you must write the type anyway, use explicit type: `Type var{.field = val};`
 - **Smart Pointers**: Do NOT use `std::unique_ptr`, `std::shared_ptr`, or `std::make_unique` in this codebase. Use RAII with inline members or raw pointers managed in constructors/destructors instead.
