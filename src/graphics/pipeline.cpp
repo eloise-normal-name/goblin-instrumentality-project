@@ -1,4 +1,4 @@
-#include "graphics/d3d12_pipeline.h"
+#include "graphics/pipeline.h"
 
 #include <d3dcompiler.h>
 #include <windows.h>
@@ -203,3 +203,4 @@ D3D12Pipeline::D3D12Pipeline(ID3D12Device* device, DXGI_FORMAT render_target_for
 
 	Try | device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&pipeline_state));
 }
+

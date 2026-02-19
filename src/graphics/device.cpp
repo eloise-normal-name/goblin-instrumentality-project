@@ -1,4 +1,4 @@
-#include "d3d12_device.h"
+#include "device.h"
 
 #include "try.h"
 
@@ -37,3 +37,4 @@ void D3D12Device::CreateCommandQueue() {
 
 	Try | device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
 }
+

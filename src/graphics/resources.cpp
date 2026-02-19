@@ -1,4 +1,4 @@
-#include "d3d12_resources.h"
+#include "resources.h"
 
 #include "try.h"
 
@@ -55,3 +55,4 @@ D3D12_RESOURCE_BARRIER CreateTransitionBarrier(ID3D12Resource* res, D3D12_RESOUR
 		},
 	};
 }
+

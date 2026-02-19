@@ -1,6 +1,6 @@
 # Shame Log
 
-- Removed `FileHandle` from `src/graphics/d3d12_pipeline.cpp`.
+- Removed `FileHandle` from `src/graphics/pipeline.cpp`.
   - Resource owners must establish invariants in constructors; no defaulted constructors.
   - File I/O now uses explicit `HANDLE` lifetimes with `CloseHandle` on all paths.
 - Reminder logged: I will check editing tool availability myself before attempting edits.
@@ -14,3 +14,4 @@
 - Committed refactored `src/app.ixx` without running clang-format first.
   - All code changes must be formatted before commit. Run clang-format, verify diff, then commit.
   - Agent: Claudia [c35s]
+

@@ -1,7 +1,7 @@
-#include "d3d12_commands.h"
+#include "commands.h"
 
-#include "d3d12_mesh.h"
-#include "d3d12_resources.h"
+#include "mesh.h"
+#include "resources.h"
 #include "try.h"
 
 D3D12Commands::D3D12Commands(ID3D12Device* device, ID3D12CommandAllocator* allocator) {
@@ -149,3 +149,4 @@ void RecordFrameCommandList(ID3D12GraphicsCommandList* command_list,
 
 	command_list->Close();
 }
+

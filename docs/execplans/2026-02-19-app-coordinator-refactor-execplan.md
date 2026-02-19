@@ -19,8 +19,8 @@ After this change, `src/app.ixx` will read as an orchestration layer that coordi
 - [x] (2026-02-19 00:00Z) Captured current `App` responsibility map and extraction seams from `src/app.ixx` and collaborators in `src/graphics/*` and `src/encoder/*`.
 - [x] (2026-02-19 00:00Z) Confirmed refactor direction with user: deep refactor, hybrid file split, preserve startup pre-recorded command lists, keep App-owned defaults.
 - [x] (2026-02-19 00:00Z) Authored this draft ExecPlan only; no implementation edits have been executed under this plan.
-- [x] (2026-02-19 13:39Z) Implemented graphics helper extraction for frame resource ownership and cleanup by replacing `App::FrameResources` with `D3D12FrameResources` from `src/graphics/d3d12_frame_resources.*`.
-- [x] (2026-02-19 13:39Z) Implemented command recording extraction while preserving startup pre-record semantics by adding `RecordFrameCommandList(...)` in `src/graphics/d3d12_commands.*` and invoking it from `App` constructor pre-record loop.
+- [x] (2026-02-19 13:39Z) Implemented graphics helper extraction for frame resource ownership and cleanup by replacing `App::FrameResources` with `D3D12FrameResources` from `src/graphics/frame_resources.*`.
+- [x] (2026-02-19 13:39Z) Implemented command recording extraction while preserving startup pre-record semantics by adding `RecordFrameCommandList(...)` in `src/graphics/commands.*` and invoking it from `App` constructor pre-record loop.
 - [x] (2026-02-19 13:40Z) Simplified `src/app.ixx` into coordinator-first composition by removing embedded low-level frame resource ownership and command recording mechanics while preserving wait/completion flow.
 - [x] (2026-02-19 13:40Z) Build and run validation completed (Debug build + headless smoke run) with output artifact verification.
 
@@ -29,14 +29,14 @@ After this change, `src/app.ixx` will read as an orchestration layer that coordi
 - Observation: `App` currently blends orchestration with low-level frame resource ownership and command list recording details.
   Evidence: `src/app.ixx` includes `FrameResources` internals, `RecordCommandList(...)`, frame loop orchestration, and shutdown drain in one class.
 
-- Observation: Existing helpers in `src/graphics/d3d12_commands.*` and `src/graphics/d3d12_resources.*` provide a natural landing area for extraction, but they are not currently used by `App` for command recording.
-  Evidence: File inspection of `src/graphics/d3d12_commands.cpp/.h` and `src/app.ixx` call paths.
+- Observation: Existing helpers in `src/graphics/commands.*` and `src/graphics/resources.*` provide a natural landing area for extraction, but they are not currently used by `App` for command recording.
+  Evidence: File inspection of `src/graphics/commands.cpp/.h` and `src/app.ixx` call paths.
 
 - Observation: There are non-obvious synchronization and encoder lifecycle invariants that must be preserved during cleanup.
   Evidence: `FrameEncoder` fixed-size pending ring behavior and completion handling paths in `src/encoder/frame_encoder.cpp`; wait and drain behavior in `src/app.ixx`.
 
-- Observation: `d3d12_frame_resources.cpp` existed but was not listed in `CMakeLists.txt`, so extraction could compile but fail to link when used from `App`.
-  Evidence: Initial `CMakeLists.txt` source list omitted `src/graphics/d3d12_frame_resources.cpp`; added during implementation.
+- Observation: `frame_resources.cpp` existed but was not listed in `CMakeLists.txt`, so extraction could compile but fail to link when used from `App`.
+  Evidence: Initial `CMakeLists.txt` source list omitted `src/graphics/frame_resources.cpp`; added during implementation.
 
 - Observation: In this terminal session, `clang-format` was not available on PATH despite project guidance expecting Developer PowerShell profile usage.
   Evidence: Terminal error: `clang-format: The term 'clang-format' is not recognized...`; resolved with explicit VS 18 clang-format path.
@@ -64,10 +64,10 @@ Implemented changes:
   - Replaced nested `App::FrameResources` ownership block with `D3D12FrameResources` member.
   - Removed in-class `RecordCommandList(...)` implementation.
   - Switched startup pre-recording loop to call `RecordFrameCommandList(...)` from graphics helper code.
-- `src/graphics/d3d12_commands.h/.cpp`
+- `src/graphics/commands.h/.cpp`
   - Added `RecordFrameCommandList(...)` helper to encapsulate low-level render/copy barrier + draw recording.
 - `CMakeLists.txt`
-  - Added `src/graphics/d3d12_frame_resources.cpp` to the build sources.
+  - Added `src/graphics/frame_resources.cpp` to the build sources.
 
 Behavior validation evidence:
 - Build (Debug): succeeded via CMake Tools (`goblin-stream.vcxproj -> ...\bin\Debug\goblin-stream.exe`).
@@ -81,8 +81,8 @@ Terminal/tooling issue captured:
 
 The primary target is `src/app.ixx`, which currently owns both high-level coordination and significant low-level operational detail. In this repository, `App` coordinates these systems:
 
-- graphics device and presentation (`src/graphics/d3d12_device.*`, `src/graphics/d3d12_swap_chain.*`)
-- rendering pipeline and mesh setup (`src/graphics/d3d12_pipeline.*`, `src/graphics/d3d12_mesh.*`)
+- graphics device and presentation (`src/graphics/device.*`, `src/graphics/swap_chain.*`)
+- rendering pipeline and mesh setup (`src/graphics/pipeline.*`, `src/graphics/mesh.*`)
 - encoding submission and completion (`src/encoder/frame_encoder.*`, `src/encoder/nvenc_session.*`, `src/encoder/nvenc_config.*`)
 - encoded output writing (`src/encoder/bitstream_file_writer.*`)
 
@@ -162,3 +162,4 @@ No external dependencies may be added. Keep the existing stack and repository co
 The resulting shape should keep `App` as the primary lifecycle coordinator while extracting low-level helpers into graphics-side files. Expected preserved interfaces include wait coordination, frame submission orchestration, encode submission, and drain processing contracts already used by `App`.
 
 Revision note (2026-02-19): Created this new draft ExecPlan at user request. It documents intended refactor scope and verification strategy without executing any implementation changes yet.
+
