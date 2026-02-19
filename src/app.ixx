@@ -147,25 +147,20 @@ export class App {
 
 		while (running) {
 			auto frame_start_time = std::chrono::steady_clock::now();
-			auto cpu_ms		   = std::chrono::duration<double, std::milli>(frame_start_time
-															 - last_frame_time)
-							 .count();
+			auto cpu_ms
+				= std::chrono::duration<double, std::milli>(frame_start_time - last_frame_time)
+					  .count();
 			last_frame_time = frame_start_time;
-			frame_encoder.ProcessCompletedFrames(bitstream_writer);
 			{
 				auto stats = frame_encoder.GetStats();
-				FRAME_LOG("frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu "
-						  "pending=%llu waits=%llu",
-						  frames_submitted, cpu_ms, stats.submitted_frames, stats.completed_frames,
-						  stats.pending_frames, stats.wait_count);
+				FRAME_LOG(
+					"frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu "
+					"pending=%llu waits=%llu",
+					frames_submitted, cpu_ms, stats.submitted_frames, stats.completed_frames,
+					stats.pending_frames, stats.wait_count);
 			}
-			auto wait_result = WaitForFrame(swap_chain.frame_latency_waitable, bitstream_writer, msg,
-											frames_submitted, cpu_ms);
-			if (wait_result == FrameWaitResult::WriteDone) {
-				bitstream_writer.DrainCompleted();
-				continue;
-			}
-			if (wait_result == FrameWaitResult::Continue) {
+			auto wait_action = frame_wait_coordinator.Wait(*this, frames_submitted, cpu_ms);
+			if (wait_action == FrameLoopAction::Continue) {
 				while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 					if (msg.message == WM_QUIT) {
 						running = false;
@@ -199,7 +194,6 @@ export class App {
 
 			if (SUCCEEDED(present_result))
 				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
-			frame_encoder.ProcessCompletedFrames(bitstream_writer);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
 			LogFrameSubmitted(frames_submitted, cpu_ms, back_buffer_index, signaled_value,
@@ -225,15 +219,26 @@ export class App {
 	}
 
   private:
-	enum class FrameWaitResult {
+	enum class FrameLoopAction {
 		Continue,
 		Proceed,
-		WriteDone,
+	};
+
+	class FrameWaitCoordinator {
+	  public:
+		struct WaitableComponent {
+			HANDLE handle;
+			FrameLoopAction (App::*on_complete)();
+		};
+
+		FrameLoopAction Wait(App& app, uint32_t frames_submitted, double cpu_ms);
 	};
 
 	struct MvpConstants {
 		float mvp[16];
 	};
+
+	FrameWaitCoordinator frame_wait_coordinator;
 
 	void RecordCommandList(ID3D12GraphicsCommandList* command_list, D3D12_CPU_DESCRIPTOR_HANDLE rtv,
 						   ID3D12Resource* offscreen_render_target,
@@ -310,27 +315,44 @@ export class App {
 		command_list->Close();
 	}
 
-	FrameWaitResult WaitForFrame(HANDLE frame_latency_waitable, BitstreamFileWriter& writer, MSG&,
-								 uint32_t frames_submitted, double cpu_ms) {
+	FrameLoopAction OnFrameLatencyReady() {
+		return FrameLoopAction::Proceed;
+	}
+
+	FrameLoopAction OnWriterReady() {
+		bitstream_writer.DrainCompleted();
+		return FrameLoopAction::Continue;
+	}
+
+	FrameLoopAction OnEncoderReady() {
+		frame_encoder.ProcessCompletedFrames(bitstream_writer);
+		return FrameLoopAction::Continue;
+	}
+
+	FrameLoopAction WaitForSignal(FrameWaitCoordinator::WaitableComponent* components,
+								  DWORD component_count, uint32_t frames_submitted,
+								  double cpu_ms) {
 #ifndef ENABLE_FRAME_DEBUG_LOG
 		(void)frames_submitted;
 		(void)cpu_ms;
 #endif
 		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame begin", frames_submitted, cpu_ms);
 
-		bool waiting_for_write = writer.HasPendingWrites();
-		HANDLE handles[]	   = {frame_latency_waitable, writer.NextWriteEvent()};
-		DWORD wait_count	   = waiting_for_write ? 2 : 1;
-		DWORD wait_result
-			= MsgWaitForMultipleObjects(wait_count, handles, FALSE, INFINITE, QS_ALLINPUT);
-		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu waiting_for_write=%u",
-				  frames_submitted, cpu_ms, wait_result, waiting_for_write ? 1u : 0u);
+		HANDLE handles[3];
+		for (DWORD i = 0; i < component_count; ++i)
+			handles[i] = components[i].handle;
 
-		if (wait_result == WAIT_OBJECT_0)
-			return FrameWaitResult::Proceed;
-		if (waiting_for_write && wait_result == WAIT_OBJECT_0 + 1)
-			return FrameWaitResult::WriteDone;
-		return FrameWaitResult::Continue;
+		DWORD wait_result = MsgWaitForMultipleObjects(component_count, handles, FALSE, INFINITE,
+													  QS_ALLINPUT);
+		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu component_count=%lu",
+				  frames_submitted, cpu_ms, wait_result, component_count);
+
+		if (wait_result >= WAIT_OBJECT_0 && wait_result < WAIT_OBJECT_0 + component_count) {
+			DWORD component_index = wait_result - WAIT_OBJECT_0;
+			auto on_complete		= components[component_index].on_complete;
+			return (this->*on_complete)();
+		}
+		return FrameLoopAction::Continue;
 	}
 
 	bool IsFrameReady(const FrameResources& resources, uint32_t back_buffer_index,
@@ -462,6 +484,33 @@ App::FrameResources::~FrameResources() {
 		if (fence_event)
 			CloseHandle(fence_event);
 	fence_events.clear();
+}
+
+App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_submitted,
+													  double cpu_ms) {
+	WaitableComponent components[3];
+	DWORD component_count = 0;
+
+	components[component_count++] = WaitableComponent{
+		.handle		= app.swap_chain.frame_latency_waitable,
+		.on_complete = &App::OnFrameLatencyReady,
+	};
+
+	if (app.bitstream_writer.HasPendingWrites()) {
+		components[component_count++] = WaitableComponent{
+			.handle		= app.bitstream_writer.NextWriteEvent(),
+			.on_complete = &App::OnWriterReady,
+		};
+	}
+
+	if (app.frame_encoder.HasPendingOutputs()) {
+		components[component_count++] = WaitableComponent{
+			.handle		= app.frame_encoder.NextOutputEvent(),
+			.on_complete = &App::OnEncoderReady,
+		};
+	}
+
+	return app.WaitForSignal(components, component_count, frames_submitted, cpu_ms);
 }
 
 void App::UpdateMvpConstants() {
