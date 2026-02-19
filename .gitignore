@@ -40,3 +40,4 @@ compile_commands.json
 # temp
 debug_output.txt
 output.h264
+.agent/logs/

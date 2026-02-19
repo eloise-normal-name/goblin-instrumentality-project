@@ -13,11 +13,12 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 - `src/` - Application sources
   - `app.ixx`, `main.cpp` - App entry points and orchestration
   - `try.h` - Error handling via `Try |` pattern
-  - `frame_debug_log.*` - Per-frame timing and debug log output
+  - `debug_log.h` - Compile-gated `FRAME_LOG(...)` macro output to `stderr` (enabled only in `Debug` and `RelWithDebInfo`; redirect streams or run from a terminal because the app uses `WIN32` subsystem)
   - `graphics/` - D3D12 device, swap chain, command allocators, command lists, and resource management
   - `encoder/` - NVENC configuration, D3D12 interop, and session management
 - `include/` - Vendor headers (`nvenc/nvEncodeAPI.h`)
 - `scripts/` - CI helper scripts (docs index validation)
+  - `agent-wrap.ps1` - Runs a PowerShell command with timeout and writes per-run logs plus JSON metadata
 - `docs/` - Project documentation
 - `.github/` - Copilot instructions and custom agent prompts
 
@@ -31,6 +32,36 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 
 - Configure: `cmake -G "Visual Studio 18 2026" -A x64 -S . -B build`
 - Build (Debug): `cmake --build build --config Debug`
+
+## Agent Terminal Wrapper
+
+For automation and long-running commands, use `scripts/agent-wrap.ps1` to get structured output with timeout protection:
+
+**Basic usage:**
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "<command>" -TimeoutSec <seconds>
+```
+
+**Features:**
+- Guaranteed termination after timeout (default: 120 seconds)
+- Structured JSON output with status, timing, exit code, and log paths
+- Separate logs for stdout, stderr, and combined output in `.agent/logs/<run-id>/`
+- Output preview (first 4000 chars by default)
+
+**When to use:**
+- ✅ Build commands, test runs, code analysis tools, validation runs
+- ❌ Quick file operations, git commands, simple checks
+
+**Examples:**
+```powershell
+# Build with 5-minute timeout
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config Debug" -TimeoutSec 300
+
+# Run tests with console output
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "ctest --test-dir build -C Debug" -TimeoutSec 180 -PrintOutput
+```
+
+See [.github/copilot-instructions.md](.github/copilot-instructions.md) for full usage guidelines.
 
 ## Documentation Index
 

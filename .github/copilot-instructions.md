@@ -163,6 +163,36 @@ If you commit any CodeQL artifact to version control despite reading this warnin
 - **Use quoted paths** when they contain spaces: `"C:\Program Files\..."`
 - **CMake commands**: Always specify generator explicitly: `-G "Visual Studio 18 2026" -A x64`
 
+## Agent Command Execution
+For potentially long-running or resource-intensive commands, use the agent terminal wrapper (`scripts/agent-wrap.ps1`) for structured logging and timeout protection:
+
+- **Wrapper syntax**: `powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "<your-command>" -TimeoutSec <seconds>`
+- **Returns**: Single JSON line with command status, timing, exit code, log paths, and output preview
+- **Logs**: Saved to `.agent/logs/<run-id>/` with separate stdout, stderr, and combined logs
+
+**When to use the wrapper:**
+- ✅ Build commands (`cmake --build`)
+- ✅ Test runs (`ctest`)
+- ✅ Code analysis tools (CodeQL, clang-format)
+- ✅ Application test runs (`./bin/Debug/goblin-stream.exe --headless`)
+- ✅ Any command that might hang or take >30 seconds
+
+**When NOT to use:**
+- ❌ Quick file operations (`dir`, `Get-ChildItem`, `Get-Content`)
+- ❌ Git commands (`git status`, `git diff`)
+- ❌ Simple checks (`Test-Path`)
+
+**Examples:**
+```powershell
+# Build with 5-minute timeout
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config Debug" -TimeoutSec 300
+
+# Run tests with output preview
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "ctest --test-dir build -C Debug --verbose" -TimeoutSec 180 -PrintOutput
+```
+
+**Benefits**: Guaranteed termination (no stuck processes), structured output for automation, per-run logs for debugging
+
 ## Continuous Integration
 - **Status**: GitHub Actions workflows are temporarily removed and will be refactored back in eventually.
 - **Validation**: Use local builds and manual checks until automation returns.
@@ -186,6 +216,7 @@ If you commit any CodeQL artifact to version control despite reading this warnin
 - **Update README** when adding, removing, or restructuring modules
 - **Architecture diagrams**: Keep ASCII diagrams in README current with implementation
 - **Known errors**: Add reproducible, solvable command/build errors to `docs/copilot-known-errors.md`. Follow the template (Command, Symptom, Cause, Fix, Notes, Verified), include exact commands and minimal environment notes (OS, shell), verify the fix on a clean environment, and open a PR to add or update entries.
+- **Docs checks policy**: Run markdown link checks and markdown lint only when explicitly requested. Do not treat them as default required gates.
 
 ## Custom Agents
 - **Agent Profiles** (`.github/agents/`): GitHub Copilot agent profiles (`.agent.md` files) that appear in the Copilot agent dropdown for code review and assistance
@@ -206,3 +237,4 @@ If you commit any CodeQL artifact to version control despite reading this warnin
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality
 - If threading becomes necessary, this policy will be revisited and documented
 - Maintain static linking preference for portable deployment
+- TODO: Consider daily scheduled documentation hygiene checks (markdown links + markdown lint) once CI workflow automation returns.
