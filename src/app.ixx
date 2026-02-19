@@ -136,18 +136,10 @@ export class App {
 		auto last_frame_time	   = std::chrono::steady_clock::now();
 
 		while (running) {
-			auto now	= std::chrono::steady_clock::now();
-			auto cpu_ms = std::chrono::duration<double, std::milli>(now - last_frame_time).count();
-			last_frame_time = now;
-			{
-				auto stats = frame_encoder.GetStats();
-				FRAME_LOG(
-					"frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu "
-					"pending=%llu waits=%llu",
-					frames_submitted, cpu_ms, stats.submitted_frames, stats.completed_frames,
-					stats.pending_frames, stats.wait_count);
-			}
-			if (frame_wait_coordinator.Wait(*this, frames_submitted, cpu_ms)
+			auto frame_log = BuildFrameLogContext(frames_submitted, last_frame_time);
+			LogFrameLoopStart(frame_log);
+
+			if (frame_wait_coordinator.Wait(*this, frame_log.frame, frame_log.cpu_ms)
 				== FrameLoopAction::Continue) {
 				MSG msg{};
 				while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -162,16 +154,15 @@ export class App {
 			}
 
 			uint64_t completed_value = 0;
-			if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
+			if (!IsFrameReady(frames, back_buffer_index, frame_log.frame, completed_value))
 				continue;
-			FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frames_submitted, cpu_ms,
-					  completed_value);
-			FRAME_LOG("frame=%u cpu_ms=%.3f present_result=%ld", frames_submitted, cpu_ms,
-					  present_result);
+
+			LogFenceCompletion(frame_log, completed_value);
+			LogPresentStatus(frame_log, present_result);
 
 			UpdateMvpConstants();
 
-			auto signaled_value = frames_submitted + 1;
+			auto signaled_value = frame_log.frame + 1;
 
 			if (SUCCEEDED(present_result)) {
 				auto command_list_to_execute
@@ -182,19 +173,16 @@ export class App {
 			present_result = PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 											  frames, back_buffer_index, signaled_value);
 			if (present_result == DXGI_ERROR_WAS_STILL_DRAWING) {
-				FRAME_LOG("frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
-						  frames_submitted, cpu_ms);
+				LogPresentStillDrawing(frame_log);
 				continue;
 			}
 
 			if (SUCCEEDED(present_result))
-				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
+				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frame_log.frame);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-			FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%u",
-					  frames_submitted, cpu_ms, back_buffer_index, signaled_value);
-			FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frames_submitted, cpu_ms,
-					  new_back_buffer_index);
+			LogFrameSubmitResult(frame_log, back_buffer_index, signaled_value,
+								 new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
@@ -207,6 +195,11 @@ export class App {
 	}
 
   private:
+	struct FrameLogContext {
+		uint32_t frame;
+		double cpu_ms;
+	};
+
 	enum class FrameLoopAction {
 		Continue,
 		Proceed,
@@ -240,6 +233,48 @@ export class App {
 	FrameLoopAction OnEncoderReady() {
 		frame_encoder.ProcessCompletedFrames(bitstream_writer);
 		return FrameLoopAction::Continue;
+	}
+
+	FrameLogContext BuildFrameLogContext(
+		uint32_t frames_submitted,
+		std::chrono::time_point<std::chrono::steady_clock>& last_frame_time) const {
+		auto now = std::chrono::steady_clock::now();
+		auto cpu_ms
+			= std::chrono::duration<double, std::milli>(now - last_frame_time).count();
+		last_frame_time = now;
+		return FrameLogContext{.frame = frames_submitted, .cpu_ms = cpu_ms};
+	}
+
+	void LogFrameLoopStart(const FrameLogContext& frame_log) const {
+		auto stats = frame_encoder.GetStats();
+		FRAME_LOG(
+			"frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu pending=%llu "
+			"waits=%llu",
+			frame_log.frame, frame_log.cpu_ms, stats.submitted_frames, stats.completed_frames,
+			stats.pending_frames, stats.wait_count);
+	}
+
+	void LogFenceCompletion(const FrameLogContext& frame_log, uint64_t completed_value) const {
+		FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frame_log.frame,
+				  frame_log.cpu_ms, completed_value);
+	}
+
+	void LogPresentStatus(const FrameLogContext& frame_log, HRESULT present_result) const {
+		FRAME_LOG("frame=%u cpu_ms=%.3f present_result=%ld", frame_log.frame, frame_log.cpu_ms,
+				  present_result);
+	}
+
+	void LogPresentStillDrawing(const FrameLogContext& frame_log) const {
+		FRAME_LOG("frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
+				  frame_log.frame, frame_log.cpu_ms);
+	}
+
+	void LogFrameSubmitResult(const FrameLogContext& frame_log, uint32_t back_buffer_index,
+							  uint32_t signaled_value, uint32_t new_back_buffer_index) const {
+		FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%u",
+				  frame_log.frame, frame_log.cpu_ms, back_buffer_index, signaled_value);
+		FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frame_log.frame,
+				  frame_log.cpu_ms, new_back_buffer_index);
 	}
 
 	bool IsFrameReady(const D3D12FrameResources& resources, uint32_t back_buffer_index,
