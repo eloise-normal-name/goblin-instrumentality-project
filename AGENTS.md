@@ -11,8 +11,9 @@ Use this file as the first-stop orientation for future coding sessions. It links
    - `docs/nvenc-crash-fix-summary.md`
 4. Open `src/app.ixx` to understand frame loop, render submission, and encode handoff.
 5. Run a local build:
-   - `cmake -G "Visual Studio 18 2026" -A x64 -S . -B build`
+  - `powershell -ExecutionPolicy Bypass -File scripts/configure-cmake.ps1`
    - `cmake --build build --config Debug`
+  - If configure errors mention stale cache/generator/toolset mismatch: rerun `scripts/configure-cmake.ps1 -ForceClean`
 
 ## High-Value Source Map
 - Entry + runtime:

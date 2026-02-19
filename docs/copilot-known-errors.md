@@ -18,6 +18,7 @@ A living list of reproducible, solvable build and tooling problems that Copilot 
 | Command | Symptom | Cause | Fix | Notes | Verified |
 |---|---|---|---|---|---|
 | `cmake -G "Visual Studio 18 2026" -A x64` | CMake picks a different generator on CI | Environment or default CMake generator misconfigured | Explicitly pass the generator and architecture: `-G "Visual Studio 18 2026" -A x64`; verify with `cmake --help` | See CMake docs for generators; rerun on clean CI to confirm | N/A |
+| `cmake -G "Visual Studio 18 2026" -A x64 -S . -B build` | Configure fails after branch/toolchain changes with stale cache, generator mismatch, or invalid cache path errors | Existing `build/CMakeCache.txt` and `build/CMakeFiles/` contain stale values from previous configure context | Run `powershell -ExecutionPolicy Bypass -File scripts/configure-cmake.ps1` (auto retry after cache clear) or force clean with `-ForceClean` | Script standardizes configure behavior and performs one retry after cache reset | 2026-02-19 |
 
 ## ComPtr Address-Of Semantics
 

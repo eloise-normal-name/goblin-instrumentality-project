@@ -145,6 +145,8 @@ If you commit any CodeQL artifact to version control despite reading this warnin
 - **Generator**: Use `-G "Visual Studio 18 2026" -A x64` (local development)
   - "Visual Studio 18 2026" is the CMake generator name. Version 18 = VS 2026. Do not use `"Visual Studio 17 2022"` — VS 2022 is not installed.
 - **Intermediate Files**: Located in `build/` (git-ignored)
+- **Configure helper**: Prefer `powershell -ExecutionPolicy Bypass -File scripts/configure-cmake.ps1` for resilient configure with one automatic cache-reset retry.
+- **Cache reset policy**: If configure errors mention stale cache, generator mismatch, or invalid source/build paths, clear `build/CMakeCache.txt` and `build/CMakeFiles/` (or run `scripts/configure-cmake.ps1 -ForceClean`) and reconfigure.
 - **Automation note**: GitHub Actions workflows are temporarily removed and will be refactored back in eventually. Rely on local builds for validation.
 
 ## VS Code Workflow

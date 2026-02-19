@@ -32,8 +32,15 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 ## Build (Windows)
 
 - Configure: `cmake -G "Visual Studio 18 2026" -A x64 -S . -B build`
+- Configure (auto retry with cache reset): `powershell -ExecutionPolicy Bypass -File scripts/configure-cmake.ps1`
 - Build (Debug): `cmake --build build --config Debug`
 - Build (RelWithDbgInfo): `cmake --build build --config RelWithDbgInfo`
+
+If configure fails after branch switches or toolchain updates, clear cache and retry:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/configure-cmake.ps1 -ForceClean
+```
 
 ## Reusable Profiling Workflow
 
@@ -55,6 +62,11 @@ For automation and long-running commands, use `scripts/agent-wrap.ps1` to get st
 **Basic usage:**
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "<command>" -TimeoutSec <seconds>
+```
+
+Run in explicit working directory:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "<command>" -WorkingDirectory "C:\Users\Admin\goblin-stream"
 ```
 
 **Features:**
