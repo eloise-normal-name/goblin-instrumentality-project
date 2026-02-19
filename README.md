@@ -39,6 +39,8 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 - Known errors & fixes: [docs/copilot-known-errors.md](docs/copilot-known-errors.md)
 - Mesh rendering & PBR plan: [docs/mesh-rendering-pbr-plan.md](docs/mesh-rendering-pbr-plan.md)
 - NVENC D3D12 workflow: [docs/nvenc-d3d12-workflow.md](docs/nvenc-d3d12-workflow.md)
+- NVENC crash fix summary: [docs/nvenc-crash-fix-summary.md](docs/nvenc-crash-fix-summary.md)
+- Project reasoning map: [docs/project-reasoning-map.md](docs/project-reasoning-map.md)
 - Custom agent guide: `.github/prompts/README.md`
 - Refactor highlights: `refactor-highlights.html` (published to `gh-pages` branch)
 

@@ -66,8 +66,9 @@ export class App {
   public:
 	App(HWND hwnd, bool headless, uint32_t width, uint32_t height)
 		: hwnd(hwnd), headless(headless), width(width), height(height) {
-		Try | device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-												IID_PPV_ARGS(&allocator));
+		Try
+			| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+													IID_PPV_ARGS(&allocator));
 
 		auto mvp_buffer_size = (UINT)((sizeof(MvpConstants) + MVP_BUFFER_ALIGNMENT - 1)
 									  & ~(MVP_BUFFER_ALIGNMENT - 1));
@@ -86,9 +87,10 @@ export class App {
 			.Layout			  = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		};
 
-		Try | device.device->CreateCommittedResource(
-				  &cb_heap_properties, D3D12_HEAP_FLAG_NONE, &cb_resource_desc,
-				  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mvp_constant_buffer));
+		Try
+			| device.device->CreateCommittedResource(
+				&cb_heap_properties, D3D12_HEAP_FLAG_NONE, &cb_resource_desc,
+				D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mvp_constant_buffer));
 
 		D3D12_RANGE range{.Begin = 0, .End = 0};
 		Try | mvp_constant_buffer->Map(0, &range, (void**)&mvp_mapped);
@@ -98,7 +100,9 @@ export class App {
 			.NumDescriptors = BUFFER_COUNT,
 		};
 
-		Try | device.device->CreateDescriptorHeap(&rtv_heap_desc, IID_PPV_ARGS(&offscreen_rtv_heap));
+		Try
+			| device.device->CreateDescriptorHeap(&rtv_heap_desc,
+												  IID_PPV_ARGS(&offscreen_rtv_heap));
 		offscreen_rtv_descriptor_size
 			= device.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
@@ -151,7 +155,11 @@ export class App {
 					<< " pending=" << stats.pending_frames << " waits=" << stats.wait_count << "\n";
 			}
 			auto wait_result
-				= WaitForFrame(frame_debug_log, swap_chain.frame_latency_waitable, msg);
+				= WaitForFrame(swap_chain.frame_latency_waitable, bitstream_writer, msg);
+			if (wait_result == FrameWaitResult::WriteDone) {
+				bitstream_writer.DrainCompleted();
+				continue;
+			}
 			if (wait_result == FrameWaitResult::Continue) {
 				while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 					if (msg.message == WM_QUIT) {
@@ -167,7 +175,7 @@ export class App {
 			uint64_t completed_value = 0;
 			if (!IsFrameReady(frames, back_buffer_index, frames_submitted, completed_value))
 				continue;
-			LogFenceStatus(frame_debug_log, completed_value, present_result);
+			LogFenceStatus(completed_value, present_result);
 
 			UpdateMvpConstants();
 
@@ -181,7 +189,7 @@ export class App {
 
 			present_result = PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 											  frames, back_buffer_index, signaled_value);
-			if (!HandlePresentResult(frame_debug_log, present_result))
+			if (!HandlePresentResult(present_result))
 				continue;
 
 			if (SUCCEEDED(present_result))
@@ -189,8 +197,7 @@ export class App {
 			frame_encoder.ProcessCompletedFrames(bitstream_writer);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-			LogFrameSubmitted(frame_debug_log, back_buffer_index, signaled_value,
-							  new_back_buffer_index);
+			LogFrameSubmitted(back_buffer_index, signaled_value, new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
@@ -216,6 +223,7 @@ export class App {
 	enum class FrameWaitResult {
 		Continue,
 		Proceed,
+		WriteDone,
 	};
 
 	struct MvpConstants {
@@ -297,16 +305,20 @@ export class App {
 		command_list->Close();
 	}
 
-	FrameWaitResult WaitForFrame(FrameDebugLog& log, HANDLE frame_latency_waitable, MSG&) {
-		log.Line() << "WaitForFrame..." << "\n";
+	FrameWaitResult WaitForFrame(HANDLE frame_latency_waitable, BitstreamFileWriter& writer, MSG&) {
+		frame_debug_log.Line() << "WaitForFrame..." << "\n";
 
-		auto wait_result
-			= MsgWaitForMultipleObjects(1, &frame_latency_waitable, FALSE, INFINITE, QS_ALLINPUT);
-		log.Line() << "Wait result: " << wait_result << "\n";
+		bool waiting_for_write = writer.HasPendingWrites();
+		HANDLE handles[]	   = {frame_latency_waitable, writer.NextWriteEvent()};
+		DWORD wait_count	   = waiting_for_write ? 2 : 1;
+		DWORD wait_result
+			= MsgWaitForMultipleObjects(wait_count, handles, FALSE, INFINITE, QS_ALLINPUT);
+		frame_debug_log.Line() << "Wait result: " << wait_result << "\n";
 
-		if (wait_result != WAIT_OBJECT_0 + 1)
+		if (wait_result == WAIT_OBJECT_0)
 			return FrameWaitResult::Proceed;
-
+		if (waiting_for_write && wait_result == WAIT_OBJECT_0 + 1)
+			return FrameWaitResult::WriteDone;
 		return FrameWaitResult::Continue;
 	}
 
@@ -316,9 +328,9 @@ export class App {
 		return completed_value + resources.fences.size() >= frames_submitted + 1;
 	}
 
-	void LogFenceStatus(FrameDebugLog& log, uint64_t completed_value, HRESULT present_result) {
-		log.Line() << "Completed Value: " << completed_value << "\n";
-		log.Line() << "present_result: " << present_result << "\n";
+	void LogFenceStatus(uint64_t completed_value, HRESULT present_result) {
+		frame_debug_log.Line() << "Completed Value: " << completed_value << "\n";
+		frame_debug_log.Line() << "present_result: " << present_result << "\n";
 	}
 
 	HRESULT PresentAndSignal(ID3D12CommandQueue* command_queue, IDXGISwapChain4* swap_chain_handle,
@@ -331,19 +343,20 @@ export class App {
 		return present_result;
 	}
 
-	bool HandlePresentResult(FrameDebugLog& log, HRESULT present_result) {
+	bool HandlePresentResult(HRESULT present_result) {
 		if (present_result != DXGI_ERROR_WAS_STILL_DRAWING)
 			return true;
 
-		log.Line() << "Present returned DXGI_ERROR_WAS_STILL_DRAWING, skipping..." << "\n";
+		frame_debug_log.Line() << "Present returned DXGI_ERROR_WAS_STILL_DRAWING, skipping..."
+							   << "\n";
 		return false;
 	}
 
-	void LogFrameSubmitted(FrameDebugLog& log, uint32_t back_buffer_index, uint64_t signaled_value,
+	void LogFrameSubmitted(uint32_t back_buffer_index, uint64_t signaled_value,
 						   uint32_t new_back_buffer_index) {
-		log.Line() << "Frame submitted, fence[" << back_buffer_index
-				   << "] signaled with value: " << signaled_value << "\n";
-		log.Line() << "new back_buffer_index: " << new_back_buffer_index << "\n";
+		frame_debug_log.Line() << "Frame submitted, fence[" << back_buffer_index
+							   << "] signaled with value: " << signaled_value << "\n";
+		frame_debug_log.Line() << "new back_buffer_index: " << new_back_buffer_index << "\n";
 	}
 
 	void UpdateMvpConstants();

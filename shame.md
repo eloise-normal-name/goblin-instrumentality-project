@@ -5,3 +5,6 @@
   - File I/O now uses explicit `HANDLE` lifetimes with `CloseHandle` on all paths.
 - Reminder logged: I will check editing tool availability myself before attempting edits.
   - Agent: Nia [gpt52]
+- Attempted to use `replace_string_in_file` without checking if editing tools were enabled.
+  - Should have verified tool availability first, per eloise.instructions.md and prior memories.
+  - Agent: Nia [gpt52]
