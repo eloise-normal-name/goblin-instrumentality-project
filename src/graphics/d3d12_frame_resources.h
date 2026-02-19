@@ -8,7 +8,7 @@
 class D3D12FrameResources {
   public:
 	D3D12FrameResources(ID3D12Device* device, uint32_t count, uint32_t width, uint32_t height,
-						 DXGI_FORMAT format);
+						DXGI_FORMAT format);
 	~D3D12FrameResources();
 
 	std::vector<ID3D12GraphicsCommandList*> command_lists;
