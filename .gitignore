@@ -37,6 +37,10 @@ Release/
 CMakeUserPresets.json
 compile_commands.json
 
+# VSDiagnostics profiling sessions (binary, can be hundreds of MB)
+*.diagsession
+docs/perf-baselines/*.diagsession
+
 # temp
 debug_output.txt
 output.h264
