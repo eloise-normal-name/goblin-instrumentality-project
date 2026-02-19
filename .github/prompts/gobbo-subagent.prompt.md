@@ -42,7 +42,7 @@ Risk checks:
 ```
 
 Rules:
-- Maximum 180 words total
+- Keep the entire response under ~180 words: Findings ≤110 words, Quick wins ≤40, Risk checks ≤30
 - Prefer specific line references or code tokens
 - If no meaningful improvements: say "No-op — already elegant within project rules"
 ```
