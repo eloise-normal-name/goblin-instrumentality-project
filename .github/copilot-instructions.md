@@ -221,6 +221,7 @@ powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "ctest 
 ## Custom Agents
 - **Agent Profiles** (`.github/agents/`): GitHub Copilot agent profiles (`.agent.md` files) that appear in the Copilot agent dropdown for code review and assistance
   - `gobbo` - Elegant C++ code reviewer focused on concise, readable code
+  - `profiler` - CLI performance profiling agent; runs VSDiagnostics sessions, diffs baselines, routes regressions
 - **Prompt Agents** (`.github/prompts/`): Specialized task agents (`.prompt.md` files) for specific development workflows
   - `check-raii` - Verify RAII patterns and resource management
   - `review-error-handling` - Check Try | usage and error handling
@@ -229,9 +230,14 @@ powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "ctest 
   - `explain-nvenc` - Explain NVENC API usage and integration
   - `refactor-extract` - Assist with extracting cohesive functionality
   - `stage-changelist` - Review changes and prepare commits with highlights
+  - `profile-performance` - Run VSDiagnostics CPU/memory/file I/O sessions; compare against baselines in `docs/perf-baselines/`
+- **Snippets** (`.github/prompts/snippets/`): Reference materials for agents
+  - `nvenc-guide.md` - NVENC SDK 13.0 D3D12 quick reference
+  - `vsdiagnostics-guide.md` - VSDiagnostics.exe CLI profiling quick reference
+- **Performance Baselines**: `docs/perf-baselines/` — committed JSON summaries; `.diagsession` binary files gitignored
 - **Usage Guide**: See `.github/prompts/README.md` for complete usage recommendations
 - **When to Use**: Before committing new resource-managing classes, after API integration, when debugging rendering issues, or preparing for code review
-- **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission
+- **Best Practice**: Run `check-raii` and `review-error-handling` on all new code before submission; run `profile-performance` after encoder or frame-loop changes
 
 ## Future Considerations
 - Evaluate external libraries only if Windows API doesn't provide equivalent functionality

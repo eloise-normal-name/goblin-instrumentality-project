@@ -147,22 +147,27 @@ export class App {
 
 		while (running) {
 			auto frame_start_time = std::chrono::steady_clock::now();
-			auto cpu_ms		   = std::chrono::duration<double, std::milli>(frame_start_time
-															 - last_frame_time)
-							 .count();
+			auto cpu_ms
+				= std::chrono::duration<double, std::milli>(frame_start_time - last_frame_time)
+					  .count();
 			last_frame_time = frame_start_time;
 			frame_encoder.ProcessCompletedFrames(bitstream_writer);
 			{
 				auto stats = frame_encoder.GetStats();
-				FRAME_LOG("frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu "
-						  "pending=%llu waits=%llu",
-						  frames_submitted, cpu_ms, stats.submitted_frames, stats.completed_frames,
-						  stats.pending_frames, stats.wait_count);
+				FRAME_LOG(
+					"frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu "
+					"pending=%llu waits=%llu",
+					frames_submitted, cpu_ms, stats.submitted_frames, stats.completed_frames,
+					stats.pending_frames, stats.wait_count);
 			}
-			auto wait_result = WaitForFrame(swap_chain.frame_latency_waitable, bitstream_writer, msg,
-											frames_submitted, cpu_ms);
+			auto wait_result = WaitForFrame(swap_chain.frame_latency_waitable, bitstream_writer,
+											frame_encoder, msg, frames_submitted, cpu_ms);
 			if (wait_result == FrameWaitResult::WriteDone) {
 				bitstream_writer.DrainCompleted();
+				continue;
+			}
+			if (wait_result == FrameWaitResult::EncoderDone) {
+				frame_encoder.ProcessCompletedFrames(bitstream_writer);
 				continue;
 			}
 			if (wait_result == FrameWaitResult::Continue) {
@@ -199,7 +204,6 @@ export class App {
 
 			if (SUCCEEDED(present_result))
 				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frames_submitted);
-			frame_encoder.ProcessCompletedFrames(bitstream_writer);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
 			LogFrameSubmitted(frames_submitted, cpu_ms, back_buffer_index, signaled_value,
@@ -229,6 +233,7 @@ export class App {
 		Continue,
 		Proceed,
 		WriteDone,
+		EncoderDone,
 	};
 
 	struct MvpConstants {
@@ -310,26 +315,41 @@ export class App {
 		command_list->Close();
 	}
 
-	FrameWaitResult WaitForFrame(HANDLE frame_latency_waitable, BitstreamFileWriter& writer, MSG&,
-								 uint32_t frames_submitted, double cpu_ms) {
+	FrameWaitResult WaitForFrame(HANDLE frame_latency_waitable, BitstreamFileWriter& writer,
+								 FrameEncoder& encoder, MSG&, uint32_t frames_submitted,
+								 double cpu_ms) {
 #ifndef ENABLE_FRAME_DEBUG_LOG
 		(void)frames_submitted;
 		(void)cpu_ms;
 #endif
 		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame begin", frames_submitted, cpu_ms);
 
-		bool waiting_for_write = writer.HasPendingWrites();
-		HANDLE handles[]	   = {frame_latency_waitable, writer.NextWriteEvent()};
-		DWORD wait_count	   = waiting_for_write ? 2 : 1;
+		bool waiting_for_write	= writer.HasPendingWrites();
+		bool waiting_for_encode = encoder.HasPendingOutputs();
+
+		HANDLE handles[3];
+		DWORD handle_count = 1;
+		handles[0]		   = frame_latency_waitable;
+
+		DWORD write_handle_index = waiting_for_write ? handle_count : 0;
+		if (waiting_for_write)
+			handles[handle_count++] = writer.NextWriteEvent();
+
+		DWORD encode_handle_index = waiting_for_encode ? handle_count : 0;
+		if (waiting_for_encode)
+			handles[handle_count++] = encoder.NextOutputEvent();
+
 		DWORD wait_result
-			= MsgWaitForMultipleObjects(wait_count, handles, FALSE, INFINITE, QS_ALLINPUT);
+			= MsgWaitForMultipleObjects(handle_count, handles, FALSE, INFINITE, QS_ALLINPUT);
 		FRAME_LOG("frame=%u cpu_ms=%.3f wait_for_frame result=%lu waiting_for_write=%u",
 				  frames_submitted, cpu_ms, wait_result, waiting_for_write ? 1u : 0u);
 
 		if (wait_result == WAIT_OBJECT_0)
 			return FrameWaitResult::Proceed;
-		if (waiting_for_write && wait_result == WAIT_OBJECT_0 + 1)
+		if (waiting_for_write && wait_result == WAIT_OBJECT_0 + write_handle_index)
 			return FrameWaitResult::WriteDone;
+		if (waiting_for_encode && wait_result == WAIT_OBJECT_0 + encode_handle_index)
+			return FrameWaitResult::EncoderDone;
 		return FrameWaitResult::Continue;
 	}
 
