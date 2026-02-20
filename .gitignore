@@ -32,6 +32,7 @@ Release/
 .vscode/.history/
 .vscode/.data/
 .vscode/settings.json
+.vscode/*.code-workspace
 .cache/
 
 # CMake
