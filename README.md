@@ -55,6 +55,22 @@ This produces:
 - `.diagsession` files in `docs/perf-baselines/` (gitignored)
 - `perf-highlights.html` (for `gh-pages` publication)
 
+## Native C++ Coverage (Headless Workload)
+
+Collect code coverage by running the app in deterministic headless mode (`--headless` exits after 30 frames):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-headless-coverage.ps1 -BuildConfig Debug
+```
+
+This produces:
+- `artifacts/coverage/headless_<timestamp>.coverage`
+- `artifacts/coverage/headless_<timestamp>.cobertura.xml`
+- `artifacts/coverage/headless_<timestamp>.summary.txt`
+- `artifacts/coverage/headless_<timestamp>.report.html`
+
+The coverage script uses `scripts/coverage.runsettings` and instruments native C++ modules that match `goblin-stream`.
+
 ## Agent Terminal Wrapper
 
 For automation and long-running commands, use `scripts/agent-wrap.ps1` to get structured output with timeout protection:
