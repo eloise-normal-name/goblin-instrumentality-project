@@ -23,6 +23,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 # 3. Explicit Source Listing
 set(SOURCES
     src/app.ixx
+    src/app_logging.cpp
     src/main.cpp
     src/encoder/bitstream_file_writer.cpp
     src/encoder/frame_encoder.cpp

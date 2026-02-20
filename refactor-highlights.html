@@ -153,25 +153,25 @@
 </head>
 <body>
     <main>
-        <h1>Refactor Highlights since <code>9dfb8fa</code></h1>
-        <p class="subtitle">Compared range: <code>9dfb8fa..23000ee</code> · generated on 2026-02-15</p>
+        <h1>Refactor Highlights since <code>715fe60</code></h1>
+        <p class="subtitle">Compared range: <code>715fe60..HEAD</code> · generated on 2026-02-19</p>
 
         <div class="cards">
             <div class="card">
                 <div class="k">Files changed</div>
-                <div class="v">1</div>
+                <div class="v">4</div>
             </div>
             <div class="card">
                 <div class="k">Insertions / Deletions</div>
-                <div class="v">Frame-loop + NVENC fence sync</div>
+                <div class="v">App run-loop readability refactor</div>
             </div>
             <div class="card">
                 <div class="k">MinSizeRel binary</div>
-                <div class="v">281,600 bytes</div>
+                <div class="v">155,136 bytes</div>
             </div>
             <div class="card">
                 <div class="k">cloc total in /src</div>
-                <div class="v">1244 lines</div>
+                <div class="v">1688 lines</div>
             </div>
         </div>
 
@@ -179,10 +179,10 @@
             <h2>High-level goal alignment</h2>
             <div class="panel">
                 <p>
-                    The current refactor track is consolidating frame ownership inside <code>App</code>, tightening
-                    render-to-encode synchronization, and keeping module/build wiring deterministic.
-                    This delta advances that by inlining the frame loop into <code>App</code>, adding fence-aware NVENC
-                    texture registration/mapping hooks, and fixing source casing in CMake to keep module discovery stable.
+                    The active track is reducing cognitive load in the frame loop while preserving exact render/encode
+                    behavior. This delta keeps the system architecture intact but moves repetitive concerns out of
+                    <code>App::Run()</code>: logging moved to <code>app_logging</code>, constant-buffer updates are now
+                    encapsulated in a helper struct, and message pumping has a dedicated method.
                 </p>
             </div>
         </section>
@@ -191,12 +191,11 @@
             <h2>What changed and why</h2>
             <div class="panel">
                 <ul>
-                    <li>Inlined <code>Run()</code> into the exported <code>App</code> class body for tighter locality between frame wait, fence readiness checks, present handling, and debug logging.</li>
-                    <li>Promoted encoder settings to <code>static constexpr ENCODER_CONFIG</code> to remove duplicated literal config and keep defaults explicit at type scope.</li>
-                    <li>Switched command list creation to <code>ID3D12Device4::CreateCommandList1</code> and aligned COM pointer usage with the <code>*&</code> style used elsewhere.</li>
-                    <li>Extended NVENC D3D12 texture registration to carry fence context (<code>pInputFencePoint</code>) and map-time fence wait values.</li>
-                    <li>Fixed CMake source path casing from <code>src/app.ixx</code> to <code>src/App.ixx</code> to avoid module lookup drift.</li>
-                    <li>Cleaned instruction docs to reference the condensed NVENC guide and removed stale/non-project-specific workflow/chat sections.</li>
+                    <li>Extracted frame-loop logging helpers into <code>src/app_logging.h/.cpp</code> so <code>App</code> orchestration code stays focused on flow control.</li>
+                    <li>Refactored constant-buffer ownership and writes into nested <code>MvpConstantBuffer</code> with RAII map/unmap and <code>WriteIdentity()</code>.</li>
+                    <li>Converted frame-wait callbacks to lambdas configured in one place inside <code>FrameWaitCoordinator::Wait</code>.</li>
+                    <li>Moved Win32 message pumping into <code>PumpMessages(bool&amp; running)</code> to simplify <code>Run()</code>.</li>
+                    <li>Added <code>src/app_logging.cpp</code> to <code>CMakeLists.txt</code> and fixed a MinSizeRel linker issue by defaulting <code>~App()</code> in-class.</li>
                 </ul>
             </div>
         </section>
@@ -205,59 +204,40 @@
             <h2>Snippets in context</h2>
             <div class="code-cards">
                 <details>
-                    <summary>Frame loop moved into App class body</summary>
+                    <summary>Logging extracted out of App::Run</summary>
                     <div class="code-card">
-                        <pre><code><span class="kw">int</span> Run() &amp;&amp; {
-    std::array&lt;HANDLE, BUFFER_COUNT&gt; fence_handles{};
-    <span class="kw">for</span> (auto i = <span class="num">0</span>u; i &lt; BUFFER_COUNT; ++i)
-        fence_handles[i] = frames[i].fence_event;
+                        <pre><code><span class="kw">auto</span> frame_log = AppLogging::BuildFrameLogContext(frames_submitted, last_frame_time);
+AppLogging::LogFrameLoopStart(frame_log, frame_encoder.GetStats());
+...
+AppLogging::LogFenceCompletion(frame_log, completed_value);
+AppLogging::LogPresentStatus(frame_log, present_result);
+...</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>MVP constant buffer now has RAII helper</summary>
+                    <div class="code-card">
+                        <pre><code><span class="kw">struct</span> <span class="type">MvpConstantBuffer</span> {
+    <span class="type">ComPtr&lt;ID3D12Resource&gt;</span> resource;
+    uint8_t* mapped = <span class="kw">nullptr</span>;
+    ~MvpConstantBuffer() { <span class="kw">if</span> (resource &amp;&amp; mapped) resource-&gt;Unmap(<span class="num">0</span>, <span class="kw">nullptr</span>); }
+    <span class="kw">void</span> WriteIdentity() { memcpy(mapped, &amp;IDENTITY, sizeof(IDENTITY)); }
+};</code></pre>
+                    </div>
+                </details>
+                <details>
+                    <summary>Wait callbacks + message pump cleanup</summary>
+                    <div class="code-card">
+                        <pre><code>.on_complete = [](App&amp; current_app) {
+    current_app.bitstream_writer.DrainCompleted();
+    <span class="kw">return</span> FrameLoopAction::Continue;
+};
 
-    <span class="kw">while</span> (running) {
-        auto wait_result = WaitForFrame(...);
-        <span class="kw">if</span> (wait_result == FrameWaitResult::Quit) <span class="kw">break</span>;
-
-        <span class="kw">if</span> (!IsFrameReady(...)) <span class="kw">continue</span>;
-        ExecuteFrame(*&amp;device.command_queue, frames[back_buffer_index], present_result);
-        present_result = PresentAndSignal(*&amp;device.command_queue, *&amp;swap_chain.swap_chain,
-            frames[back_buffer_index], frames_submitted + <span class="num">1</span>);
-    }
-    <span class="kw">return</span> <span class="num">0</span>;
+<span class="kw">if</span> (frame_wait_coordinator.Wait(*<span class="kw">this</span>, frame_log.frame, frame_log.cpu_ms)
+    == FrameLoopAction::Continue) {
+    PumpMessages(running);
+    <span class="kw">continue</span>;
 }</code></pre>
-                    </div>
-                </details>
-                <details>
-                    <summary>Fence-aware NVENC registration and map entrypoint</summary>
-                    <div class="code-card">
-                        <pre><code><span class="type">NV_ENC_FENCE_POINT_D3D12</span> fence_point{
-    .version = NV_ENC_FENCE_POINT_D3D12_VER,
-    .pFence = fence,
-    .waitValue = <span class="num">0</span>,
-    .bWait = <span class="num">1</span>,
-};
-
-<span class="type">NV_ENC_REGISTER_RESOURCE</span> register_params{
-    .resourceType = NV_ENC_INPUT_RESOURCE_TYPE_DIRECTX,
-    .resourceToRegister = texture,
-    .pInputFencePoint = &amp;fence_point,
-};
-
-<span class="kw">void</span> MapInputTexture(uint32_t index, uint64_t fence_wait_value);</code></pre>
-                    </div>
-                </details>
-                <details>
-                    <summary>Command-list creation + CMake case fix</summary>
-                    <div class="code-card">
-                        <pre><code><span class="type">ComPtr&lt;ID3D12Device4&gt;</span> device4;
-<span class="type">ComPtr&lt;ID3D12GraphicsCommandList1&gt;</span> command_list1;
-Try | device-&gt;QueryInterface(IID_PPV_ARGS(&amp;device4))
-    | device4-&gt;CreateCommandList1(..., IID_PPV_ARGS(&amp;command_list1));
-command_list.Attach(command_list1.Detach());
-
-# CMakeLists.txt
-set(SOURCES
-    src/App.ixx
-    src/main.cpp
-)</code></pre>
                     </div>
                 </details>
                 <details>
@@ -276,23 +256,26 @@ set(SOURCES
             <div class="panel">
                 <ul>
                     <li>MinSizeRel build: successful (<code>goblin-stream.vcxproj -&gt; bin/MinSizeRel/goblin-stream.exe</code>).</li>
-                    <li>Binary size (MinSizeRel): <code>281,600</code> bytes.</li>
-                    <li>cloc /src total: <code>1244</code> lines.</li>
-                    <li>Diagnostics check: no blocking errors; two non-fatal C4100 warnings remain in staged code.</li>
-                    <li><strong>CI automation</strong>: GitHub workflow now automatically validates builds on all PRs.</li>
+                    <li>Binary size (MinSizeRel): <code>155,136</code> bytes.</li>
+                    <li>cloc /src total: <code>1688</code> lines.</li>
+                    <li>Diagnostics check: no blocking errors after the destructor linkage fix and logging warning guards.</li>
+                    <li>Check used for this entry: <code>cmake --build build --config MinSizeRel</code>.</li>
                 </ul>
-                <p class="small">Build command: <code>cmake --build build --config MinSizeRel</code></p>
+                <p class="small">Environment note: MinSizeRel build must run inside VS18 developer shell or equivalent configured environment.</p>
             </div>
         </section>
 
         <section>
-            <h2>CI/CD automation</h2>
+            <h2>Scope note</h2>
             <div class="panel">
-                <p>A GitHub workflow now automates build validation tasks previously done manually:</p>
+                <p>This highlights update focuses on the current staged refactor delta in runtime code:</p>
                 <ul>
-                    <li><code>.github/workflows/build-and-validate.yml</code> — Builds all configurations, tracks binary size and source line count.</li>
+                    <li><code>src/app.ixx</code></li>
+                    <li><code>src/app_logging.cpp</code> and <code>src/app_logging.h</code></li>
+                    <li><code>CMakeLists.txt</code></li>
+                    <li><code>refactor-highlights.html</code></li>
                 </ul>
-                <p class="small">This streamlines the development process by catching build issues early and automating metric tracking that was previously manual. Additional workflows for code formatting and quality checks will be added in future PRs.</p>
+                <p class="small">Baseline commit used for broad comparison lookup: <code>715fe60</code> (latest prior highlights commit).</p>
             </div>
         </section>
 
@@ -300,6 +283,7 @@ set(SOURCES
             <h2>Build log</h2>
             <div class="panel">
                 <ul>
+                    <li>2026-02-19 · MinSizeRel size: <code>155,136</code> bytes · cloc /src: <code>1688</code> lines · build succeeded.</li>
                     <li>2026-02-15 · MinSizeRel size: <code>281,600</code> bytes · cloc /src: <code>1244</code> lines · build succeeded.</li>
                     <li>2026-02-15 · MinSizeRel size: <code>281,600</code> bytes · cloc /src: <code>1244</code> lines · build succeeded.</li>
                     <li>2026-02-15 · MinSizeRel size: <code>281,600</code> bytes · cloc /src: <code>1244</code> lines · build succeeded.</li>
@@ -323,9 +307,9 @@ set(SOURCES
             <h2>Proposed next steps</h2>
             <div class="panel">
                 <ul>
-                    <li>Consume <code>fence_wait_value</code> in <code>NvencD3D12::MapInputTexture</code> and wire it to map params to clear the current warning and complete synchronization intent.</li>
-                    <li>Either use or remove the unused allocator parameter in <code>App::FrameResources</code> constructor to keep warning budget at zero.</li>
-                    <li>Add a short encode submission/status card in this highlights page once texture map/unmap is fully wired into the frame loop.</li>
+                    <li>Move the <code>wait_for_frame</code> logging calls from <code>app.ixx</code> into <code>app_logging</code> to fully centralize frame-loop logs.</li>
+                    <li>Consider extracting RTV heap / command-list bootstrap from <code>App</code> into a small render-setup helper for constructor readability.</li>
+                    <li>Add one regression test/checklist item for MinSizeRel linkage (to catch duplicate symbol regressions quickly).</li>
                 </ul>
             </div>
         </section>

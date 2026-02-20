@@ -7,6 +7,7 @@ module;
 #include <utility>
 #include <vector>
 
+#include "app_logging.h"
 #include "debug_log.h"
 #include "encoder/bitstream_file_writer.h"
 #include "encoder/frame_encoder.h"
@@ -45,8 +46,69 @@ export class App {
 	ComPtr<ID3D12CommandAllocator> allocator;
 	ComPtr<ID3D12DescriptorHeap> offscreen_rtv_heap;
 	uint32_t offscreen_rtv_descriptor_size;
-	ComPtr<ID3D12Resource> mvp_constant_buffer;
-	uint8_t* mvp_mapped = nullptr;
+	struct MvpConstantBuffer {
+		struct MvpConstants {
+			float mvp[16];
+		};
+
+		static constexpr MvpConstants IDENTITY{
+			.mvp = {
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f,
+			},
+		};
+
+		ComPtr<ID3D12Resource> resource;
+		uint8_t* mapped = nullptr;
+
+		explicit MvpConstantBuffer(ID3D12Device* device) {
+			auto mvp_buffer_size = (UINT)((sizeof(MvpConstants) + MVP_BUFFER_ALIGNMENT - 1)
+										  & ~(MVP_BUFFER_ALIGNMENT - 1));
+
+			D3D12_HEAP_PROPERTIES cb_heap_properties{
+				.Type = D3D12_HEAP_TYPE_UPLOAD,
+			};
+
+			D3D12_RESOURCE_DESC cb_resource_desc{
+				.Dimension		  = D3D12_RESOURCE_DIMENSION_BUFFER,
+				.Width			  = mvp_buffer_size,
+				.Height			  = 1,
+				.DepthOrArraySize = 1,
+				.MipLevels		  = 1,
+				.SampleDesc		  = {.Count = 1},
+				.Layout			  = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+			};
+
+			Try
+				| device->CreateCommittedResource(
+					&cb_heap_properties, D3D12_HEAP_FLAG_NONE, &cb_resource_desc,
+					D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource));
+
+			D3D12_RANGE range{.Begin = 0, .End = 0};
+			Try | resource->Map(0, &range, (void**)&mapped);
+		}
+
+		~MvpConstantBuffer() {
+			if (resource && mapped) {
+				resource->Unmap(0, nullptr);
+				mapped = nullptr;
+			}
+		}
+
+		D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const {
+			return resource->GetGPUVirtualAddress();
+		}
+
+		void WriteIdentity() {
+			if (!mapped)
+				return;
+
+			memcpy(mapped, &IDENTITY, sizeof(IDENTITY));
+		}
+	};
+	MvpConstantBuffer mvp_constant_buffer{*&device.device};
 	D3D12FrameResources frames{*&device.device, BUFFER_COUNT, width, height, RENDER_TARGET_FORMAT};
 	BitstreamFileWriter bitstream_writer{"output.h264"};
 	FrameEncoder frame_encoder{nvenc_session, *&device.device, BUFFER_COUNT,
@@ -58,31 +120,6 @@ export class App {
 		Try
 			| device.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
 													IID_PPV_ARGS(&allocator));
-
-		auto mvp_buffer_size = (UINT)((sizeof(MvpConstants) + MVP_BUFFER_ALIGNMENT - 1)
-									  & ~(MVP_BUFFER_ALIGNMENT - 1));
-
-		D3D12_HEAP_PROPERTIES cb_heap_properties{
-			.Type = D3D12_HEAP_TYPE_UPLOAD,
-		};
-
-		D3D12_RESOURCE_DESC cb_resource_desc{
-			.Dimension		  = D3D12_RESOURCE_DIMENSION_BUFFER,
-			.Width			  = mvp_buffer_size,
-			.Height			  = 1,
-			.DepthOrArraySize = 1,
-			.MipLevels		  = 1,
-			.SampleDesc		  = {.Count = 1},
-			.Layout			  = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		};
-
-		Try
-			| device.device->CreateCommittedResource(
-				&cb_heap_properties, D3D12_HEAP_FLAG_NONE, &cb_resource_desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mvp_constant_buffer));
-
-		D3D12_RANGE range{.Begin = 0, .End = 0};
-		Try | mvp_constant_buffer->Map(0, &range, (void**)&mvp_mapped);
 
 		D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc{
 			.Type			= D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
@@ -117,16 +154,11 @@ export class App {
 			RecordFrameCommandList(
 				frames.command_lists[k], cmd_rtv, frames.offscreen_render_targets[k],
 				*&swap_chain.render_targets[k], width, height, pipeline.GetRootSignature(),
-				pipeline.GetPipelineState(), mvp_constant_buffer->GetGPUVirtualAddress(), mesh);
+				pipeline.GetPipelineState(), mvp_constant_buffer.GetGpuVirtualAddress(), mesh);
 		}
 	}
 
-	~App() {
-		if (mvp_constant_buffer && mvp_mapped) {
-			mvp_constant_buffer->Unmap(0, nullptr);
-			mvp_mapped = nullptr;
-		}
-	}
+	~App() = default;
 
 	int Run() && {
 		bool running			   = true;
@@ -136,20 +168,12 @@ export class App {
 		auto last_frame_time	   = std::chrono::steady_clock::now();
 
 		while (running) {
-			auto frame_log = BuildFrameLogContext(frames_submitted, last_frame_time);
-			LogFrameLoopStart(frame_log);
+			auto frame_log = AppLogging::BuildFrameLogContext(frames_submitted, last_frame_time);
+			AppLogging::LogFrameLoopStart(frame_log, frame_encoder.GetStats());
 
 			if (frame_wait_coordinator.Wait(*this, frame_log.frame, frame_log.cpu_ms)
 				== FrameLoopAction::Continue) {
-				MSG msg{};
-				while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-					if (msg.message == WM_QUIT) {
-						running = false;
-						break;
-					}
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
+				PumpMessages(running);
 				continue;
 			}
 
@@ -157,10 +181,10 @@ export class App {
 			if (!IsFrameReady(frames, back_buffer_index, frame_log.frame, completed_value))
 				continue;
 
-			LogFenceCompletion(frame_log, completed_value);
-			LogPresentStatus(frame_log, present_result);
+			AppLogging::LogFenceCompletion(frame_log, completed_value);
+			AppLogging::LogPresentStatus(frame_log, present_result);
 
-			UpdateMvpConstants();
+			mvp_constant_buffer.WriteIdentity();
 
 			auto signaled_value = frame_log.frame + 1;
 
@@ -173,7 +197,7 @@ export class App {
 			present_result = PresentAndSignal(*&device.command_queue, *&swap_chain.swap_chain,
 											  frames, back_buffer_index, signaled_value);
 			if (present_result == DXGI_ERROR_WAS_STILL_DRAWING) {
-				LogPresentStillDrawing(frame_log);
+				AppLogging::LogPresentStillDrawing(frame_log);
 				continue;
 			}
 
@@ -181,8 +205,8 @@ export class App {
 				frame_encoder.EncodeFrame(back_buffer_index, signaled_value, frame_log.frame);
 
 			auto new_back_buffer_index = swap_chain.swap_chain->GetCurrentBackBufferIndex();
-			LogFrameSubmitResult(frame_log, back_buffer_index, signaled_value,
-								 new_back_buffer_index);
+			AppLogging::LogFrameSubmitResult(frame_log, back_buffer_index, signaled_value,
+											 new_back_buffer_index);
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
@@ -195,11 +219,6 @@ export class App {
 	}
 
   private:
-	struct FrameLogContext {
-		uint32_t frame;
-		double cpu_ms;
-	};
-
 	enum class FrameLoopAction {
 		Continue,
 		Proceed,
@@ -209,72 +228,24 @@ export class App {
 	  public:
 		struct WaitableComponent {
 			HANDLE handle;
-			FrameLoopAction (App::*on_complete)();
+			FrameLoopAction (*on_complete)(App&);
 		};
 
 		FrameLoopAction Wait(App& app, uint32_t frames_submitted, double cpu_ms);
 	};
 
-	struct MvpConstants {
-		float mvp[16];
-	};
-
 	FrameWaitCoordinator frame_wait_coordinator;
 
-	FrameLoopAction OnFrameLatencyReady() {
-		return FrameLoopAction::Proceed;
-	}
-
-	FrameLoopAction OnWriterReady() {
-		bitstream_writer.DrainCompleted();
-		return FrameLoopAction::Continue;
-	}
-
-	FrameLoopAction OnEncoderReady() {
-		frame_encoder.ProcessCompletedFrames(bitstream_writer);
-		return FrameLoopAction::Continue;
-	}
-
-	FrameLogContext BuildFrameLogContext(
-		uint32_t frames_submitted,
-		std::chrono::time_point<std::chrono::steady_clock>& last_frame_time) const {
-		auto now = std::chrono::steady_clock::now();
-		auto cpu_ms
-			= std::chrono::duration<double, std::milli>(now - last_frame_time).count();
-		last_frame_time = now;
-		return FrameLogContext{.frame = frames_submitted, .cpu_ms = cpu_ms};
-	}
-
-	void LogFrameLoopStart(const FrameLogContext& frame_log) const {
-		auto stats = frame_encoder.GetStats();
-		FRAME_LOG(
-			"frame=%u cpu_ms=%.3f encoder_stats submitted=%llu completed=%llu pending=%llu "
-			"waits=%llu",
-			frame_log.frame, frame_log.cpu_ms, stats.submitted_frames, stats.completed_frames,
-			stats.pending_frames, stats.wait_count);
-	}
-
-	void LogFenceCompletion(const FrameLogContext& frame_log, uint64_t completed_value) const {
-		FRAME_LOG("frame=%u cpu_ms=%.3f fence_completed_value=%llu", frame_log.frame,
-				  frame_log.cpu_ms, completed_value);
-	}
-
-	void LogPresentStatus(const FrameLogContext& frame_log, HRESULT present_result) const {
-		FRAME_LOG("frame=%u cpu_ms=%.3f present_result=%ld", frame_log.frame, frame_log.cpu_ms,
-				  present_result);
-	}
-
-	void LogPresentStillDrawing(const FrameLogContext& frame_log) const {
-		FRAME_LOG("frame=%u cpu_ms=%.3f present=DXGI_ERROR_WAS_STILL_DRAWING skipping",
-				  frame_log.frame, frame_log.cpu_ms);
-	}
-
-	void LogFrameSubmitResult(const FrameLogContext& frame_log, uint32_t back_buffer_index,
-							  uint32_t signaled_value, uint32_t new_back_buffer_index) const {
-		FRAME_LOG("frame=%u cpu_ms=%.3f frame_submitted fence_index=%u signal_value=%u",
-				  frame_log.frame, frame_log.cpu_ms, back_buffer_index, signaled_value);
-		FRAME_LOG("frame=%u cpu_ms=%.3f new_back_buffer_index=%u", frame_log.frame,
-				  frame_log.cpu_ms, new_back_buffer_index);
+	void PumpMessages(bool& running) const {
+		MSG msg{};
+		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_QUIT) {
+				running = false;
+				break;
+			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
 
 	bool IsFrameReady(const D3D12FrameResources& resources, uint32_t back_buffer_index,
@@ -303,8 +274,6 @@ export class App {
 				  stats.submitted_frames, stats.completed_frames, stats.pending_frames,
 				  stats.wait_count);
 	}
-
-	void UpdateMvpConstants();
 };
 
 App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_submitted,
@@ -314,20 +283,28 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 
 	components[component_count++] = WaitableComponent{
 		.handle		 = app.swap_chain.frame_latency_waitable,
-		.on_complete = &App::OnFrameLatencyReady,
+		.on_complete = [](App&) { return FrameLoopAction::Proceed; },
 	};
 
 	if (app.bitstream_writer.HasPendingWrites()) {
 		components[component_count++] = WaitableComponent{
-			.handle		 = app.bitstream_writer.NextWriteEvent(),
-			.on_complete = &App::OnWriterReady,
+			.handle = app.bitstream_writer.NextWriteEvent(),
+			.on_complete =
+				[](App& current_app) {
+					current_app.bitstream_writer.DrainCompleted();
+					return FrameLoopAction::Continue;
+				},
 		};
 	}
 
 	if (app.frame_encoder.HasPendingOutputs()) {
 		components[component_count++] = WaitableComponent{
-			.handle		 = app.frame_encoder.NextOutputEvent(),
-			.on_complete = &App::OnEncoderReady,
+			.handle = app.frame_encoder.NextOutputEvent(),
+			.on_complete =
+				[](App& current_app) {
+					current_app.frame_encoder.ProcessCompletedFrames(current_app.bitstream_writer);
+					return FrameLoopAction::Continue;
+				},
 		};
 	}
 
@@ -358,24 +335,7 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 	if (wait_result >= WAIT_OBJECT_0 && wait_result < WAIT_OBJECT_0 + component_count) {
 		DWORD component_index = wait_result - WAIT_OBJECT_0;
 		auto on_complete	  = components[component_index].on_complete;
-		return (app.*on_complete)();
+		return on_complete(app);
 	}
 	return FrameLoopAction::Continue;
 }
-
-void App::UpdateMvpConstants() {
-	if (!mvp_mapped)
-		return;
-
-	MvpConstants constants{
-		.mvp = {
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f,
-		},
-	};
-
-	memcpy(mvp_mapped, &constants, sizeof(constants));
-}
-
