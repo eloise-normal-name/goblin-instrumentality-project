@@ -216,6 +216,25 @@ GitHub Actions workflows are temporarily removed and will be refactored back in 
 @workspace /agent stage-changelist Review all changes since last commit and prepare staging
 ```
 
+#### Cleanup Git Hygiene (`cleanup-git-hygiene.prompt.md`)
+**When to use:**
+- Pruning stale local branches and stale worktree entries
+- Running periodic git hygiene with a configurable age threshold
+- Preparing branch/worktree state before larger refactors
+
+**What it does:**
+- Requires `threshold-days=<int>` argument per run
+- Runs dry-run first and shows candidate branches/worktrees
+- Optionally applies deletions and optionally deletes eligible remote branches
+- Protects `main` and `gh-pages` by default, with optional additional protected branches
+
+**Example usage:**
+```
+@workspace /agent cleanup-git-hygiene threshold-days=2
+@workspace /agent cleanup-git-hygiene threshold-days=14 apply
+@workspace /agent cleanup-git-hygiene threshold-days=30 apply remote protect=release/2026Q1
+```
+
 ## Workflow Recommendations
 
 ### Bug Triage (Manual, Temporary)
