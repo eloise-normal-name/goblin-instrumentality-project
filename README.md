@@ -63,11 +63,21 @@ Collect code coverage by running the app in deterministic headless mode (`--head
 powershell -ExecutionPolicy Bypass -File scripts/run-headless-coverage.ps1 -BuildConfig Debug
 ```
 
+Scenario-driven examples:
+
+```powershell
+# Force shader cache miss to exercise CompileShader/WriteFileBytes path
+powershell -ExecutionPolicy Bypass -File scripts/run-headless-coverage.ps1 -BuildConfig Debug -Scenario shader-cache-miss
+
+# Use custom app arguments
+powershell -ExecutionPolicy Bypass -File scripts/run-headless-coverage.ps1 -BuildConfig Debug -Scenario custom -AppArgs "--headless"
+```
+
 This produces:
-- `artifacts/coverage/headless_<timestamp>.coverage`
-- `artifacts/coverage/headless_<timestamp>.cobertura.xml`
-- `artifacts/coverage/headless_<timestamp>.summary.txt`
-- `artifacts/coverage/headless_<timestamp>.report.html`
+- `artifacts/coverage/<scenario>_<timestamp>.coverage`
+- `artifacts/coverage/<scenario>_<timestamp>.cobertura.xml`
+- `artifacts/coverage/<scenario>_<timestamp>.summary.txt`
+- `artifacts/coverage/<scenario>_<timestamp>.report.html`
 
 The coverage script uses `scripts/coverage.runsettings` and instruments native C++ modules that match `goblin-stream`.
 
@@ -111,6 +121,7 @@ See [.github/copilot-instructions.md](.github/copilot-instructions.md) for full 
 - Project instructions: `.github/copilot-instructions.md`
 - Bug triage system: [.github/BUG_TRIAGE_SYSTEM.md](.github/BUG_TRIAGE_SYSTEM.md) (manual and agent-assisted routing)
 - Known errors & fixes: [docs/copilot-known-errors.md](docs/copilot-known-errors.md)
+- Coverage triage and cleanup plan: [docs/coverage-cleanup-plan.md](docs/coverage-cleanup-plan.md)
 - Mesh rendering & PBR plan: [docs/mesh-rendering-pbr-plan.md](docs/mesh-rendering-pbr-plan.md)
 - NVENC D3D12 workflow: [docs/nvenc-d3d12-workflow.md](docs/nvenc-d3d12-workflow.md)
 - NVENC crash fix summary: [docs/nvenc-crash-fix-summary.md](docs/nvenc-crash-fix-summary.md)

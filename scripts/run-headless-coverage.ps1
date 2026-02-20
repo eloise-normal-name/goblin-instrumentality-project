@@ -1,6 +1,8 @@
 param(
 	[string]$BuildConfig = "Debug",
-	[string]$AppArgs = "--headless",
+	[ValidateSet("headless", "shader-cache-miss", "custom")]
+	[string]$Scenario = "headless",
+	[string]$AppArgs = "",
 	[string]$OutputDir = "artifacts/coverage",
 	[int]$BuildTimeoutSec = 120,
 	[switch]$SkipBuild
@@ -12,9 +14,45 @@ $repo_root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $output_path = Join-Path $repo_root $OutputDir
 New-Item -ItemType Directory -Path $output_path -Force | Out-Null
 
+function Clear-ShaderCache {
+	param(
+		[string]$RepoRoot,
+		[string]$Config
+	)
+
+	$shader_files = @("mesh_vs.cso", "mesh_ps.cso")
+	$cache_dirs = @(
+		(Join-Path $RepoRoot "src/shaders"),
+		(Join-Path $RepoRoot "bin/$Config/shaders")
+	)
+
+	foreach ($cache_dir in $cache_dirs) {
+		foreach ($shader_file in $shader_files) {
+			$cache_path = Join-Path $cache_dir $shader_file
+			if (Test-Path $cache_path) {
+				Remove-Item $cache_path -Force
+			}
+		}
+	}
+}
+
 if (-not $SkipBuild) {
 	$build_command = "cmake --build build --config $BuildConfig"
-	powershell -ExecutionPolicy Bypass -File (Join-Path $repo_root "scripts/agent-wrap.ps1") -Command $build_command -TimeoutSec $BuildTimeoutSec -WorkingDirectory $repo_root | Out-Null
+	$build_result_json = powershell -ExecutionPolicy Bypass -File (Join-Path $repo_root "scripts/agent-wrap.ps1") -Command $build_command -TimeoutSec $BuildTimeoutSec -WorkingDirectory $repo_root
+	if ($LASTEXITCODE -ne 0) {
+		throw "Build failed with exit code $LASTEXITCODE while running: $build_command"
+	}
+
+	$build_result = $null
+	try {
+		$build_result = ($build_result_json | Select-Object -Last 1 | ConvertFrom-Json)
+	} catch {
+		throw "Failed to parse build wrapper output as JSON. Raw output: $build_result_json"
+	}
+
+	if ($null -eq $build_result -or $build_result.exit_code -ne 0) {
+		throw "Build wrapper reported failure. Output preview: $($build_result.output_preview)"
+	}
 }
 
 $exe_path = Join-Path $repo_root "bin/$BuildConfig/goblin-stream.exe"
@@ -49,16 +87,38 @@ if (-not (Test-Path $runsettings_path)) {
 	throw "Runsettings file not found: $runsettings_path"
 }
 
-$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$coverage_file = Join-Path $output_path "headless_$stamp.coverage"
-$cobertura_file = Join-Path $output_path "headless_$stamp.cobertura.xml"
-$summary_file = Join-Path $output_path "headless_$stamp.summary.txt"
-$html_file = Join-Path $output_path "headless_$stamp.report.html"
+$effective_app_args = $AppArgs
+switch ($Scenario) {
+	"headless" {
+		if ([string]::IsNullOrWhiteSpace($effective_app_args)) {
+			$effective_app_args = "--headless"
+		}
+	}
+	"shader-cache-miss" {
+		if ([string]::IsNullOrWhiteSpace($effective_app_args)) {
+			$effective_app_args = "--headless"
+		}
+		Clear-ShaderCache -RepoRoot $repo_root -Config $BuildConfig
+	}
+	"custom" {
+	}
+}
 
-$target = if ([string]::IsNullOrWhiteSpace($AppArgs)) {
+$scenario_slug = ($Scenario.ToLowerInvariant() -replace "[^a-z0-9]+", "-").Trim("-")
+if ([string]::IsNullOrWhiteSpace($scenario_slug)) {
+	$scenario_slug = "coverage"
+}
+
+$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$coverage_file = Join-Path $output_path "$scenario_slug`_$stamp.coverage"
+$cobertura_file = Join-Path $output_path "$scenario_slug`_$stamp.cobertura.xml"
+$summary_file = Join-Path $output_path "$scenario_slug`_$stamp.summary.txt"
+$html_file = Join-Path $output_path "$scenario_slug`_$stamp.report.html"
+
+$target = if ([string]::IsNullOrWhiteSpace($effective_app_args)) {
 	"`"$exe_path`""
 } else {
-	"`"$exe_path`" $AppArgs"
+	"`"$exe_path`" $effective_app_args"
 }
 
 & $coverage_console collect --settings $runsettings_path --output $coverage_file --output-format coverage $target
@@ -103,8 +163,10 @@ $uncovered_rows = $class_rows |
 	Sort-Object LinePct, Path |
 	Select-Object -First 25
 $summary_lines = @(
-	"Headless Coverage Summary",
+	"$Scenario Coverage Summary",
 	"Generated: $(Get-Date -Format o)",
+	"Scenario: $Scenario",
+	"App args: $effective_app_args",
 	"Coverage file: $coverage_file",
 	"Cobertura file: $cobertura_file",
 	"",
@@ -125,7 +187,7 @@ $html = @"
 <html lang=""en"">
 <head>
 <meta charset=""utf-8"" />
-<title>Headless Coverage Report</title>
+<title>$Scenario Coverage Report</title>
 <style>
 body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #1f2937; background: #f8fafc; }
 h1 { margin-bottom: 8px; }
@@ -137,10 +199,12 @@ th { background: #eef2ff; }
 </style>
 </head>
 <body>
-<h1>Headless Coverage Report</h1>
+<h1>$Scenario Coverage Report</h1>
 <div class=""meta"">Generated: $(Get-Date -Format o)</div>
 <div class=""card"">
 <div><strong>Overall line coverage:</strong> $overall_line_pct% ($lines_covered/$lines_valid)</div>
+<div><strong>Scenario:</strong> $Scenario</div>
+<div><strong>App args:</strong> $effective_app_args</div>
 <div><strong>Coverage file:</strong> $coverage_file</div>
 <div><strong>Cobertura file:</strong> $cobertura_file</div>
 </div>
