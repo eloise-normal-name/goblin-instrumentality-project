@@ -29,6 +29,13 @@ The Goblin Instrumentality Project is a Windows x64 C++23 application that uses 
 2. Each frame records and executes D3D12 command lists and presents via the swap chain.
 3. The encoder path configures and runs an NVENC session, using D3D12 interop for GPU-backed encoding.
 
+## Runtime Responsiveness Policy
+
+- Keep CPU occupancy minimal during steady-state operation.
+- Favor async submission work (for example GPU command list execution and overlapped file writes) over CPU-heavy busy work.
+- Drive frame/encode progress from waitable events and completion signals.
+- When signaled, handle work promptly and return quickly to an event-driven wait state.
+
 ## Build (Windows)
 
 - Configure: `cmake -G "Visual Studio 18 2026" -A x64 -S . -B build`

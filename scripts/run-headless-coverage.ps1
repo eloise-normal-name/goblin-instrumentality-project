@@ -3,6 +3,7 @@ param(
 	[ValidateSet("headless", "shader-cache-miss", "custom")]
 	[string]$Scenario = "headless",
 	[string]$AppArgs = "",
+	[string]$AppWorkingDirectory = "",
 	[string]$OutputDir = "artifacts/coverage",
 	[int]$BuildTimeoutSec = 120,
 	[switch]$SkipBuild
@@ -88,6 +89,50 @@ if (-not (Test-Path $runsettings_path)) {
 }
 
 $effective_app_args = $AppArgs
+if ([string]::IsNullOrWhiteSpace($AppWorkingDirectory)) {
+	$AppWorkingDirectory = $repo_root
+}
+
+function Normalize-CoberturaForCoverageGutters {
+	param(
+		[xml]$CoverageXml,
+		[string]$RepoRoot
+	)
+
+	$coverage_node = $CoverageXml.coverage
+	if ($null -eq $coverage_node) {
+		return
+	}
+
+	if ($null -eq $coverage_node.sources) {
+		$sources_node = $CoverageXml.CreateElement("sources")
+		$source_node = $CoverageXml.CreateElement("source")
+		$source_node.InnerText = $RepoRoot
+		[void]$sources_node.AppendChild($source_node)
+		[void]$coverage_node.InsertBefore($sources_node, $coverage_node.packages)
+	} elseif ($null -eq $coverage_node.sources.source -or @($coverage_node.sources.source).Count -eq 0) {
+		$source_node = $CoverageXml.CreateElement("source")
+		$source_node.InnerText = $RepoRoot
+		[void]$coverage_node.sources.AppendChild($source_node)
+	}
+
+	$class_nodes = @($CoverageXml.coverage.packages.package.classes.class)
+	foreach ($class_node in $class_nodes) {
+		$filename = [string]$class_node.filename
+		if ([string]::IsNullOrWhiteSpace($filename)) {
+			continue
+		}
+
+		if ($filename.StartsWith($RepoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+			$filename = $filename.Substring($RepoRoot.Length).TrimStart("\", "/")
+		}
+
+		$class_node.filename = $filename.Replace("\", "/")
+	}
+}
+if (-not (Test-Path $AppWorkingDirectory)) {
+	throw "App working directory not found: $AppWorkingDirectory"
+}
 switch ($Scenario) {
 	"headless" {
 		if ([string]::IsNullOrWhiteSpace($effective_app_args)) {
@@ -114,6 +159,10 @@ $coverage_file = Join-Path $output_path "$scenario_slug`_$stamp.coverage"
 $cobertura_file = Join-Path $output_path "$scenario_slug`_$stamp.cobertura.xml"
 $summary_file = Join-Path $output_path "$scenario_slug`_$stamp.summary.txt"
 $html_file = Join-Path $output_path "$scenario_slug`_$stamp.report.html"
+$latest_coverage_file = Join-Path $output_path "latest.coverage"
+$latest_cobertura_file = Join-Path $output_path "latest.cobertura.xml"
+$latest_summary_file = Join-Path $output_path "latest.summary.txt"
+$latest_html_file = Join-Path $output_path "latest.report.html"
 
 $target = if ([string]::IsNullOrWhiteSpace($effective_app_args)) {
 	"`"$exe_path`""
@@ -121,7 +170,13 @@ $target = if ([string]::IsNullOrWhiteSpace($effective_app_args)) {
 	"`"$exe_path`" $effective_app_args"
 }
 
-& $coverage_console collect --settings $runsettings_path --output $coverage_file --output-format coverage $target
+$previous_location = Get-Location
+Set-Location -LiteralPath $AppWorkingDirectory
+try {
+	& $coverage_console collect --settings $runsettings_path --output $coverage_file --output-format coverage $target
+} finally {
+	Set-Location -LiteralPath $previous_location
+}
 if ($LASTEXITCODE -ne 0) {
 	throw "CodeCoverage collect failed with exit code $LASTEXITCODE"
 }
@@ -132,6 +187,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 [xml]$coverage_xml = Get-Content -Raw -Path $cobertura_file
+Normalize-CoberturaForCoverageGutters -CoverageXml $coverage_xml -RepoRoot $repo_root
+$coverage_xml.Save($cobertura_file)
+
 $overall_line_rate = [double]$coverage_xml.coverage.'line-rate'
 $overall_line_pct = [Math]::Round($overall_line_rate * 100.0, 2)
 $lines_covered = [int]$coverage_xml.coverage.'lines-covered'
@@ -143,8 +201,13 @@ foreach ($class_node in $class_nodes) {
 	$filename = [string]$class_node.filename
 	$line_rate = [double]$class_node.'line-rate'
 	$line_pct = [Math]::Round($line_rate * 100.0, 2)
-	if ($filename.StartsWith($repo_root, [System.StringComparison]::OrdinalIgnoreCase)) {
-		$relative_path = $filename.Replace($repo_root + "\", "").Replace("\", "/")
+	$is_absolute_path = [System.IO.Path]::IsPathRooted($filename)
+	if (($is_absolute_path -and $filename.StartsWith($repo_root, [System.StringComparison]::OrdinalIgnoreCase)) -or (-not $is_absolute_path)) {
+		$relative_path = if ($is_absolute_path) {
+			$filename.Replace($repo_root + "\", "").Replace("\", "/")
+		} else {
+			$filename.Replace("\", "/")
+		}
 		$class_rows += [PSCustomObject]@{
 			Path = $relative_path
 			LinePct = $line_pct
@@ -167,6 +230,7 @@ $summary_lines = @(
 	"Generated: $(Get-Date -Format o)",
 	"Scenario: $Scenario",
 	"App args: $effective_app_args",
+	"App working directory: $AppWorkingDirectory",
 	"Coverage file: $coverage_file",
 	"Cobertura file: $cobertura_file",
 	"",
@@ -205,6 +269,7 @@ th { background: #eef2ff; }
 <div><strong>Overall line coverage:</strong> $overall_line_pct% ($lines_covered/$lines_valid)</div>
 <div><strong>Scenario:</strong> $Scenario</div>
 <div><strong>App args:</strong> $effective_app_args</div>
+<div><strong>App working directory:</strong> $AppWorkingDirectory</div>
 <div><strong>Coverage file:</strong> $coverage_file</div>
 <div><strong>Cobertura file:</strong> $cobertura_file</div>
 </div>
@@ -222,7 +287,16 @@ $(($table_rows -join "`n"))
 "@
 Set-Content -Path $html_file -Value $html -Encoding UTF8
 
+Copy-Item -Path $coverage_file -Destination $latest_coverage_file -Force
+Copy-Item -Path $cobertura_file -Destination $latest_cobertura_file -Force
+Copy-Item -Path $summary_file -Destination $latest_summary_file -Force
+Copy-Item -Path $html_file -Destination $latest_html_file -Force
+
 Write-Output "Coverage file: $coverage_file"
 Write-Output "Cobertura file: $cobertura_file"
 Write-Output "Summary file: $summary_file"
 Write-Output "HTML report: $html_file"
+Write-Output "Latest coverage file: $latest_coverage_file"
+Write-Output "Latest Cobertura file: $latest_cobertura_file"
+Write-Output "Latest summary file: $latest_summary_file"
+Write-Output "Latest HTML report: $latest_html_file"

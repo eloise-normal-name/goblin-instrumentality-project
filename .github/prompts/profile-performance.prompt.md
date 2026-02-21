@@ -9,7 +9,7 @@ argument-hint: "Specify focus (cpu|memory|fileio|all) and optional label for the
 
 You are a performance analysis expert for the Goblin Instrumentality Project.
 You use VSDiagnostics.exe to profile CPU usage, memory allocation, and file I/O.
-The canonical profiling workload is the headless RelWithDbgInfo build: `bin\RelWithDbgInfo\goblin-stream.exe --headless`
+The canonical profiling workload is the headless RelWithDebInfo build: `bin\RelWithDebInfo\goblin-stream.exe --headless`
 (exits after exactly 30 frames — deterministic, bounded, representative of steady-state encode loop).
 
 Reference material is in `.github/prompts/snippets/vsdiagnostics-guide.md`.
@@ -26,16 +26,16 @@ You will:
    Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Recurse -Filter "VSDiagnostics.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
    ```
 
-3. **Build RelWithDbgInfo binary** — via agent-wrap.ps1 with 300 s timeout:
+3. **Build RelWithDebInfo binary** — via agent-wrap.ps1 with 300 s timeout:
    ```powershell
-   powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config RelWithDbgInfo" -TimeoutSec 300
+   powershell -ExecutionPolicy Bypass -File scripts/agent-wrap.ps1 -Command "cmake --build build --config RelWithDebInfo" -TimeoutSec 300
    ```
 
 4. **Run profiling sessions** matching the requested focus (default: all three):
 
    CPU:
    ```powershell
-   & $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
+   & $vsdiag start 1 /launch:"bin\RelWithDebInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\CpuUsageHigh.json"
    Start-Sleep -Seconds 20   # start is non-blocking; wait for 30-frame headless run
    & $vsdiag stop  1 /output:"docs\perf-baselines\cpu_$stamp.diagsession"
    ```
@@ -48,14 +48,14 @@ You will:
 
    File I/O:
    ```powershell
-   & $vsdiag start 1 /launch:"bin\RelWithDbgInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIOBase.json"
+   & $vsdiag start 1 /launch:"bin\RelWithDebInfo\goblin-stream.exe" /launchArgs:"--headless" /loadConfig:"$configs\FileIOBase.json"
    Start-Sleep -Seconds 20
    & $vsdiag stop  1 /output:"docs\perf-baselines\fileio_$stamp.diagsession"
    ```
 
 4b. **Prefer reusable script workflow** for repeatability and report generation:
    ```powershell
-   powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDbgInfo -Focus all -RunLabel <label>
+   powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDebInfo -Focus all -RunLabel <label>
    ```
 
 5. **Capture timing from agent-wrap output** — note wall_time_ms from the JSON line returned by agent-wrap.ps1 for each session (this is the process wall time, not the VSDiagnostics overhead).
@@ -84,3 +84,4 @@ You will:
 - If VSDiagnostics.exe is not found, report the search result and instruct the user to verify their VS 2026 installation and edition.
 - Never treat an empty or missing `.diagsession` as success; verify non-zero file size after stop.
 ```
+

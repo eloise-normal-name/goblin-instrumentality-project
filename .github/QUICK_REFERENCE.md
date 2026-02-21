@@ -66,6 +66,7 @@ struct FileHandle {
 - Prefer event-driven waits in steady-state main loops (`WaitFor*`/`MsgWaitForMultipleObjects`) instead of polling completion methods every iteration
 - Call completion handlers like `ProcessCompletedFrames` in response to their signaled events whenever possible
 - Poll only when no waitable signal path exists (or in explicit shutdown/drain flows)
+- Keep steady-state CPU occupancy minimal: submit async work quickly (GPU command lists, overlapped writes), respond to signals promptly, and return to waiting
 
 ---
 

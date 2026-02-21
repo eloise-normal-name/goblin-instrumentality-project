@@ -28,9 +28,8 @@ constexpr auto MVP_BUFFER_ALIGNMENT = 256u;
 struct MvpConstantBuffer {
 	struct MvpConstants {
 		float mvp[16];
-	};
-
-	static constexpr MvpConstants IDENTITY{
+	}
+	static constexpr  IDENTITY{
 			.mvp = {
 				1.0f, 0.0f, 0.0f, 0.0f,
 				0.0f, 1.0f, 0.0f, 0.0f,
@@ -283,7 +282,7 @@ export class App {
 			back_buffer_index = new_back_buffer_index;
 			++frames_submitted;
 
-			if (headless && frames_submitted >= 30)
+			if (headless && frames_submitted >= 500)
 				break;
 		}
 

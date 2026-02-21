@@ -159,7 +159,7 @@ GitHub Actions workflows are temporarily removed and will be refactored back in 
 
 **What it does:**
 - Locates `VSDiagnostics.exe` in the local VS 2026 install
-- Builds the RelWithDbgInfo binary via `cmake --build`
+- Builds the RelWithDebInfo binary via `cmake --build`
 - Runs three separate VSDiagnostics sessions (CPU, memory, file I/O) against the `--headless` 30-frame workload
 - Compares new measurements against the latest baseline JSON in `docs/perf-baselines/`
 - Flags CPU wall time regression (>10%), memory regression (>5%), and any new file write calls
@@ -357,3 +357,4 @@ If you identify a recurring pattern or specialized knowledge area that would ben
 3. Include specific project context and examples
 4. Test with real scenarios from the codebase
 5. Update this README with usage suggestions
+
