@@ -23,7 +23,7 @@ Or follow `.github/prompts/snippets/vsdiagnostics-guide.md` for manual CLI steps
 
 Reusable script workflow:
 ```
-powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDbgInfo -Focus all -RunLabel baseline
+powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig RelWithDebInfo -Focus all -RunLabel baseline
 ```
 
 ## Regression thresholds
@@ -37,7 +37,7 @@ powershell -ExecutionPolicy Bypass -File scripts/profile-exe.ps1 -BuildConfig Re
 ```json
 {
   "run_label": "post-<change>_YYYY-MM-DD",
-  "build_config": "RelWithDbgInfo",
+  "build_config": "RelWithDebInfo",
   "app_args": "--headless",
   "frames": 30,
   "session_files": {

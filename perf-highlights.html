@@ -1,0 +1,56 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Goblin Instrumentality - Performance Highlights</title>
+	<style>
+		body { font-family: Segoe UI, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+		main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+		h1 { margin: 0 0 6px; }
+		.subtitle { color: #94a3b8; margin-bottom: 20px; }
+		.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 20px; }
+		.card { border: 1px solid #334155; border-radius: 10px; padding: 12px; background: #111827; }
+		.k { text-transform: uppercase; font-size: 0.8rem; color: #94a3b8; }
+		.v { margin-top: 6px; font-size: 1.2rem; font-weight: 700; }
+		table { width: 100%; border-collapse: collapse; background: #111827; border: 1px solid #334155; border-radius: 10px; overflow: hidden; }
+		th, td { padding: 10px; border-bottom: 1px solid #1e293b; text-align: left; font-size: 0.9rem; }
+		th { background: #0b1120; }
+		.note { margin-top: 14px; color: #94a3b8; font-size: 0.9rem; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Performance Highlights</h1>
+		<p class="subtitle">Generated 2026-02-20 16:54:42 from docs/perf-baselines/baseline_*.json</p>
+
+		<div class="grid">
+			<div class="card"><div class="k">Total Baselines</div><div class="v">2</div></div>
+			<div class="card"><div class="k">Latest Label</div><div class="v">review-fix-5s_20260220_165435</div></div>
+			<div class="card"><div class="k">Latest Build Config</div><div class="v">RelWithDebInfo</div></div>
+			<div class="card"><div class="k">Latest CPU Wall Time</div><div class="v">6125 ms</div></div>
+			<div class="card"><div class="k">Latest File Write Calls</div><div class="v">0</div></div>
+		</div>
+
+		<table>
+			<thead>
+				<tr>
+					<th>Baseline File</th>
+					<th>Run Label</th>
+					<th>Build</th>
+					<th>CPU Wall Time (ms)</th>
+					<th>File Write Calls</th>
+					<th>Regression Flags</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td>baseline_review-fix-5s_20260220_165435.json</td><td>review-fix-5s_20260220_165435</td><td>RelWithDebInfo</td><td>6125</td><td>0</td><td>CPU wall time regression: +474.04%</td></tr>
+<tr><td>baseline_2026-02-19.json</td><td>initial-baseline_2026-02-19</td><td>Release</td><td>1067</td><td></td><td></td></tr>
+
+			</tbody>
+		</table>
+
+		<p class="note">Publish this file to the gh-pages branch to share performance findings.</p>
+	</main>
+</body>
+</html>

@@ -1,6 +1,7 @@
 #include "swap_chain.h"
 
 #include <windows.h>
+#include <wrl/client.h>
 
 #include "try.h"
 
@@ -57,4 +58,3 @@ void D3D12SwapChain::AcquireBackBuffers() {
 		Try | swap_chain->GetBuffer(i, IID_PPV_ARGS(&render_targets[i]));
 	}
 }
-

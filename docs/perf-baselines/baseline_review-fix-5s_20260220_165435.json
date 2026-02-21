@@ -1,0 +1,37 @@
+﻿{
+    "run_label":  "review-fix-5s_20260220_165435",
+    "build_config":  "RelWithDebInfo",
+    "app_args":  "--headless",
+    "frames":  30,
+    "session_files":  {
+                          "cpu":  "C:\\Users\\Admin\\goblin-stream\\docs\\perf-baselines\\cpu_20260220_165435.diagsession",
+                          "memory":  "",
+                          "fileio":  ""
+                      },
+    "cpu":  {
+                "wall_time_ms":  6125,
+                "avg_cpu_pct":  0,
+                "peak_cpu_pct":  0,
+                "top_hot_functions":  [
+
+                                      ]
+            },
+    "memory":  {
+                   "peak_private_bytes":  0,
+                   "total_heap_allocs":  0,
+                   "top_alloc_sites":  [
+
+                                       ]
+               },
+    "fileio":  {
+                   "total_read_bytes":  0,
+                   "total_write_bytes":  0,
+                   "write_calls":  0,
+                   "top_files":  [
+
+                                 ]
+               },
+    "regression_flags":  [
+                             "CPU wall time regression: +474.04%"
+                         ]
+}

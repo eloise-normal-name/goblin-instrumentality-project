@@ -32,30 +32,13 @@ struct EncoderConfig {
 	bool low_latency = true;
 };
 
-struct EncoderCapabilities {
-	bool supports_h264;
-	bool supports_hevc;
-	bool supports_av1;
-	uint32_t max_width;
-	uint32_t max_height;
-	bool supports_async_encode;
-	bool supports_10bit;
-};
-
 struct NvencSession : public NV_ENCODE_API_FUNCTION_LIST {
   public:
-	NvencSession(void* d3d12_device);
 	NvencSession(void* d3d12_device, const EncoderConfig& config);
 	~NvencSession();
-
-	void InitializeEncoder(const EncoderConfig& config);
-
-	void QueryCapabilities(EncoderCapabilities& caps);
-	bool IsCodecSupported(EncoderCodec codec);
 
 	void* encoder = nullptr;
 
   private:
 	HMODULE nvenc_module = nullptr;
-	GUID GetCodecGuid(EncoderCodec codec) const;
 };

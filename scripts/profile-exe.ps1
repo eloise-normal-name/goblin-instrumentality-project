@@ -1,5 +1,5 @@
 param(
-	[string]$BuildConfig = "RelWithDbgInfo",
+	[string]$BuildConfig = "RelWithDebInfo",
 	[ValidateSet("all", "cpu", "memory", "fileio")]
 	[string]$Focus = "all",
 	[string]$RunLabel = "baseline",
