@@ -45,6 +45,7 @@
   - Constants use CAPS_CASE (SCREAMING_SNAKE_CASE)
 - **Resource Management**: Full RAII with constructor/destructor pairs (no Initialize/Shutdown methods; **✅ CI enforced**):
   - All resource allocation in constructors; all cleanup in destructors
+  - In destructors, avoid redundant container cleanup (for example `vector.clear()`) when the container itself is immediately being destroyed
   - No two-phase initialization; construction must fully succeed or throw
   - GPU resources receive config/device pointers in constructor parameters
   - HANDLEs, COM objects, DLL modules wrapped with proper RAII cleanup

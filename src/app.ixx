@@ -171,64 +171,69 @@ export class App {
 										  DxgiFormatToNvencFormat(RENDER_TARGET_FORMAT),
 										  renderer.frames.fences[j]);
 
+		auto offscreen_rtv_for = [this](uint32_t index) {
+			auto rtv = offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
+			rtv.ptr += index * offscreen_rtv_descriptor_size;
+			return rtv;
+		};
+
+		auto record_frame_command_list
+			= [this](uint32_t index, D3D12_CPU_DESCRIPTOR_HANDLE cmd_rtv) {
+				  auto command_list				= renderer.frames.command_lists[index];
+				  auto render_target			= *&offscreen_render_targets.textures[index];
+				  auto swap_chain_render_target = *&swap_chain.render_targets[index];
+
+				  auto apply_transition_barriers = [command_list](auto... transitions) {
+					  D3D12_RESOURCE_BARRIER barriers[]{{
+						  .Type		  = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						  .Transition = transitions,
+					  }...};
+					  command_list->ResourceBarrier((UINT)sizeof...(transitions), barriers);
+				  };
+
+				  command_list->Reset(*&allocator, nullptr);
+				  apply_transition_barriers(D3D12_RESOURCE_TRANSITION_BARRIER{
+					  .pResource   = render_target,
+					  .StateBefore = D3D12_RESOURCE_STATE_COMMON,
+					  .StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET,
+				  });
+
+				  renderer.WriteToCommandList(command_list, cmd_rtv, this->width, this->height);
+
+				  apply_transition_barriers(
+					  D3D12_RESOURCE_TRANSITION_BARRIER{
+						  .pResource   = render_target,
+						  .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
+						  .StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE,
+					  },
+					  D3D12_RESOURCE_TRANSITION_BARRIER{
+						  .pResource   = swap_chain_render_target,
+						  .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
+						  .StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST,
+					  });
+
+				  command_list->CopyResource(swap_chain_render_target, render_target);
+
+				  apply_transition_barriers(
+					  D3D12_RESOURCE_TRANSITION_BARRIER{
+						  .pResource   = swap_chain_render_target,
+						  .StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
+						  .StateAfter  = D3D12_RESOURCE_STATE_PRESENT,
+					  },
+					  D3D12_RESOURCE_TRANSITION_BARRIER{
+						  .pResource   = render_target,
+						  .StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
+						  .StateAfter  = D3D12_RESOURCE_STATE_COMMON,
+					  });
+
+				  command_list->Close();
+			  };
+
 		for (auto k = 0u; k < BUFFER_COUNT; ++k) {
-			D3D12_CPU_DESCRIPTOR_HANDLE cmd_rtv
-				= offscreen_rtv_heap->GetCPUDescriptorHandleForHeapStart();
-			cmd_rtv.ptr += k * offscreen_rtv_descriptor_size;
+			auto cmd_rtv = offscreen_rtv_for(k);
 			device.device->CreateRenderTargetView(*&offscreen_render_targets.textures[k], nullptr,
 												  cmd_rtv);
-
-			auto command_list			  = renderer.frames.command_lists[k];
-			auto render_target			  = *&offscreen_render_targets.textures[k];
-			auto swap_chain_render_target = *&swap_chain.render_targets[k];
-
-			command_list->Reset(*&allocator, nullptr);
-			{
-				D3D12_RESOURCE_BARRIER barrier{
-					.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					.Transition = {.pResource	= render_target,
-								   .StateBefore = D3D12_RESOURCE_STATE_COMMON,
-								   .StateAfter	= D3D12_RESOURCE_STATE_RENDER_TARGET}};
-				command_list->ResourceBarrier(1, &barrier);
-			}
-
-			renderer.WriteToCommandList(command_list, cmd_rtv, width, height);
-
-			auto transition_barriers = [command_list](auto... transitions) {
-				D3D12_RESOURCE_BARRIER barriers[]{{
-					.Type		= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-					.Transition = transitions,
-				}...};
-				command_list->ResourceBarrier(static_cast<UINT>(sizeof...(transitions)), barriers);
-			};
-
-			transition_barriers(
-				D3D12_RESOURCE_TRANSITION_BARRIER{
-					.pResource	 = render_target,
-					.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
-					.StateAfter	 = D3D12_RESOURCE_STATE_COPY_SOURCE,
-				},
-				D3D12_RESOURCE_TRANSITION_BARRIER{
-					.pResource	 = swap_chain_render_target,
-					.StateBefore = D3D12_RESOURCE_STATE_PRESENT,
-					.StateAfter	 = D3D12_RESOURCE_STATE_COPY_DEST,
-				});
-
-			command_list->CopyResource(swap_chain_render_target, render_target);
-
-			transition_barriers(
-				D3D12_RESOURCE_TRANSITION_BARRIER{
-					.pResource	 = swap_chain_render_target,
-					.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST,
-					.StateAfter	 = D3D12_RESOURCE_STATE_PRESENT,
-				},
-				D3D12_RESOURCE_TRANSITION_BARRIER{
-					.pResource	 = render_target,
-					.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE,
-					.StateAfter	 = D3D12_RESOURCE_STATE_COMMON,
-				});
-
-			command_list->Close();
+			record_frame_command_list(k, cmd_rtv);
 		}
 	}
 
@@ -371,18 +376,20 @@ App::FrameLoopAction App::FrameWaitCoordinator::Wait(App& app, uint32_t frames_s
 	WaitableComponent components[3];
 	DWORD component_count = 0;
 
-	handles[component_count]	  = app.swap_chain.frame_latency_waitable;
-	components[component_count++] = WaitableComponent::FrameLatency;
+	auto add_waitable
+		= [&handles, &components, &component_count](HANDLE handle, WaitableComponent component) {
+			  handles[component_count]	  = handle;
+			  components[component_count] = component;
+			  ++component_count;
+		  };
 
-	if (app.bitstream_writer.HasPendingWrites()) {
-		handles[component_count]	  = app.bitstream_writer.NextWriteEvent();
-		components[component_count++] = WaitableComponent::BitstreamWrite;
-	}
+	add_waitable(app.swap_chain.frame_latency_waitable, WaitableComponent::FrameLatency);
 
-	if (app.frame_encoder.HasPendingOutputs()) {
-		handles[component_count]	  = app.frame_encoder.NextOutputEvent();
-		components[component_count++] = WaitableComponent::EncoderOutput;
-	}
+	if (app.bitstream_writer.HasPendingWrites())
+		add_waitable(app.bitstream_writer.NextWriteEvent(), WaitableComponent::BitstreamWrite);
+
+	if (app.frame_encoder.HasPendingOutputs())
+		add_waitable(app.frame_encoder.NextOutputEvent(), WaitableComponent::EncoderOutput);
 
 #ifndef ENABLE_FRAME_DEBUG_LOG
 	(void)frames_submitted;

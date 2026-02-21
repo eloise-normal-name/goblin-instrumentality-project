@@ -30,8 +30,11 @@ if ([string]::IsNullOrWhiteSpace($Command)) {
 $resolved_working_directory = (Resolve-Path $WorkingDirectory -ErrorAction Stop).Path
 
 $run_id = (Get-Date -Format "yyyyMMdd-HHmmss-fff") + "-" + (Get-Random -Maximum 100000).ToString("D5")
-$repo_root = Get-Location
-$resolved_log_dir = Join-Path $resolved_working_directory $LogDir
+$resolved_log_dir = if ([System.IO.Path]::IsPathRooted($LogDir)) {
+	$LogDir
+} else {
+	Join-Path $resolved_working_directory $LogDir
+}
 $run_dir = Join-Path $resolved_log_dir $run_id
 $stdout_path = Join-Path $run_dir "stdout.log"
 $stderr_path = Join-Path $run_dir "stderr.log"
@@ -54,27 +57,43 @@ $start_info.CreateNoWindow = $true
 
 $process = New-Object System.Diagnostics.Process
 $process.StartInfo = $start_info
-$null = $process.Start()
+$stdout_text = ""
+$stderr_text = ""
+$timed_out = $false
+$wrapped_pid = $null
+$process_exit_code = $null
 
-$timed_out = -not $process.WaitForExit($TimeoutSec * 1000)
-if ($timed_out) {
-	taskkill /PID $process.Id /T /F | Out-Null
+try {
+	$null = $process.Start()
+	$wrapped_pid = $process.Id
+
+	$timed_out = -not $process.WaitForExit($TimeoutSec * 1000)
+	if ($timed_out) {
+		try {
+			Stop-Process -Id $process.Id -Force -ErrorAction Stop
+		} catch {
+			taskkill /PID $process.Id /T /F | Out-Null
+		}
+	}
+
+	$stdout_text = $process.StandardOutput.ReadToEnd()
+	$stderr_text = $process.StandardError.ReadToEnd()
+	$process_exit_code = $process.ExitCode
+} finally {
+	$process.Dispose()
 }
 
-$stdout_text = $process.StandardOutput.ReadToEnd()
-$stderr_text = $process.StandardError.ReadToEnd()
-
-Set-Content -Path $stdout_path -Value $stdout_text
-Set-Content -Path $stderr_path -Value $stderr_text
+Set-Content -Path $stdout_path -Value $stdout_text -Encoding utf8
+Set-Content -Path $stderr_path -Value $stderr_text -Encoding utf8
 
 $end = Get-Date
 $duration_ms = [int][Math]::Round(($end - $start).TotalMilliseconds)
 $exit_code = if ($timed_out) {
 	124
-} elseif ($null -eq $process.ExitCode) {
+} elseif ($null -eq $process_exit_code) {
 	0
 } else {
-	[int]$process.ExitCode
+	[int]$process_exit_code
 }
 
 
@@ -90,18 +109,19 @@ if ($stderr_text.Length -gt 0) {
 	$combined_lines += "=== STDERR ==="
 	$combined_lines += $stderr_text.TrimEnd("`r", "`n")
 }
-Set-Content -Path $combined_path -Value ($combined_lines -join "`r`n")
+Set-Content -Path $combined_path -Value ($combined_lines -join "`r`n") -Encoding utf8
 
 if ($PrintOutput) {
 	if ($stdout_text.Length -gt 0) {
 		Write-Output $stdout_text.TrimEnd("`r", "`n")
 	}
 	if ($stderr_text.Length -gt 0) {
+		Write-Output "=== STDERR ==="
 		Write-Output $stderr_text.TrimEnd("`r", "`n")
 	}
 }
 
-$preview_text = [string](Get-Content -Raw -Path $combined_path)
+$preview_text = [string]($combined_lines -join "`r`n")
 if ($PreviewChars -gt 0 -and $preview_text.Length -gt $PreviewChars) {
 	$preview_text = $preview_text.Substring(0, $PreviewChars)
 }
@@ -111,6 +131,8 @@ if ($PreviewChars -eq 0) {
 
 $result = [ordered]@{
 	command = $Command
+	host_shell = $shell_executable
+	wrapped_pid = $wrapped_pid
 	start_time_utc = $start.ToUniversalTime().ToString("o")
 	end_time_utc = $end.ToUniversalTime().ToString("o")
 	duration_ms = $duration_ms

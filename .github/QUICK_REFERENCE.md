@@ -11,6 +11,7 @@
 - **Constructor/destructor only** - NO `Initialize()` or `Shutdown()` methods ✅ CI enforced
 - All resource allocation in constructor; all cleanup in destructor
 - Construction must fully succeed or throw - no two-phase initialization
+- In destructors, avoid pointless container cleanup like `vector.clear()` when the container is about to be destroyed anyway
 - ✓ Good: Resource acquired in constructor, released in destructor
 - ✗ Bad: `Texture::Initialize()` called after construction
 

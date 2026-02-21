@@ -60,19 +60,10 @@ class FrameEncoder {
 	std::vector<BitstreamBuffer> bitstream_buffers;
 
   private:
-	struct TextureEncodeCache {
-		NV_ENC_FENCE_POINT_D3D12 input_fence_point;
-		NV_ENC_INPUT_RESOURCE_D3D12 input_resource;
-		NV_ENC_FENCE_POINT_D3D12 output_fence_point;
-		NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource;
-		NV_ENC_PIC_PARAMS pic_params;
-	};
-
 	NvencSession& session;
 	std::vector<ID3D12Resource*> output_d3d12_buffers;
 	std::vector<NV_ENC_REGISTERED_PTR> output_registered_ptrs;
 	std::vector<ID3D12Fence*> output_fences;
-	std::vector<TextureEncodeCache> texture_encode_caches;
 	uint32_t buffer_count;
 	struct PendingOutput {
 		NV_ENC_REGISTERED_PTR output_buffer;
@@ -81,7 +72,9 @@ class FrameEncoder {
 		HANDLE event;
 	};
 
-	void MapInputTexture(uint32_t index);
+	RegisteredTexture BuildRegisteredTexture(ID3D12Resource* texture, uint32_t width,
+											 uint32_t height, NV_ENC_BUFFER_FORMAT format,
+											 ID3D12Fence* fence);
 	void UnmapInputTexture(uint32_t index);
 
 	std::vector<PendingOutput> pending_ring;

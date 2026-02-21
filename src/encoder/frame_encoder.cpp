@@ -2,23 +2,10 @@
 
 #include "try.h"
 
-static NV_ENC_OUTPUT_RESOURCE_D3D12 MakeOutputResource(NV_ENC_REGISTERED_PTR buffer,
-													   ID3D12Fence* fence, uint64_t fence_value) {
-	return NV_ENC_OUTPUT_RESOURCE_D3D12{
-		.version		  = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
-		.pOutputBuffer	  = buffer,
-		.outputFencePoint = {.version	  = NV_ENC_FENCE_POINT_D3D12_VER,
-							 .pFence	  = fence,
-							 .signalValue = fence_value,
-							 .bSignal	  = 1},
-	};
-}
-
 FrameEncoder::FrameEncoder(NvencSession& sess, ID3D12Device* device, uint32_t count,
 						   uint32_t output_buffer_size)
 	: session(sess), buffer_count(count) {
 	textures.reserve(count);
-	texture_encode_caches.reserve(count);
 	pending_ring.resize(count);
 
 	output_d3d12_buffers.resize(count);
@@ -79,28 +66,45 @@ FrameEncoder::~FrameEncoder() {
 		if (output_registered_ptrs[i])
 			session.nvEncUnregisterResource(encoder, output_registered_ptrs[i]);
 	}
-	output_registered_ptrs.clear();
 
 	for (auto buffer : output_d3d12_buffers) {
 		if (buffer)
 			buffer->Release();
 	}
-	output_d3d12_buffers.clear();
 
 	for (auto fence : output_fences) {
 		if (fence)
 			fence->Release();
 	}
-	output_fences.clear();
 
 	for (auto& slot : pending_ring)
 		if (slot.event)
 			CloseHandle(slot.event);
-	pending_ring.clear();
 }
 
 void FrameEncoder::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint32_t height,
 								   NV_ENC_BUFFER_FORMAT format, ID3D12Fence* fence) {
+	textures.push_back(BuildRegisteredTexture(texture, width, height, format, fence));
+
+	auto texture_index = (uint32_t)(textures.size() - 1);
+	RegisteredTexture& registered_texture = textures[texture_index];
+	if (registered_texture.is_mapped)
+		return;
+
+	NV_ENC_MAP_INPUT_RESOURCE map_params{
+		.version			= NV_ENC_MAP_INPUT_RESOURCE_VER,
+		.registeredResource = registered_texture.registered_ptr,
+	};
+	Try | session.nvEncMapInputResource(session.encoder, &map_params);
+
+	registered_texture.mapped_ptr	= map_params.mappedResource;
+	registered_texture.buffer_format = map_params.mappedBufferFmt;
+	registered_texture.is_mapped	= true;
+}
+
+RegisteredTexture FrameEncoder::BuildRegisteredTexture(ID3D12Resource* texture, uint32_t width,
+													   uint32_t height, NV_ENC_BUFFER_FORMAT format,
+													   ID3D12Fence* fence) {
 	void* encoder = session.encoder;
 
 	NV_ENC_FENCE_POINT_D3D12 fence_point{
@@ -123,56 +127,16 @@ void FrameEncoder::RegisterTexture(ID3D12Resource* texture, uint32_t width, uint
 
 	Try | session.nvEncRegisterResource(encoder, &register_params);
 
-	textures.push_back({
+	return RegisteredTexture{
 		.resource		= texture,
 		.registered_ptr = register_params.registeredResource,
+		.mapped_ptr		= nullptr,
 		.buffer_format	= format,
 		.width			= width,
 		.height			= height,
 		.is_mapped		= false,
 		.fence			= fence,
-	});
-
-	auto texture_index = (uint32_t)(textures.size() - 1);
-	MapInputTexture(texture_index);
-
-	RegisteredTexture& registered_texture = textures[texture_index];
-
-	texture_encode_caches.push_back({
-		.input_fence_point = {
-			.version   = NV_ENC_FENCE_POINT_D3D12_VER,
-			.pFence	   = fence,
-			.waitValue = 0,
-			.bWait	   = 1,
-		},
-		.input_resource = {
-			.version		 = NV_ENC_INPUT_RESOURCE_D3D12_VER,
-			.pInputBuffer	 = registered_texture.mapped_ptr,
-			.inputFencePoint = {},
-		},
-		.output_fence_point = {
-			.version	 = NV_ENC_FENCE_POINT_D3D12_VER,
-			.pFence		 = output_fences[texture_index],
-			.signalValue = 0,
-			.bSignal	 = 1,
-		},
-		.output_resource = {
-			.version		  = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
-			.pOutputBuffer	  = output_registered_ptrs[texture_index],
-			.outputFencePoint = {},
-		},
-		.pic_params = {
-			.version		 = NV_ENC_PIC_PARAMS_VER,
-			.inputWidth		 = registered_texture.width,
-			.inputHeight	 = registered_texture.height,
-			.inputPitch		 = registered_texture.width * 4,
-			.inputTimeStamp	 = 0,
-			.inputBuffer	 = nullptr,
-			.outputBitstream = nullptr,
-			.bufferFmt		 = registered_texture.buffer_format,
-			.pictureStruct	 = NV_ENC_PIC_STRUCT_FRAME,
-		},
-	});
+	};
 }
 
 void FrameEncoder::UnregisterTexture(uint32_t index) {
@@ -195,7 +159,6 @@ void FrameEncoder::UnregisterAllTextures() {
 		UnregisterTexture(i);
 	}
 	textures.clear();
-	texture_encode_caches.clear();
 }
 
 void FrameEncoder::RegisterBitstreamBuffer(ID3D12Resource* buffer, uint32_t size) {
@@ -242,30 +205,6 @@ void FrameEncoder::UnregisterAllBitstreamBuffers() {
 	bitstream_buffers.clear();
 }
 
-void FrameEncoder::MapInputTexture(uint32_t index) {
-	if (index >= textures.size())
-		throw;
-
-	RegisteredTexture& texture = textures[index];
-	if (texture.is_mapped)
-		return;
-	if (!texture.registered_ptr)
-		throw;
-
-	void* encoder = session.encoder;
-
-	NV_ENC_MAP_INPUT_RESOURCE map_params{
-		.version			= NV_ENC_MAP_INPUT_RESOURCE_VER,
-		.registeredResource = texture.registered_ptr,
-	};
-
-	Try | session.nvEncMapInputResource(encoder, &map_params);
-
-	texture.mapped_ptr	  = map_params.mappedResource;
-	texture.buffer_format = map_params.mappedBufferFmt;
-	texture.is_mapped	  = true;
-}
-
 void FrameEncoder::UnmapInputTexture(uint32_t index) {
 	if (index >= textures.size())
 		throw;
@@ -284,26 +223,47 @@ void FrameEncoder::UnmapInputTexture(uint32_t index) {
 
 void FrameEncoder::EncodeFrame(uint32_t texture_index, uint64_t fence_wait_value,
 							   uint32_t frame_index) {
-	if (texture_index >= buffer_count || texture_index >= textures.size()
-		|| texture_index >= texture_encode_caches.size())
+	if (texture_index >= buffer_count || texture_index >= textures.size())
 		return;
 
 	void* encoder = session.encoder;
 
 	RegisteredTexture& texture = textures[texture_index];
-	TextureEncodeCache& cache  = texture_encode_caches[texture_index];
+	NV_ENC_FENCE_POINT_D3D12 input_fence_point{
+		.version   = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence	   = texture.fence,
+		.waitValue = fence_wait_value,
+		.bWait	   = 1,
+	};
+	NV_ENC_INPUT_RESOURCE_D3D12 input_resource{
+		.version		 = NV_ENC_INPUT_RESOURCE_D3D12_VER,
+		.pInputBuffer	 = texture.mapped_ptr,
+		.inputFencePoint = input_fence_point,
+	};
+	NV_ENC_FENCE_POINT_D3D12 output_fence_point{
+		.version	 = NV_ENC_FENCE_POINT_D3D12_VER,
+		.pFence		 = output_fences[texture_index],
+		.signalValue = frame_index + 1,
+		.bSignal	 = 1,
+	};
+	NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource{
+		.version		  = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
+		.pOutputBuffer	  = output_registered_ptrs[texture_index],
+		.outputFencePoint = output_fence_point,
+	};
+	NV_ENC_PIC_PARAMS pic_params{
+		.version		 = NV_ENC_PIC_PARAMS_VER,
+		.inputWidth		 = texture.width,
+		.inputHeight	 = texture.height,
+		.inputPitch		 = texture.width * 4,
+		.inputTimeStamp	 = frame_index,
+		.inputBuffer	 = &input_resource,
+		.outputBitstream = &output_resource,
+		.bufferFmt		 = texture.buffer_format,
+		.pictureStruct	 = NV_ENC_PIC_STRUCT_FRAME,
+	};
 
-	cache.input_fence_point.waitValue	   = fence_wait_value;
-	cache.input_resource.inputFencePoint   = cache.input_fence_point;
-	cache.input_resource.pInputBuffer	   = texture.mapped_ptr;
-	cache.output_fence_point.signalValue   = frame_index + 1;
-	cache.output_resource.outputFencePoint = cache.output_fence_point;
-	cache.pic_params.inputTimeStamp		   = frame_index;
-	cache.pic_params.bufferFmt			   = texture.buffer_format;
-	cache.pic_params.inputBuffer		   = &cache.input_resource;
-	cache.pic_params.outputBitstream	   = &cache.output_resource;
-
-	Try | session.nvEncEncodePicture(encoder, &cache.pic_params);
+	Try | session.nvEncEncodePicture(encoder, &pic_params);
 
 	uint32_t ring_index = (pending_head + pending_count) % buffer_count;
 	auto& slot			= pending_ring[ring_index];
@@ -330,8 +290,16 @@ void FrameEncoder::ProcessCompletedFrames(BitstreamFileWriter& writer, bool wait
 			++wait_count;
 		}
 
-		auto output_resource
-			= MakeOutputResource(slot.output_buffer, slot.output_fence, slot.fence_value);
+		NV_ENC_OUTPUT_RESOURCE_D3D12 output_resource{
+			.version		  = NV_ENC_OUTPUT_RESOURCE_D3D12_VER,
+			.pOutputBuffer	  = slot.output_buffer,
+			.outputFencePoint = {
+				 .version	  = NV_ENC_FENCE_POINT_D3D12_VER,
+				 .pFence	  = slot.output_fence,
+				 .signalValue = slot.fence_value,
+				 .bSignal	  = 1,
+			},
+		};
 
 		NV_ENC_LOCK_BITSTREAM lock_params{
 			.version		 = NV_ENC_LOCK_BITSTREAM_VER,
